@@ -17,4 +17,4 @@ web_desc_line="Runs windows gvim and fixes file paths"
 
 files="$*"
 fixed_files="$(echo $files | sed 's/\/c\//C:\//g')"
-gvim.exe $fixed_files &
+/c/Program\ Files/Vim/vim90/gvim.exe $fixed_files &

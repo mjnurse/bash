@@ -25,7 +25,7 @@ params=$*
 date_str=$(date +'%y-%m-%d')
 
 filename=${date_str}_-_${params// /_}.md
-file="/c/MJN/github/mjnurse-github-io/Blog-B/$filename"
+file="/c/MJN/drive/github/mjnurse-github-io/Blog-B/$filename"
 echo $filename
 
 if [[ -f $file ]]; then

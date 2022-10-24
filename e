@@ -1,20 +1,21 @@
 #!/bin/bash
 help_text="
 NAME
-  e - One line description.
+  e - Search for a file to edit in gvim or VSCode.
 
 USAGE
   e <search words>
 
 OPTIONS
-  -x
-    Description...
+  -g
+    Run grep - search content of files instead of filename.
 
   -h|--help
     Show help text.
 
 DESCRIPTION
-  Description description description description.
+  Search for a file to edit in gvim or VSCode.  A list of matching files will
+  be shown with the option to select one for edit.
 
 AUTHOR
   mjnurse.dev - 2020
@@ -56,10 +57,10 @@ words="${*}"
 words="*${words// /*}*"
 
 if [[ $run_grep == y ]]; then
-  grep -ril "${words:1}" /c/MJN/github/* >> $tmp
+  grep -ril "${words:1}" /c/MJN/drive/github/* >> $tmp
   echo "--------------------------------------------------------------------------------" >> $tmp
 fi
-find /c/MJN/github -iname "$words" -print >> $tmp
+find /c/MJN/drive/github -iname "$words" -print >> $tmp
 
 let c=1
 while read line; do

@@ -30,7 +30,7 @@ params=$*
 
 # Prompt for the section
 
-cd /c/MJN/github/mjnurse-github-io || exit
+cd /c/MJN/drive/github/mjnurse-github-io || exit
 if [[ "$section_name" == "" ]]; then
    find . -type d -print | sed "s/^\.//; /^\/[^A-Z]/d; /images$/d; /All-A/d; /^$/d" \
       > /tmp/article.tmp
@@ -52,7 +52,7 @@ if [[ "$section_name" == "" ]]; then
    done < /tmp/article.tmp
 fi
 
-cd /c/MJN/github/mjnurse-github-io/"${section_name}"
+cd /c/MJN/drive/github/mjnurse-github-io/"${section_name}"
 ls | sort -f
 filename=${params// /_}.md
 echo ------------------------------
