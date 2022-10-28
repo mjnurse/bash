@@ -19,8 +19,8 @@ DESCRIPTION
 AUTHOR
   mjnurse.dev - 2020
 "
-help_line="A script containing an example script-template"
-web_desc_line="A script containing an example script-template"
+help_line="tbc"
+web_desc_line="tbc"
 
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"

@@ -1,26 +1,27 @@
 #!/bin/bash
 help_text="
 NAME
-  doit - One line description.
+  doit - Prompt to do something and create a note of what got done.
 
 USAGE
-  doit [options] <parameters>
+  doit [options] 
 
 OPTIONS
-  -x
-    Description...
+  -l
+    Display the list of things I did.
 
   -h|--help
     Show help text.
 
 DESCRIPTION
-  Description description description description.
+  I always have a list of things (small things) I need to do.
 
 AUTHOR
   mjnurse.dev - 2020
 "
-help_line="tbc"
-web_desc_line="tbc"
+help_line="Script to prompt user to do something!"
+web_desc_line="Script to prompt user to do something!"
+i_did="/c/MJN/drive/i-did.txt"
 
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
@@ -29,6 +30,11 @@ usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
 if [[ "$1" == "--help" || "$1" == "-h" || "$1" == "?" ]]; then
    echo "$help_text"
    exit
+fi
+
+if [[ "$1" == "-l" ]]; then
+  cat ${i_did}
+  exit
 fi
 
 clear
@@ -57,8 +63,6 @@ while [[ ${repeat_yn} == y ]]; do
     repeat_yn=n
   fi
 done
-
-i_did="/c/MJN/gdrive/i-did.txt"
 
 echo "${dte} - ${did}" >> ${i_did}
 

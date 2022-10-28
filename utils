@@ -19,8 +19,8 @@ DESCRIPTION
 AUTHOR
   mjnurse.dev - 2020
 "
-help_line="tbc"
-web_desc_line="tbc"
+help_line="Some bash Utility Functions"
+web_desc_line="Some bash Utility Functions"
 
 colour_default="\e[39m"
 colour_black="\e[30m"
