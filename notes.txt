@@ -1,0 +1,3 @@
+tar -xvzf <filename> # Extract zipped tarball
+tar -cvzf filename sourcedir # Create tarball
+git checkout tags/<tag name> # checkout a git tag

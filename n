@@ -1,0 +1,57 @@
+#!/bin/bash
+help_text="
+NAME
+  n - Notes
+
+USAGE
+  n [options] <text - consider wrapping in quotes>
+
+OPTIONS
+  -h|--help
+    Show this help message.
+
+  -a|--add
+    Add the <text> as a new note.
+
+  -e|--edit
+    Edit the notes text file.
+
+DESCRIPTION
+  Record and query notes.
+
+EXAMPLES
+  'n .' - lists all notes.
+
+AUTHOR
+  mjnurse.dev - 2023
+"
+
+help_line="Record and query notes"
+web_desc_line="Record and query notes"
+
+nf="/c/MJN/drive/github/bash/notes.txt"
+
+if [[ "$1" == "" ]]; then
+  echo "Usage: n [options] <text - consider wrapping in quotes>"
+  echo "Try:  \"n -h\" for more information."
+  echo "Hint: \"n .\" will list all notes."
+  exit
+fi
+
+case ${1-} in
+  -a|--add)
+    shift
+    echo "$*" >> $nf
+    exit
+    ;;
+  -e|--edit)
+    vi $nf
+    exit
+    ;;
+  -h|--help)
+    echo "$help_text"
+    exit
+    ;;
+esac
+
+grep "$1" $nf

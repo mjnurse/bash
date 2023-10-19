@@ -18,12 +18,12 @@ AUTHOR
   mjnurse.dev - 2020
 "
 
-set -o errexit
-set -o nounset
-set -o pipefail
-if [[ "${TRACE-0}" == "1" ]]; then
-    set -o xtrace
-fi
+# set -o errexit
+# set -o nounset
+# set -o pipefail
+# if [[ "${TRACE-0}" == "1" ]]; then
+    # set -o xtrace
+# fi
 
 help_line="Extracts and displays the help_lines"
 web_desc_line="Extracts and displays the help_lines"
@@ -35,11 +35,20 @@ case ${1-} in
     matches_only_yn=y
     shift
     ;;
+  -h|--help)
+    echo "$help_text"
+    exit
+    ;;
+  -*)
+    echo "Bad option: $1"
+    exit
 esac
 
 cd /c/MJN/drive/github/bash
 
 files="${*-*}"
+
+echo "files: $files"
 
 if [[ $matches_only_yn == n ]]; then
 
@@ -79,6 +88,7 @@ if [[ $matches_only_yn == n ]]; then
 fi
 
 prev_char=""
+
 grep -H -s -e "^help_line=" -e "^-- help_line:" $files  > /tmp/h.tmp
 cat /tmp/h.tmp | \
   sed ' 

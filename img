@@ -1,33 +1,29 @@
 #!/bin/bash
 help_text="
 NAME
-  script-template - A script containing an example script-template.
+  img - Copy an image into my website folder structure
 
 USAGE
-  script-template [options] <parameters>
+  img [options]
 
 OPTIONS
-  -x
-    Description...
 
   -h|--help
     Show help text.
 
 DESCRIPTION
-  Description description description description.
+  Copy an image into my website folder structure
 
 AUTHOR
   mjnurse.dev - 2020
 "
-help_line="tbc"
+help_line="Copy an image into website directory structure"
 web_desc_line="tbc"
 
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
 usage="$(echo Usage: ${tmp%%OPTIONS*})"
 
-logging_yn=n
-max_value=-1
 tmp="/tmp/img.tmp"
 
 while [[ "$1" != "" ]]; do
@@ -35,13 +31,6 @@ while [[ "$1" != "" ]]; do
     -h|--help)
       echo "$help_text"
       exit
-      ;;
-    -l|--logging)
-      logging_yn=y
-      ;;
-    -m|--max)
-      shift
-      max_value=$1
       ;;
     ?*)
       break
@@ -67,7 +56,7 @@ case $cos in
     read -p "path/filename: " img_filename
     ;;
   s)
-    source_dir="/c/MJN/screenshots"
+    source_dir="/mnt/c/MJN/screenshots"
     ;;
   *)
     echo "Error: Invalid option"
@@ -103,7 +92,7 @@ fi
 
 echo
 echo "IMAGE DESTINATION"
-cd /c/MJN/github/mjnurse-github-io
+cd /c/MJN/drive/github/mjnurse-github-io
 
 find . -name images -print | sort > $tmp
 num=1
@@ -146,6 +135,8 @@ if [[ "${new_name##*.}" != "png" &&  \
 fi
 
 echo
+file --brief "$source_dir/$img_filename"
+echo
 echo "Copying: $source_dir/$img_filename"
 echo "To: $dest_dir/$new_name"
 echo
@@ -154,5 +145,11 @@ read -p "Continue [yN]? " yn
 if [[ ${yn,,} == y ]]; then
   cp "$source_dir/$img_filename" $dest_dir/$new_name
   echo
-  echo "Image md tag: ![](${dest_dir:1}/$new_name)"
+  echo "Image md tag: | ![](${dest_dir:1}/$new_name) |"
+
+  width1="$(file $dest_dir/$new_name | sed 's/^[^,]*, *//; s/ x.*//')"
+  let width2=$width1*2/3 
+  echo "Image html: | <img src=\"${dest_dir:1}/$new_name\" width=\"$width2\"> |"
+  echo
+  echo "Note: the | character wraps the image in a table cell"
 fi

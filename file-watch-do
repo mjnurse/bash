@@ -1,13 +1,14 @@
 #!/bin/bash
 help_text="
 NAME
-  file-watch-do - Watch a file and each time it is modified run a command.
+  file-watch-do - Watch a file (or directory) and each time it is modified run a command.
 
 USAGE
   file-watch-do <file name> <command> [<command parameters>]
 
 DESCRIPTION
-  Watch a file and each time it is modified run a command.
+  Watch a file (or directory) and each time the file or a file within the directory is 
+  modified run a command.
 
 AUTHOR
   mjnurse.dev - 2019
