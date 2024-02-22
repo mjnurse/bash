@@ -66,5 +66,11 @@ if [ "${yn^}" == "Y" ]; then
    echo "title: ${params}" >> "$filename"
    echo "layout: page-with-contents-list" >> "$filename"
    echo "---" >> "$filename"
-   gvim "$filename"
+
+   read -rp "Edit in gvim or code [Gc]: " gc
+   if [ "${gc^}" == "C" ]; then
+      code "$filename"
+   else
+      gvim "$filename"
+   fi
 fi
