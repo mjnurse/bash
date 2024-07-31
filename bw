@@ -1,4 +1,0 @@
-cd "/c/Users/MartinNurse/OneDrive - Quantexa Ltd/MJN/github/mjnurse-github-io"
-
-build-website $*
-
