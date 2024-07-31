@@ -44,14 +44,14 @@ if [[ $# == 0 ]]; then
    echo "   -up username:password (default:\$QES_USER_PASS=$QES_USER_PASS)" 
 fi
 
-curlcmd="curl"
+curlcmd="curl -s"
 # get curl localhost to work in WSL
 #if [[ "$WSL_DISTRO_NAME" != "" ]]; then
 #  curlcmd="cmd.exe /c curl"
 #fi
 
 # Default Values
-debug_yn=n
+debug_yn=y
 show_settings_yn=n
 host="$QES_HOST"
 port="$QES_PORT"
@@ -133,7 +133,7 @@ if [[ "$json" != "" ]]; then
       echo ==================================================
       echo COMMAND
       echo ==================================================
-      echo $curlcmd $userpass $proxyauth -X $opn "$url"  -H 'Content-Type: application/json' -d "$json" | tr -d "\n" | sed "s/  */ /g"
+      echo $curlcmd $userpass $proxyauth -X $opn "$url"  -H "'Content-Type: application/json'" -d "'$json'" | tr -d "\n" | sed "s/  */ /g"
       echo
       echo ==================================================
       echo RESULTS
@@ -145,7 +145,7 @@ else
       echo ==================================================
       echo COMMAND
       echo ==================================================
-      echo $curlcmd $userpass $proxyauth -X $opn "$url" | tr -d "\n" | sed "s/  */ /g"
+      echo $curlcmd $userpass $proxyauth -X $opn "'$url'" | tr -d "\n" | sed "s/  */ /g"
       echo
       echo ==================================================
       echo RESULTS

@@ -42,16 +42,23 @@ fi
 
 file_name=$1
 shift
-prev_file_date=$(date -r $file_name)
+prev_file_date=$(date -r "$file_name")
 echo $prev_file_date
 file_date=$prev_file_date
 while [ 1 ]; do
    while [[ "$file_date" == "$prev_file_date" ]]; do
       sleep 1
-      file_date=$(date -r $file_name)
+      file_date=$(date -r "$file_name")
    done
    prev_file_date=$file_date
+   echo
+   echo "------------------------------------------------------------"
    echo $prev_file_date -  Run: "$*"
+   echo "------------------------------------------------------------"
    $*
+   echo "------------------------------------------------------------"
+   echo "Run Complete"
+   echo "------------------------------------------------------------"
+   echo
 done
 

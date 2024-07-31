@@ -29,7 +29,7 @@ AUTHOR
 help_line="Record and query notes"
 web_desc_line="Record and query notes"
 
-nf="/c/MJN/drive/github/bash/notes.txt"
+nf="/c/Users/MartinNurse/OneDrive - Quantexa Ltd/MJN/github/bash/notes.txt"
 
 if [[ "$1" == "" ]]; then
   echo "Usage: n [options] <text - consider wrapping in quotes>"
@@ -41,11 +41,11 @@ fi
 case ${1-} in
   -a|--add)
     shift
-    echo "$*" >> $nf
+    echo "$*" >> "$nf"
     exit
     ;;
   -e|--edit)
-    vi $nf
+    vi "$nf"
     exit
     ;;
   -h|--help)
@@ -54,4 +54,4 @@ case ${1-} in
     ;;
 esac
 
-grep "$1" $nf
+grep "$1" "$nf"

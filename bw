@@ -1,2 +1,4 @@
-/c/MJN/drive/github/mjnurse-github-io/build-website $*
+cd "/c/Users/MartinNurse/OneDrive - Quantexa Ltd/MJN/github/mjnurse-github-io"
+
+build-website $*
 

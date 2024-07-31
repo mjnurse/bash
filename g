@@ -14,7 +14,7 @@ AUTHOR
 "
 help_line="Creates a set of alias to 'go' to various directories"
 
-alias ge='bash -c "cd /c/MJN/drive/github/bash; gvim g"'
+alias ge='bash -c "cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/bash; gvim g"'
 alias gp='g -p'
 
 if [[ $1 == -p ]]; then
@@ -28,23 +28,25 @@ fi
 # ------------------------------------------------------------------------------------------
 
 alias gapi="cd /c/quantexa/q-apis; ls"
-alias gbash="cd /c/MJN/drive/github/bash; ls"
-alias gbin="cd /c/MJN/drive/bin; ls"
-alias gcli="cd /c/MJN/drive/github/cli-builder; ls"
+alias gbash="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/bash; ls"
+alias gbin="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/bin; ls"
+alias gcli="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/cli-builder; ls"
 alias gdown="cd /c/Users/MartinNurse/Downloads/; ls"
-alias ggd="cd /c/MJN/drive; ls"
-alias ggh="cd /c/MJN/drive/github; ls"
-alias ggithub="cd /c/MJN/drive/github; ls"
-alias gjs="cd /c/MJN/drive/github/javascript; ls"
-alias gmjn="cd /c/MJN; ls"
+alias ges="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/quantexa/es-perf-test; ls"
+alias ggd="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/ ls"
+alias ggh="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github; ls"
+alias ggithub="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github; ls"
+alias gjs="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/javascript; ls"
+alias gmjn="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN; ls"
 alias gmjns="cd /c/quantexa/mjn-scripts; ls"
 alias gpe="cd /c/quantexa/project-example-2.5; ls"
 alias gped="cd /c/quantexa/project-example-deployment-2.5; ls"
-alias gqu="cd /c/quantexa; ls"
-alias gsc="cd /c/MJN/drive/github/scratch; ls"
-alias gscratch="cd /c/MJN/drive/github/scratch; ls"
-alias gtodo="cd /c/MJN/drive/github/todo-done; ls"
-alias gweb="cd /c/MJN/drive/github/mjnurse-github-io; ls"
+alias gqp="cd /c/q-repos; ls"
+alias gqu="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/quantexa; ls"
+alias gsc="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/scratch; ls"
+alias gscratch="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/scratch; ls"
+alias gtodo="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/todo-done; ls"
+alias gweb="cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/mjnurse-github-io; ls"
 alias gwin="cd /mnt/c/Users/MartinNurse/; ls"
 
 if [[ $1 == -p ]]; then
@@ -57,8 +59,8 @@ fi
 
 # ------------------------------------------------------------------------------------------
 
-alias lb="ll /c/MJN/drive/github/bash"
-alias lj="ll /c/MJN/drive/github/javascript"
+alias lb="ll /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/bash"
+alias lj="ll /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/javascript"
 
 if [[ $1 == -p ]]; then
   echo
@@ -70,10 +72,12 @@ fi
 
 # ------------------------------------------------------------------------------------------
 
-export B=/c/MJN/drive/github/bash
-export J=/c/MJN/drive/github/javascript
-export W=/c/MJN/drive/github/web
-export T=/c/MJN/drive/todo
+export B="/c/Users/MartinNurse/OneDrive - Quantexa Ltd/MJN/github/bash"
+export J=/c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/javascript
+export M=/c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN
+export Q=/c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/quantexa
+export T=/c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/todo
+export W=/c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/web
 
 if [[ $1 == -p ]]; then
   echo
@@ -83,8 +87,8 @@ if [[ $1 == -p ]]; then
          egrep --color=auto " [A-Z]*"
 
   echo
-  echo Use ge - to edit
-  echo     gp - to print
+  echo Use ge\ -\ to edit
+  echo     gp\ -\ to print
   echo
   echo ---------------------------
   echo REMEMBER use source g / . g

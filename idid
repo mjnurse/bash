@@ -380,9 +380,9 @@ case $1 in
     ;;  
 esac
 
-cd /c/MJN/drive/github/todo-done
-/c/MJN/drive/github/todo-done/dne
-# /c/MJN/drive/github/todo-done/todo
+cd /c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/todo-done
+/c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/todo-done/dne
+/c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/MJN/github/todo-done/todo
 exit
 
 clear

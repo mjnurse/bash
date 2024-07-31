@@ -25,7 +25,7 @@ web_desc_line="Connect to postgresql using psql"
 export PGPASSWORD=postgres
 
 if [[ "$1" == "" ]]; then
-   psql --host=localhost -U postgres $*
+   psql --host=localhost -d postgres -U postgres $*
 else
-   psql --host=localhost -U postgres -f $1
+   psql --host=localhost -d postgres -U postgres -f $1
 fi

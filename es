@@ -487,7 +487,7 @@ if [[ "$1" == "help" || "$1" == "ehe" ]]; then
    if [[ "$1" == "ehe" ]]; then shift; else shift 1; fi
    usage="help (ehe)"
    check_params $# 0 "Usage: $usage"
-   egrep "usage=|section=" $0 | grep -v "grep" | sed "s/.*usage=/   /; s/.*section=//; s/\"//g"
+   egrep "usage=|section=" "$0" | grep -v "grep" | grep "$1" | sed "s/.*usage=/   /; s/.*section=//; s/\"//g"
    exit
 fi
 
