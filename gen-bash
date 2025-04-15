@@ -1,0 +1,25 @@
+#!/bin/bash
+
+
+if [[ "$B" == "" ]]; then
+    echo 'Error: environment variable $B not set - this should be the bash script folder'
+    exit 1
+fi
+
+new_file="$B/$1"
+
+if [[ -f "$new_file" ]]; then
+    echo "Error: file: $1 already exists"
+    exit 1
+fi
+
+cat "$B/bash-script-example" > "$new_file"
+
+read -p "Edit $1? c - code, g - gvim, n - No [cgN]" cgn
+cgn="${cgn^}"
+
+if [[ $cgn == C ]]; then
+    code "$new_file"
+elif [[ $cgn == G ]]; then
+    gvim "$new_file"
+fi

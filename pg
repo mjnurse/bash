@@ -24,8 +24,13 @@ web_desc_line="Connect to postgresql using psql"
 
 export PGPASSWORD=postgres
 
+wp=""
+if [[ "$GITBASH" == "Y" ]]; then
+   wp=winpty
+fi
+
 if [[ "$1" == "" ]]; then
-   psql --host=localhost -d postgres -U postgres $*
+   $wp psql --host=localhost -d postgres -U postgres 
 else
-   psql --host=localhost -d postgres -U postgres -f $1
+   $wp psql --host=localhost -d postgres -U postgres -f $1
 fi

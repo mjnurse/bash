@@ -79,29 +79,35 @@ cmd="$(command -v jq)"
 cmd="${cmd:-cat}"
 
 if [[ $mode == csv ]]; then
+
+    # For some reason python would no write to the /tmp so create a random file in the current
+    # working directory
+
+    tmpfile="$RANDOM$RANDOM$RANDOM.csv"
   echo "
     import pandas as pd
 
     df = pd.read_parquet(\"$1\")
-    df.to_csv('/tmp/parq.csv')
+    print(df.head())
+    df.to_csv('"$tmpfile"')
   " | sed "s/^    //" > /tmp/parq.py
 
-  python3 /tmp/parq.py 
-  total_recs="$(cat /tmp/parq.csv | wc -l)"
+  python /tmp/parq.py 
+  total_recs="$(cat $tmpfile | wc -l)"
   let total_recs=$total_recs-1
   if [[ $recs == 0 ]]; then
-    cat /tmp/parq.csv
+    cat $tmpfile
     echo
     echo "$total_recs total records"
   else
     # Add 1 to recs for header line
     let recs=$recs+1
-    head -n $recs /tmp/parq.csv 
+    head -n $recs $tmpfile
     let recs=$recs-1
     echo
     echo "$recs of $total_recs total records"
   fi
-  rm -f /tmp/parq.csv
+  rm -f $tmpfile
 fi
 
 if [[ $mode == json ]]; then
@@ -114,7 +120,7 @@ if [[ $mode == json ]]; then
       print(json.dumps(r))
   " | sed "s/^    //" > /tmp/parq.py
 
-  python3 /tmp/parq.py > /tmp/parq.json
+  python /tmp/parq.py > /tmp/parq.json
   total_recs="$(cat /tmp/parq.json | wc -l)"
   if [[ $recs == 0 ]]; then
     cat /tmp/parq.json | $cmd
@@ -137,6 +143,6 @@ if [[ $mode == schema ]]; then
     print(table.schema)
   " | sed "s/^    //" > /tmp/parq.py
 
-  python3 /tmp/parq.py | sed -n "/-- schema/q; /./p" | egrep --color=auto " .*"
+  python /tmp/parq.py | sed -n "/-- schema/q; /./p" | egrep --color=auto " .*"
 fi
 rm -f /tmp/parq.py

@@ -44,7 +44,9 @@ case ${1-} in
     exit
 esac
 
-cd /c/MJN/drive/github/bash
+location="$(which h)"
+echo $location
+cd "${location:0:-2}"
 
 files="${*-*}"
 
