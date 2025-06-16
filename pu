@@ -18,6 +18,8 @@ AUTHOR
 "
 help_line="tbc"
 
+./gen-readme > /dev/null 2>&1
+
 git add .
 git status
 

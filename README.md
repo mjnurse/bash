@@ -15,8 +15,8 @@
 | f |`file-watch-do` | Watch a file and each time it is modified run a command |
 | |`filename-cleanse` | Rename files to only lowercase characters and a dash. |
 | g |`g` | Creates a set of alias to 'go' to various directories |
-| |`gen-bash-readme` | Create a README.md for the bash scripts repo |
 | |`gen-bookmark-page` | Generates a bookmark web page from a folder in the Chrome bookmarks bar |
+| |`gen-readme` | Create a README.md for the bash scripts repo |
 | |`gvim` | Runs windows gvim and fixes file paths |
 | i |`img` | Copy an image into website directory structure |
 | l |`lf` | A script to recursively list folders and show folder details |
