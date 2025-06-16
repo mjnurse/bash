@@ -26,5 +26,5 @@ if [[ "$1" != "-f" ]]; then
 fi
 
 git commit -m 'Various'
-git push origin main
-#git push 
+#git push origin main
+git push 
