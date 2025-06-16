@@ -14,13 +14,9 @@ AUTHOR
 "
 help_line="Create a README.md for the bash scripts repo"
 
-rme="/c/MJN/github/bash/README.md"
+rme="$MJNWINROOT/MJN/github/bash/README.md"
 
-echo "# Bash Scripts" > $rme
-echo "" >> $rme
+echo "# Bash Scripts" > "$rme"
+echo "" >> "$rme"
 
-for f in $(grep -l -e "desc_line=" *); do
-   cat $f | sed -n '/^desc_line=/p;' | sed 's/desc_line=//; s/"//g' \
-      | sed "s/^/- [**$f**](https:\/\/github.com\/mjnurse\/bash\/blob\/master\/$f) - /" >> $rme
-   echo "" >> $rme
-done
+h -m >> "$rme"
