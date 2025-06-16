@@ -19,4 +19,4 @@ rme="$MJNWINROOT/MJN/github/bash/README.md"
 echo "# Bash Scripts" > "$rme"
 echo "" >> "$rme"
 
-h -m >> "$rme"
+h -m | sed G >> "$rme"
