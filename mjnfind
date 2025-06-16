@@ -1,0 +1,51 @@
+#!/bin/bash
+help_text="
+NAME
+   mjnfind - Finds files in the MJN directory
+
+USAGE
+   mjnfind [options] <parameters>
+
+OPTIONS
+   -a
+      Extend search to the entire C drive.
+
+   -g
+      Limit search to gdrive directory.
+
+DESCRIPTION
+   Finds files in the MJN directory.
+
+AUTHOR
+  mjnurse.uk 2020
+"
+help_line="Finds files in the MJN dir: mjnfind [options] <name-wildcards allowed>"
+
+if [[ "$1" == "-a" ]]; then
+   start_dir="/c"
+   shift
+elif [[ "$1" == "-g" ]]; then
+   start_dir="/c/MJN/gdrive"
+   shift
+else
+   start_dir="/c/MJN"
+fi
+
+echo
+echo "Default: MJN directory.  Options: -a = whole drive, -g = synced google drive."
+echo
+echo "Searching: $start_dir for ${1:-null}"
+echo
+
+if [[ "$1" != "" ]]; then
+   find $start_dir -iname "*$1*" -ls 2>/dev/null | \
+      sed 's/^[0-9 ]*[^ ]* *[^ ]* *[^ ]* *[^ ]*//' | grep "$2" > /tmp/mjnfind1.tmp
+   sed '=' /tmp/mjnfind1.tmp | sed 'N; s/\n/ /' > /tmp/mjnfind2.tmp
+   cat /tmp/mjnfind2.tmp
+   echo
+   read -p "Enter File Num To Edit (RTN to cancel)> " fn
+
+   if [[ "$fn" != "" ]]; then
+      gvim $(sed "${fn}q;d" /tmp/mjnfind2.tmp | sed 's/^[^ ]* *[^ ]* *[^ ]* *[^ ]* *[^ ]* *//')
+   fi
+fi

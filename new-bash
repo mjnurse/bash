@@ -1,0 +1,60 @@
+#!/bin/bash
+
+file="${1:-/tmp/new-bash.tmp}"
+
+if [[ -f $1 ]]; then
+  echo "$1 - file already exists.  Terminating."
+  exit
+fi
+
+echo -e '#!/bin/bash
+help_text="
+NAME
+  '$1' - One line description.
+
+USAGE
+  '$1' [options] <parameters>
+
+OPTIONS
+  -x
+    Description...
+
+  -h|--help
+    Show help text.
+
+DESCRIPTION
+  Description description description description.
+
+AUTHOR
+  Martin N 2025  
+"
+help_line="tbc"
+web_desc_line="tbc"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+  echo "${usage}"
+  echo "${try}"
+  exit 1
+fi
+
+while [[ "$1" != "" ]]; do
+  case $1 in
+    -h|--help)
+      echo "$help_text"
+      exit
+      ;;
+    ?*)
+      break
+      ;;
+  esac
+  shift
+done
+' > $file
+
+cat $file
+
+rm -f /tmp/new-bash.tmp

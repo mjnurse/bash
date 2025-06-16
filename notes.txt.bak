@@ -1,0 +1,6 @@
+git checkout tags/<tag name> # checkout a git tag.
+postgres: ALTER ROLE <username> SET search_path TO <schema name>; # Permanently alter search_path.
+postgres: SET search_path TO <schema name> # Alter the schema searched.
+postgres: SHOW search_path; # show the currently search schema.
+tar -cvzf filename sourcedir # Create tarball.
+tar -xvzf <filename> # Extract zipped tarball.

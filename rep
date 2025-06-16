@@ -1,0 +1,9 @@
+#!/bin/bash
+
+while [[ 1 ]]; do
+
+    $*
+    echo
+    read -p "Press RTN (or CTRL-C exit)"
+
+done

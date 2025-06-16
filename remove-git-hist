@@ -1,0 +1,40 @@
+#!/bin/bash
+help_text="
+NAME
+  remove-git-hist - Removes a local git, initialises a new git, adds all files with no history.
+
+USAGE
+  remove-git-hist
+
+OPTIONS
+  -h|--help
+    Show help text.
+
+DESCRIPTION
+  Removes a local git, initialises a new git, adds all files with no history.
+
+AUTHOR
+  mjnurse.dev - 2020
+"
+help_line="tbc"
+
+url=$(cat .git/config | grep url | sed "s/.*url = //")
+
+echo Removing git History
+echo
+echo repo=\"$url\"
+echo
+
+read -p "Press RTN to continue"
+
+rm -rf .git
+
+git init
+
+git add .
+
+git commit -m "Initial commit"
+
+git remote add origin $url
+
+git push -u --force origin master

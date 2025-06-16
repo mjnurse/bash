@@ -1,0 +1,4 @@
+#!/bin/bash
+cd "$MJNWINROOT/MJN/github/mjnurse-github-io"
+
+build-website $*

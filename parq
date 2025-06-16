@@ -1,0 +1,148 @@
+#!/bin/bash
+help_text="
+NAME
+  bash-func - One line description.
+
+USAGE
+  bash-func [options] <parameters>
+
+OPTIONS
+  -x
+    Description...
+
+  -h|--help
+    Show help text.
+
+DESCRIPTION
+  Description description description description.
+
+AUTHOR
+  mjnurse.dev - 2020
+"
+help_line="tbc"
+web_desc_line="tbc"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+  echo "${usage}"
+  echo "${try}"
+  exit 1
+fi
+
+mode=json
+recs=10
+
+while [[ "$1" != "" ]]; do
+  case $1 in
+    -a|--all)
+      recs=0
+      ;;
+    -c|--csv)
+      mode=csv
+      ;;
+    -h|--help)
+      echo "$help_text"
+      exit
+      ;;
+    -n|--num)
+      shift
+      recs=$1
+      ;;
+    -s|--schema)
+      mode=schema
+      ;;
+    ?*)
+      break
+      ;;
+  esac
+  shift
+done
+
+# Check if python libraries are installed, if not offer to install
+for lib in pandas pyarrow; do
+  if [[ $(pip3 list | egrep "$lib" | wc -l) == 0 ]]; then
+    echo Missing python library: $lib
+    read -p "Do you want to install $lib [Yn]: " yn
+
+    if [[ "${yn^}" != "Y" ]]; then
+       exit
+    fi
+    pip3 install $lib
+  fi
+done
+
+# If jq is installed use it to format and colour the json
+cmd="$(command -v jq)"
+cmd="${cmd:-cat}"
+
+if [[ $mode == csv ]]; then
+
+    # For some reason python would no write to the /tmp so create a random file in the current
+    # working directory
+
+    tmpfile="$RANDOM$RANDOM$RANDOM.csv"
+  echo "
+    import pandas as pd
+
+    df = pd.read_parquet(\"$1\")
+    print(df.head())
+    df.to_csv('"$tmpfile"')
+  " | sed "s/^    //" > /tmp/parq.py
+
+  python /tmp/parq.py 
+  total_recs="$(cat $tmpfile | wc -l)"
+  let total_recs=$total_recs-1
+  if [[ $recs == 0 ]]; then
+    cat $tmpfile
+    echo
+    echo "$total_recs total records"
+  else
+    # Add 1 to recs for header line
+    let recs=$recs+1
+    head -n $recs $tmpfile
+    let recs=$recs-1
+    echo
+    echo "$recs of $total_recs total records"
+  fi
+  rm -f $tmpfile
+fi
+
+if [[ $mode == json ]]; then
+  echo "
+    import pandas as pd
+    import json
+
+    df = pd.read_parquet(\"$1\")
+    for r in json.loads(df.to_json(orient=\"records\")):
+      print(json.dumps(r))
+  " | sed "s/^    //" > /tmp/parq.py
+
+  python /tmp/parq.py > /tmp/parq.json
+  total_recs="$(cat /tmp/parq.json | wc -l)"
+  if [[ $recs == 0 ]]; then
+    cat /tmp/parq.json | $cmd
+    echo
+    echo "$total_recs total records"
+  else
+    # Add 1 to recs for header line
+    head -n $recs /tmp/parq.json | $cmd
+    echo
+    echo "$recs of $total_recs total records"
+  fi
+  rm -f /tmp/parq.json
+fi
+
+if [[ $mode == schema ]]; then
+  echo "
+    import pyarrow.parquet as pq
+
+    table = pq.read_table(\"./$1\", memory_map=True)
+    print(table.schema)
+  " | sed "s/^    //" > /tmp/parq.py
+
+  python /tmp/parq.py | sed -n "/-- schema/q; /./p" | egrep --color=auto " .*"
+fi
+rm -f /tmp/parq.py

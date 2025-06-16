@@ -1,0 +1,99 @@
+#!/bin/bash
+help_text="
+NAME
+  article - Creates a new article
+
+USAGE
+  article <Article Title - Words with spaces>
+
+OPTIONS
+  -h|--help
+    Show help text.
+
+  -s <section name>
+    Specify section name.
+
+DESCRIPTION
+  A basic script to create a new website article.
+
+AUTHOR
+  mjnurse - 2020
+"
+help_line="Creates a new website article: article <title: spaces allowed>"
+web_desc_line="Creates a new website article"
+
+web_home="$MJNWINROOT/MJN/github/mjnurse-github-io"
+
+if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+   echo "$help_text"
+   exit
+fi
+
+if [[ "$1" == "-s" ]]; then
+   shift
+   cd "$web_home"
+   section_name="$(ls -d ${1}* 2>/dev/null)"
+   if [[ "$(echo $section_name | wc -w)" != 1 ]]; then
+      echo "Bad section name: $1"
+      exit
+   fi
+   shift
+fi
+
+params=$*
+
+if [[ "$params" == "" ]]; then
+   echo "Article Title missing"
+   exit
+fi
+
+# Prompt for the section
+
+cd "$web_home" || exit
+if [[ "$section_name" == "" ]]; then
+   find . -type d -print | sed "s/^\.//; /^\/[^A-Z]/d; /images$/d; /All-A/d; /^$/d" \
+      > /tmp/article.tmp
+
+   ((section_num = 1))
+   echo SECTIONS:
+   echo ---------
+   while read -r line; do
+      echo "$section_num: $line"
+      (( section_num=section_num + 1 ))
+   done < /tmp/article.tmp
+   echo
+   read -rp "Select section: " chosen_num
+   
+   ((section_num = 1))
+   while read -r line; do
+      if [[ "$section_num" == "$chosen_num" ]]; then
+         section_name="$line"
+      fi
+      (( section_num = section_num + 1 ))
+   done < /tmp/article.tmp
+fi
+
+cd "${web_home}/${section_name}"
+echo "FILES IN SECTION"
+echo "----------------"
+ls | sort -f
+filename=${params// /_}.md
+echo ------------------------------
+echo "Folder:   ${section_name}"
+echo "New File: $filename"
+
+read -rp "Create [yN]: " yn
+
+if [ "${yn^}" == "Y" ]; then
+   echo "---" > "$filename"
+   echo "title: ${params}" >> "$filename"
+   echo "layout: page-with-contents-list" >> "$filename"
+   echo "---" >> "$filename"
+
+   read -rp "Edit in gvim or code [Gc]: " gc
+   if [ "${gc^}" == "C" ]; then
+      code "$filename"
+   else
+      gvim "$filename"
+   fi
+fi

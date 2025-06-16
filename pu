@@ -1,0 +1,30 @@
+#!/bin/bash
+help_text="
+NAME
+  pu - Git add all and push.
+
+USAGE
+  pu [options] <parameters>
+
+OPTIONS
+  -h|--help
+    Show help text.
+
+DESCRIPTION
+  Description description description description.
+
+AUTHOR
+  mjnurse.dev - 2020
+"
+help_line="tbc"
+
+git add .
+git status
+
+if [[ "$1" != "-f" ]]; then
+  read -p 'Press a key to continue'
+fi
+
+git commit -m 'Various'
+git push origin main
+#git push 
