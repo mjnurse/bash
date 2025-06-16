@@ -1,5 +1,7 @@
 # Bash Scripts
 
+| c | Script | Description |
+| - | ------ | ----------- |
 | 3 |`3wp` | Generates a random 3 word password |
 | a |`ah` | Add header to web page markdown document |
 | |`article` | Creates a new website article: article <title: spaces allowed> |
