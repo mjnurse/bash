@@ -14,14 +14,8 @@ AUTHOR
 "
 help_line="Creates a set of alias to 'go' to various directories"
 
-alias ge='bash -c "cd "$MJNWINROOT/MJN/github/bash"; gvim g"'
+alias ge='bash -c "cd \"$MJNWINROOT/MJN/github/bash\"; gvim g"'
 alias gp='g -p'
-
-echo
-echo EDIT ALIASES
-echo ------------
-alias | grep 'alias e.*' | sed "s/^/- /; s/=/ = /" | sort | sed "/grep/d" | \
-        egrep --color=auto "alias e[a-z]*"
 
 # ------------------------------------------------------------------------------------------
 
@@ -29,16 +23,11 @@ alias gbash='cd "$MJNWINROOT/MJN/github/bash"; ls'
 alias gbin='cd "$MJNWINROOT/MJN/bin"; ls'
 alias gcli='cd "$MJNWINROOT/MJN/github/cli-builder"; ls'
 alias gdocs='cd "$MJNWINROOT/Documents"; ls'
-alias gdown='cd /c/Users/MartinNurse/Downloads/"; ls'
-alias ggd='cd "$MJNWINROOT/MJN/ ls'
+alias gdown='cd "$MJNWINROOT/Downloads/"; ls'
 alias ggh='cd "$MJNWINROOT/MJN/github"; ls'
 alias ggithub='cd "$MJNWINROOT/MJN/github"; ls'
-alias ghier='cd /c/q-repos/project-hierarchy-management"; ls'
-alias gjs='cd "$MJNWINROOT/MJN/github/javascript"; ls'
 alias gmjn='cd "$MJNWINROOT/MJN"; ls'
-alias gpe='cd /c/q-repos/project-example-2.5"; ls'
-alias gped='cd /c/q-repos/project-example-deployment-2.5"; ls'
-alias gqp='cd /c/q-repos"; ls'
+alias gpic='cd "$MJNWINROOT/Pictures"; ls'
 alias gsc='cd "$MJNWINROOT/MJN/github/scratch"; ls'
 alias gscratch='cd "$MJNWINROOT/MJN/github/scratch"; ls'
 alias gtodo='cd "$MJNWINROOT/MJN/github/todo-done"; ls'
@@ -53,8 +42,19 @@ alias | grep 'alias g.*' | sed "s/^/- /; s/=/ = /" | sort | sed "/grep/d; / gvim
 
 # ------------------------------------------------------------------------------------------
 
-alias lb="ll "$MJNWINROOT/MJN/github/bash"
-alias lj="ll "$MJNWINROOT/MJN/github/javascript"
+alias edown='explorer.exe "c:\Users\MartinNurse\Downloads"'
+alias edocs='explorer.exe "c:\Users\MartinNurse\OneDrive - Quantexa Ltd\Documents"'
+alias eimg='explorer.exe "c:\Users\MartinNurse\OneDrive - Quantexa Ltd\Pictures"'
+alias epic='explorer.exe "c:\Users\MartinNurse\OneDrive - Quantexa Ltd\Pictures"'
+alias ess='explorer.exe "c:\Users\MartinNurse\OneDrive - Quantexa Ltd\Pictures\Screenshots"'
+
+echo
+echo EXPLORER OPEN ALIASES
+echo ---------------------
+alias | grep 'alias e.*' | sed "s/^/- /; s/=/ = /" | sort | sed "/grep/d; / gvim.exe/d" | \
+        grep --color=auto " e[a-z]* "
+
+# ------------------------------------------------------------------------------------------
 
 echo
 echo LS ALIASES

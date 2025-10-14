@@ -17,12 +17,12 @@ DESCRIPTION
   A basic script to create a new website article.
 
 AUTHOR
-  mjnurse - 2020
+  mjnurse.github.io - 2020
 "
 help_line="Creates a new website article: article <title: spaces allowed>"
 web_desc_line="Creates a new website article"
 
-web_home="$MJNWINROOT/MJN/github/mjnurse-github-io"
+web_home="$MJNWINROOT/MJN/github/mjnurse.github.io-github-io"
 
 if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
    echo "$help_text"

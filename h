@@ -15,7 +15,7 @@ DESCRIPTION
   Extracts and displays the (single line) help lines.
 
 AUTHOR
-  mjnurse.dev - 2020
+  mjnurse.github.io - 2020
 "
 
 # set -o errexit

@@ -26,7 +26,7 @@ DESCRIPTION
   Generates a HTML page containing a Google Chart plotting the csv data.
 
 AUTHOR
-  mjnurse.dev - 2020
+  mjnurse.github.io - 2020
 "
 help_line="Generates a HTML page containing a Google Chart plotting the csv data"
 web_desc_line="Generates a HTML page containing a Google Chart plotting the csv data"

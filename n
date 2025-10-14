@@ -20,7 +20,7 @@ DESCRIPTION
   Record and query notes.
 
 AUTHOR
-  mjnurse - 2023
+  mjnurse.github.io - 2023
 "
 
 help_line="Record and query notes"

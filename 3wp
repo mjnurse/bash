@@ -10,7 +10,7 @@ DESCRIPTION
   A script to generate a 3 word password.
 
 AUTHOR
-  mjnurse - 2025
+  mjnurse.github.io - 2025
 "
 
 help_line="Generates a random 3 word password"

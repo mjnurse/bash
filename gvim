@@ -10,7 +10,7 @@ DESCRIPTION
   Runs windows gvim and fixes files paths.
 
 AUTHOR
-  mjnurse.dev - 2020
+  mjnurse.github.io - 2020
 "
 help_line="Runs windows gvim and fixes file paths"
 web_desc_line="Runs windows gvim and fixes file paths"

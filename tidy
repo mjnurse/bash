@@ -12,7 +12,7 @@ DESCRIPTION
   Fixes issues such as permission issues with files in current directory.
 
 AUTHOR
-  mjnurse.dev - 2020
+  mjnurse.github.io - 2020
 "
 help_line="Fixes issues such as permission issues with files in current directory"
 web_desc_line="Fixes eg permission issues with files"
@@ -202,7 +202,7 @@ DESCRIPTION
    Description description description description.
 
 AUTHOR
-  mjnurse.dev - 2021
+  mjnurse.github.io - 2021
 "
 help_line="'tbc'"
 web_desc_line="'tbc'"

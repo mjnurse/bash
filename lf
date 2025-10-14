@@ -21,7 +21,7 @@ DESCRIPTION
   optionally a count of files by file size.
 
 AUTHOR
-  mjnurse.dev - 2020
+  mjnurse.github.io - 2020
 "
 help_line="A script to recursively list folders and show folder details"
 web_desc_line="A script to recursively list folders and show folder details"

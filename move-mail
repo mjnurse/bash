@@ -14,7 +14,7 @@ DESCRIPTION
   Takes images of mail from Google Scanner and moves these to a chosen folder.
 
 AUTHOR
-  mjnurse.dev - 2020
+  mjnurse.github.io - 2020
 "
 help_line="Move images of mail from Google Scanner a chosen folder"
 web_desc_line="Move images of mail from Google Scanner a chosen folder"

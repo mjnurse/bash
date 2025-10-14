@@ -10,7 +10,7 @@ DESCRIPTION
   A basic script to create a new blog article.
 
 AUTHOR
-  mjnurse.dev - 2021
+  mjnurse.github.io - 2021
 "
 
 help_line="Creates a Blog article: blog <title: spaces allowed>"

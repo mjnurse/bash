@@ -10,7 +10,7 @@ DESCRIPTION
   A function to parse and print details about script parameters.
 
 AUTHOR
-  mjnurse.dev - 2022
+  mjnurse.github.io - 2022
 "
 help_line="Contains a function to parse and print details about script parameters"
 web_desc_line="Contains a function to parse and print details about script parameters"

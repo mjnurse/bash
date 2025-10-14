@@ -24,7 +24,7 @@ DESCRIPTION
   the output is written to 'multi.pack'.
 
 AUTHOR
-  mjnurse.dev - 2020
+  mjnurse.github.io - 2020
 "
 help_line="Compresses and converts files base64 to copy and paste into a command line session"
 web_desc_line="Compresses and converts files base64 to copy and paste into a command line session"

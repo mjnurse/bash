@@ -14,7 +14,7 @@ DESCRIPTION
   Generates a bookmark web page from a folder in the Chrome bookmarks bar.
 
 AUTHOR
-  mjnurse.dev - 2022
+  mjnurse.github.io - 2022
 "
 help_line="Generates a bookmark web page from a folder in the Chrome bookmarks bar"
 web_desc_line="Generates a bookmark web page from a folder in the Chrome bookmarks bar"
@@ -38,7 +38,7 @@ while [[ "$1" != "" ]]; do
   shift
 done 
 
-winroot="echo $MJNWINROOT | sed 's/\//\\/g; s/\\c/C:/'"
+winroot="$(echo $MJNWINROOT | sed 's/\//\\/g; s/\\c/C:/')"
 
 bm_page="$MJNWINROOT/MJN/bookmarks.html"
 bm_file="/c/Users/MartinNurse/AppData/Local/Google/Chrome/User*Data/Default/Bookmarks"

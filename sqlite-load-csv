@@ -24,7 +24,7 @@ DESCRIPTION
   to both the column names and the field values.
 
 AUTHOR
-  mjnurse.dev - 2020
+  mjnurse.github.io - 2020
 "
 help_line="Load a csv file into a sqlite3 database"
 web_desc_line="Load a csv file into a sqlite3 database"

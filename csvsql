@@ -13,7 +13,7 @@ DESCRIPTION
   anything after a '.' removed).
 
 AUTHOR
-  mjnurse.dev - 2022
+  mjnurse.github.io - 2022
 "
 
 help_line="Run a SQL query over a csv file"

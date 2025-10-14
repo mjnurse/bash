@@ -18,7 +18,7 @@ DESCRIPTION
   be shown with the option to select one for edit.
 
 AUTHOR
-  mjnurse.dev - 2020
+  mjnurse.github.io - 2020
 "
 help_line="tbc"
 web_desc_line="tbc"

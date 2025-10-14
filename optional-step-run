@@ -18,7 +18,7 @@ DESCRIPTION
   start step number can be passed in and all steps before this are automatically skipped.
 
 AUTHOR
-  mjnurse.dev - 2023
+  mjnurse.github.io - 2023
 "
 help_line="A script which prompts a user to decide if a step should be run"
 web_desc_line="A script which prompts a user to decide if a step should be run"

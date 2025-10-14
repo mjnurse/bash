@@ -11,7 +11,7 @@ DESCRIPTION
   modified run a command.
 
 AUTHOR
-  mjnurse.dev - 2019
+  mjnurse.github.io - 2019
 "
 help_line="Watch a file and each time it is modified run a command"
 web_desc_line="Watch a file and each time it is modified run a command"

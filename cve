@@ -14,7 +14,7 @@ DESCRIPTION
   Lookup CVE using the services.nvd.nist.gov API.
 
 AUTHOR
-  mjnurse.dev - 2024
+  mjnurse.github.io - 2024
 "
 help_line="CVE Lookup"
 web_desc_line="CVE Lookup"

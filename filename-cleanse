@@ -15,7 +15,7 @@ DESCRIPTION
   and rename these.
 
 AUTHOR
-  mjnurse.dev - 2020
+  mjnurse.github.io - 2020
 "
 help_line="Rename files to only lowercase characters and a dash."
 web_desc_line="Rename files to only lowercase characters and a dash."
