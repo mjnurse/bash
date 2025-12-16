@@ -1,26 +1,41 @@
 #!/bin/bash
 help_text="
 NAME
-  bash-func - One line description.
+  parq - Read and display parquet files in various formats.
 
 USAGE
-  bash-func [options] <parameters>
+  parq [options] <parquet-file>
 
 OPTIONS
-  -x
-    Description...
+  -a|--all
+    Display all records (default shows 10 records).
+
+  -c|--csv
+    Output data in CSV format (default is JSON).
 
   -h|--help
     Show help text.
 
+  -n|--num <number>
+    Specify number of records to display.
+
+  -s|--schema
+    Display the parquet file schema only.
+
 DESCRIPTION
-  Description description description description.
+  parq is a utility for reading Apache Parquet files and displaying their
+  contents in different formats. By default, it displays the first 10 records
+  in JSON format. The script uses Python's pandas and pyarrow libraries to
+  read parquet files and can output in JSON, CSV, or display the schema.
+  
+  If required Python libraries (pandas, pyarrow) are not installed, the script
+  will offer to install them automatically.
 
 AUTHOR
-  mjnurse.github.io - 2020
+  mjnurse.github.io - 2025
 "
-help_line="tbc"
-web_desc_line="tbc"
+help_line="Read and display parquet files in various formats"
+web_desc_line="A bash utility for viewing Apache Parquet files in JSON, CSV, or schema format"
 
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
@@ -37,112 +52,58 @@ recs=10
 
 while [[ "$1" != "" ]]; do
   case $1 in
-    -a|--all)
-      recs=0
-      ;;
-    -c|--csv)
-      mode=csv
-      ;;
-    -h|--help)
-      echo "$help_text"
-      exit
-      ;;
-    -n|--num)
-      shift
-      recs=$1
-      ;;
-    -s|--schema)
-      mode=schema
-      ;;
-    ?*)
-      break
-      ;;
+    -a|--all) recs=0 ;;
+    -c|--csv) mode=csv ;;
+    -h|--help) echo "$help_text"; exit ;;
+    -n|--num) shift; recs=$1 ;;
+    -s|--schema) mode=schema ;;
+    ?*) break ;;
   esac
   shift
 done
 
 # Check if python libraries are installed, if not offer to install
 for lib in pandas pyarrow; do
-  if [[ $(pip3 list | egrep "$lib" | wc -l) == 0 ]]; then
-    echo Missing python library: $lib
-    read -p "Do you want to install $lib [Yn]: " yn
-
-    if [[ "${yn^}" != "Y" ]]; then
-       exit
-    fi
+  if ! pip3 list 2>/dev/null | grep -q "$lib"; then
+    echo "Missing python library: $lib"
+    read -p "Install $lib? [Yn]: " yn
+    [[ "${yn^}" != "Y" ]] && exit
     pip3 install $lib
   fi
 done
 
-# If jq is installed use it to format and colour the json
-cmd="$(command -v jq)"
-cmd="${cmd:-cat}"
+# Execute Python and display results
+exec_py() {
+  python3 -c "$1" 2>/dev/null
+}
 
-if [[ $mode == csv ]]; then
-
-    # For some reason python would no write to the /tmp so create a random file in the current
-    # working directory
-
-    tmpfile="$RANDOM$RANDOM$RANDOM.csv"
-  echo "
-    import pandas as pd
-
-    df = pd.read_parquet(\"$1\")
-    print(df.head())
-    df.to_csv('"$tmpfile"')
-  " | sed "s/^    //" > /tmp/parq.py
-
-  python /tmp/parq.py 
-  total_recs="$(cat $tmpfile | wc -l)"
-  let total_recs=$total_recs-1
+show_recs() {
+  local total=$(wc -l < "$1")
+  [[ $mode == csv ]] && ((total--))
+  
   if [[ $recs == 0 ]]; then
-    cat $tmpfile
-    echo
-    echo "$total_recs total records"
+    cat "$1" | ${2:-cat}
   else
-    # Add 1 to recs for header line
-    let recs=$recs+1
-    head -n $recs $tmpfile
-    let recs=$recs-1
-    echo
-    echo "$recs of $total_recs total records"
+    head -n $((recs + (mode == csv ? 1 : 0))) "$1" | ${2:-cat}
   fi
-  rm -f $tmpfile
-fi
+  echo
+  echo "$([[ $recs == 0 ]] && echo $total || echo $recs of $total) total records"
+}
 
-if [[ $mode == json ]]; then
-  echo "
-    import pandas as pd
-    import json
-
-    df = pd.read_parquet(\"$1\")
-    for r in json.loads(df.to_json(orient=\"records\")):
-      print(json.dumps(r))
-  " | sed "s/^    //" > /tmp/parq.py
-
-  python /tmp/parq.py > /tmp/parq.json
-  total_recs="$(cat /tmp/parq.json | wc -l)"
-  if [[ $recs == 0 ]]; then
-    cat /tmp/parq.json | $cmd
-    echo
-    echo "$total_recs total records"
-  else
-    # Add 1 to recs for header line
-    head -n $recs /tmp/parq.json | $cmd
-    echo
-    echo "$recs of $total_recs total records"
-  fi
-  rm -f /tmp/parq.json
-fi
-
-if [[ $mode == schema ]]; then
-  echo "
-    import pyarrow.parquet as pq
-
-    table = pq.read_table(\"./$1\", memory_map=True)
-    print(table.schema)
-  " | sed "s/^    //" > /tmp/parq.py
-
-  python /tmp/parq.py | sed -n "/-- schema/q; /./p" | egrep --color=auto " .*"
-fi
-rm -f /tmp/parq.py
+case $mode in
+  csv)
+    tmpfile="/tmp/parq_$$.csv"
+    exec_py "import pandas as pd; pd.read_parquet('$1').to_csv('$tmpfile')"
+    show_recs "$tmpfile"
+    rm -f "$tmpfile"
+    ;;
+  json)
+    tmpfile="/tmp/parq_$$.json"
+    exec_py "import pandas as pd, json; df=pd.read_parquet('$1'); [print(json.dumps(r)) for r in json.loads(df.to_json(orient='records'))]" > "$tmpfile"
+    show_recs "$tmpfile" "$(command -v jq || echo cat)"
+    rm -f "$tmpfile"
+    ;;
+  schema)
+    exec_py "import pyarrow.parquet as pq; print(pq.read_table('$1').schema)" | sed -n "/-- schema/q; /./p" | grep --color=auto " .*"
+    ;;
+esac

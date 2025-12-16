@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 help_text="
 NAME
   edge - Launches the Microsoft Edge browser.
@@ -66,7 +66,8 @@ else
 fi
 
 # Launch Edge browser
-if ! powershell.exe /c start msedge "$edge_path" 2>/dev/null; then
+# if ! powershell.exe /c start msedge "$edge_path"; then
+if ! cmd.exe /c start msedge "$edge_path"; then
     error_exit "Failed to launch Microsoft Edge. Ensure Edge is installed and accessible."
 fi
 

@@ -20,6 +20,12 @@ esac
 
 new_file="$1"
 
+if [[ "$1" == "" ]]; then
+    echo "Error: no filename provided"
+    echo "$help_text"
+    exit 1
+fi
+
 if [[ -f "$new_file" ]]; then
     echo "Error: file: $1 already exists"
     exit 1
@@ -30,12 +36,15 @@ if [[ $basic_yn == y ]]; then
 else
     cat "$B/bash-script-example" > "$new_file"
 fi
+chmod +x "$new_file"
 
 read -p "Edit $1? c - code, g - gvim, n - No [cgN]: " cgn
-cgn="${cgn^}"
 
-if [[ $cgn == C ]]; then
-    code "$new_file"
-elif [[ $cgn == G ]]; then
-    gvim "$new_file"
-fi
+case ${cgn^} in
+    C)
+        code "$new_file"
+        ;;
+    G)
+        gvim "$new_file"
+        ;;
+esac

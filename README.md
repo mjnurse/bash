@@ -5,7 +5,8 @@
 | 3 |`3wp` | Generates a random 3 word password |
 | a |`ah` | Add header to web page markdown document |
 | |`article` | Creates a new website article: article <title: spaces allowed> |
-| b |`blog` | Creates a Blog article: blog <title: spaces allowed> |
+| b |`backup` | Create a dated zip archive of files and directories. |
+| |`blog` | Creates a Blog article: blog <title: spaces allowed> |
 | c |`calc` | Command line calculator |
 | |`cls` | Clear terminal and putty terminal buffer |
 | |`crreadme` | Creates a README.md document from READMEscr.md |
@@ -27,7 +28,9 @@
 | |`or` | Connect to oracle using sqlplus |
 | p |`pack` | Compresses and converts files base64 to copy and paste into a command line session |
 | |`parameters-function` | Contains a function to parse and print details about script parameters |
+| |`parq` | Read and display parquet files in various formats |
+| |`pwd-gen` | Random Password Generator |
 | s |`script-template` | A script containing an example script-template |
 | |`sqlite-load-csv` | Load a csv file into a sqlite3 database |
-| t |`tidy` | Fixes issues such as permission issues with files in current directory |
+| t |`tidy` | Tidies filenames and fixes issues such as permission issues with files in the specified directory |
 | u |`utils` | Some bash Utility Functions |

@@ -1,29 +1,128 @@
 #!/bin/bash
 help_text="
 NAME
-  tidy - Fixes issues such as permission issues with files in current directory.
+    tidy - Tidies filenames and fixes issues such as permission issues with files in the specified directory.
 
 USAGE
-  tidy [<folder>]
+    tidy [<folder>]
 
 OPTIONS
+    -n|--name
+        Only tidy filenames - do not check permissions etc.
+    
+    -fn|-nf
+        Force rename of filenames without prompting.  Implies -n.
+    
+    -h|--help
+        Show help text.
 
 DESCRIPTION
-  Fixes issues such as permission issues with files in current directory.
+    Tidies filenames and fixes issues such as permission issues with files in the specified directory.
 
-AUTHOR
-  mjnurse.github.io - 2020
+AUTHORS
+    mjnurse.github.io - 2020
 "
-help_line="Fixes issues such as permission issues with files in current directory"
-web_desc_line="Fixes eg permission issues with files"
+help_line="Tidies filenames and fixes issues such as permission issues with files in the specified directory"
+web_desc_line="Tidies filenames and fixes issues such as permission issues with files in the specified directory"
 
-if [[ "$1" != "" ]]; then
-  cd $1
+force=n
+names_only=n
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -n|--name)
+            names_only=y
+            ;;
+        -fn|-nf)
+            force=y
+            names_only=y
+            ;;
+        -*)
+            echo "Unknown option: $1"
+            echo "Try ${0##*/} -h for more information"
+            exit 1
+            ;;
+        ?*)
+            cd $1
+            ;;
+    esac 
+    shift
+done
+
+cdef="\e[39m" # default colour
+
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
+cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
+clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+
+function cecho {
+    color=c$1
+    shift
+    message="$*"
+    echo -e "${!color}${message}${cdef}"
+}
+cecho gre ================================================================================
+cecho gre "Filename contains character other than [a-z][0-9]_-."
+cecho gre ================================================================================
+
+for f in *; do
+    if [[ -f "$f" && ! -L "$f" ]]; then
+        newname=$(echo "$f" | \
+            sed 's/[^a-zA-Z0-9._-]/_/g; 
+                    s/\([A-Z]\)\([A-Z][A-Z]*\)/\1\L\2/g;
+                s/^\([A-Z]\)/\L\1/;
+                s/\([A-Z]\)/-\L\1/g;
+                s/__*/_/g; 
+                s/--*/-/g; 
+                s/_\./\./g;
+                s/_-/-/g;
+                s/-_/-/g;
+                s/__*/_/g; 
+                s/--*/-/g; 
+        ')
+        if [[ "$f" != "$newname" ]]; then
+            echo --------------------------------------------------------------------------------
+            echo "FILE:      $f"
+            echo "Rename as: $newname"
+            echo --------------------------------------------------------------------------------
+            if [[ $force == y ]]; then
+                opt="r"
+            else
+                printf "${clblu}[i]gnore rule, [r]ename, [s]kip, q[uit]. [irSq]?: ${cdef}"
+                read opt
+            fi
+            case $opt in
+                r|R)
+                    # rename via a temp tile name to avoid the Windows file system saying 
+                    # a.txt is same as A.txt etc.
+                    val=$RANDOM
+                    mv "$f" "${newname}.tmp.${val}"
+                    mv "${newname}.tmp.${val}" "$newname"
+                    ;;
+                i|I)
+                    break;;
+                q|Q)
+                    exit;;
+            esac
+        fi
+    fi
+done
+
+if [[ $names_only == y ]]; then
+    exit
 fi
 
-echo ================================================================================
-echo Executable but not '#!/bin/bash'
-echo ================================================================================
+cecho gre ================================================================================
+cecho gre Executable but not '#!/bin/bash'
+cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 -executable); do
 
@@ -38,7 +137,8 @@ for f in $(find . -maxdepth 1 -executable); do
          echo --------------
          head -5 $f
          echo
-         read -p "[i]gnore rule, [r]emove exec, [a]dd '#!/bin/bash', [s]kip, q[uit]. [iraSq]?: " opt
+         printf "${clblu}[i]gnore rule, [r]emove exec, [a]dd '#!/bin/bash', [s]kip, q[uit]. [iraSq]?: ${cdef}"
+         read opt
          case $opt in
             r|R)
                chmod a-x $f;;
@@ -53,9 +153,9 @@ for f in $(find . -maxdepth 1 -executable); do
    fi
 done
 
-echo ================================================================================
-echo '#!/bin/bash' but not Executable
-echo ================================================================================
+cecho gre ================================================================================
+cecho gre '#!/bin/bash' but not Executable
+cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 ! -executable); do
    if [[ -f $f && ! -L $f ]]; then
@@ -84,9 +184,9 @@ for f in $(find . -maxdepth 1 ! -executable); do
    fi
 done
 
-echo ================================================================================
-echo Writable by Other
-echo ================================================================================
+cecho gre ================================================================================
+cecho gre Writable by Other
+cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 -perm -o=w); do
    if [[ -f $f && ! -L $f ]]; then
@@ -105,9 +205,9 @@ for f in $(find . -maxdepth 1 -perm -o=w); do
    fi
 done
 
-echo ================================================================================
-echo Writable by Group
-echo ================================================================================
+cecho gre ================================================================================
+cecho gre Writable by Group
+cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 -perm -g=w); do
    if [[ -f $f && ! -L $f ]]; then
@@ -126,9 +226,9 @@ for f in $(find . -maxdepth 1 -perm -g=w); do
    fi
 done
 
-echo ================================================================================
-echo Executable by Other
-echo ================================================================================
+cecho gre ================================================================================
+cecho gre Executable by Other
+cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 -perm -o=x); do
    if [[ -f $f && ! -L $f ]]; then
@@ -147,9 +247,9 @@ for f in $(find . -maxdepth 1 -perm -o=x); do
    fi
 done
 
-echo ================================================================================
-echo Executable by Group
-echo ================================================================================
+cecho gre ================================================================================
+cecho gre Executable by Group
+cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 -perm -g=x); do
    if [[ -f $f && ! -L $f ]]; then
@@ -168,9 +268,9 @@ for f in $(find . -maxdepth 1 -perm -g=x); do
    fi
 done
 
-echo ================================================================================
-echo No header
-echo ================================================================================
+cecho gre ================================================================================
+cecho gre No header
+cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 -executable); do
    if [[ -f $f && ! -L $f ]]; then
@@ -202,7 +302,7 @@ DESCRIPTION
    Description description description description.
 
 AUTHOR
-  mjnurse.github.io - 2021
+  mjnurse.github.io - 2025
 "
 help_line="'tbc'"
 web_desc_line="'tbc'"

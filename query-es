@@ -170,4 +170,3 @@ let num_lines=num_lines-header_rows
 
 echo
 echo "($num_lines lines)"
-

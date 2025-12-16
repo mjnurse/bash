@@ -14,31 +14,49 @@ AUTHOR
 "
 help_line="Creates a set of alias to 'go' to various directories"
 
-alias ge='bash -c "cd \"$MJNWINROOT/MJN/github/bash\"; gvim g"'
-alias gp='g -p'
+sourced_or_run=""
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    # Script is being sourced
+    sourced_or_run=s
+else
+    # Script is being executed
+    sourced_or_run=r
+fi
 
 # ------------------------------------------------------------------------------------------
 
+
+alias ge='bash -c "cd \"$MJNWINROOT/MJN/github/bash\"; gvim g; 
+          echo -e \"\n---------------------------\nREMEMBER use source g / . g\n---------------------------\n\""'
+alias gp='g -p'
+
+alias garch='cd "$MJNWINROOT/Documents - Quantexa - Technology/Architecture"; ls'
+alias gqa='cd "$MJNWINROOT/Documents - Quantexa - Technology/Architecture/QA Review"; ls'
 alias gbash='cd "$MJNWINROOT/MJN/github/bash"; ls'
 alias gbin='cd "$MJNWINROOT/MJN/bin"; ls'
 alias gcli='cd "$MJNWINROOT/MJN/github/cli-builder"; ls'
 alias gdocs='cd "$MJNWINROOT/Documents"; ls'
-alias gdown='cd "$MJNWINROOT/Downloads/"; ls'
+alias gdown='cd "/c/Users/MartinNurse/Downloads"; ls'
+alias geffort='cd "$MJNWINROOT/Documents - Quantexa - Technology/Architecture/Effort estimates"; ls'
 alias ggh='cd "$MJNWINROOT/MJN/github"; ls'
-alias ggithub='cd "$MJNWINROOT/MJN/github"; ls'
 alias gmjn='cd "$MJNWINROOT/MJN"; ls'
+alias gnotes='cd "$MJNWINROOT/Documents/m_notes"; ls'
 alias gpic='cd "$MJNWINROOT/Pictures"; ls'
+alias gsize='cd "$MJNWINROOT/Documents - Quantexa - Technology/Architecture/Sizing"; ls'
 alias gsc='cd "$MJNWINROOT/MJN/github/scratch"; ls'
-alias gscratch='cd "$MJNWINROOT/MJN/github/scratch"; ls'
 alias gtodo='cd "$MJNWINROOT/MJN/github/todo-done"; ls'
+alias gtrash='cd ~/.trash; ls'
+alias gwbs='cd "$MJNWINROOT/Documents - Quantexa - Technology/Architecture/Effort estimates"; ls'
 alias gweb='cd "$MJNWINROOT/MJN/github/mjnurse-github-io"; ls'
 alias gwip='cd "$MJNWINROOT/MJN/code/wip"; ls'
 
-echo
-echo GOTO ALIASES
-echo ------------
-alias | grep 'alias g.*' | sed "s/^/- /; s/=/ = /" | sort | sed "/grep/d; / gvim.exe/d" | \
-        grep --color=auto " g[a-z]* "
+if [[ $sourced_or_run == r ]]; then
+    echo
+    echo GOTO ALIASES
+    echo ------------
+    alias | grep 'alias g.*' | sed "s/^/- /; s/=/ = /" | sort | sed "/grep/d; / gvim.exe/d" | \
+            grep --color=auto " g[a-z]* "
+fi
 
 # ------------------------------------------------------------------------------------------
 
@@ -48,19 +66,25 @@ alias eimg='explorer.exe "c:\Users\MartinNurse\OneDrive - Quantexa Ltd\Pictures"
 alias epic='explorer.exe "c:\Users\MartinNurse\OneDrive - Quantexa Ltd\Pictures"'
 alias ess='explorer.exe "c:\Users\MartinNurse\OneDrive - Quantexa Ltd\Pictures\Screenshots"'
 
-echo
-echo EXPLORER OPEN ALIASES
-echo ---------------------
-alias | grep 'alias e.*' | sed "s/^/- /; s/=/ = /" | sort | sed "/grep/d; / gvim.exe/d" | \
-        grep --color=auto " e[a-z]* "
+if [[ $sourced_or_run == r ]]; then
+    echo
+    echo EXPLORER OPEN ALIASES
+    echo ---------------------
+    alias | grep 'alias e.*' | sed "s/^/- /; s/=/ = /" | sort | sed "/grep/d; / gvim.exe/d" | \
+            grep --color=auto " e[a-z]* "
+fi
 
 # ------------------------------------------------------------------------------------------
 
-echo
-echo LS ALIASES
-echo ----------
+alias vmjnbashrc='vim -c "set filetype=sh" "$MJNWINROOT/MJN/mjn-bashrc"'
 
-alias | grep 'alias l.*ll.*' | sed "s/^/- /; s/=/ = /" | sort | grep --color=auto " l[a-z]*"
+if [[ $sourced_or_run == r ]]; then
+    echo
+    echo VI ALIASES
+    echo ----------
+
+    alias | grep 'alias v.*' | sed "s/^/- /; s/=/ = /" | sort | grep --color=auto " v[a-z]*"
+fi
 
 # ------------------------------------------------------------------------------------------
 
@@ -71,16 +95,40 @@ export W="/c/Users/MartinNurse/Downloads"
 export P="$MJNWINROOT/Pictures"
 export S="$MJNWINROOT/Pictures/Screenshots"
 
-echo
-echo ENV VARS
-echo --------
-export | grep -e ' [A-Z]=' | sed "s/declare -x/- export/; s/=/ = /" | sort | \
-         egrep --color=auto " [A-Z]* "
+if [[ $sourced_or_run == r ]]; then
+    echo
+    echo ENV VARS
+    echo --------
+    export | grep -e ' [A-Z]=' | sed "s/declare -x/- export/; s/=/ = /" | sort | \
+            egrep --color=auto " [A-Z]* "
+fi
 
 echo
 echo Use ge\ -\ to edit
-echo     gp\ -\ to print
 echo
-echo ---------------------------
-echo REMEMBER use source g / . g
-echo ---------------------------
+
+if [[ $sourced_or_run == s ]]; then
+    cd "$MJNWINROOT/Documents"
+    dirs="$(ls | egrep '^[a-z]_.*')"
+    i=1
+    for d in $dirs; do
+        alias g${i}='cd "$MJNWINROOT/Documents/'$d'"; ls'
+        let i=i+1
+    done
+fi
+if [[ $sourced_or_run == r ]]; then
+    cd "$MJNWINROOT/Documents"
+    dirs="$(ls | egrep '^[a-z]_.*')"
+    i=1
+    lead_char=""
+    for d in $dirs; do
+        if [[ "${d:0:1}" != "$lead_char" && "$lead_char" != "" ]]; then
+            echo
+        fi
+        echo "${i} - ${d}"
+        lead_char="${d:0:1}"
+        let i=i+1
+    done
+    echo
+    echo "Enter g## to go to directory"
+fi

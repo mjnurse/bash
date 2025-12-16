@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+
+import argparse
+import json
+import sys
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import streaming_bulk
+
+def import_jsonl(jsonl_path, es_host="http://localhost:9200"):
+    es = Elasticsearch(es_host)
+
+    def generate_actions():
+        with open(jsonl_path, "r", encoding="utf-8") as f:
+            while True:
+                meta_line = f.readline()
+                doc_line = f.readline()
+                if not meta_line or not doc_line:
+                    break
+                meta = json.loads(meta_line)
+                doc = json.loads(doc_line)
+                action = {
+                    "_op_type": "index",
+                    "_index": meta["index"]["_index"],
+                    "_id": meta["index"].get("_id"),
+                    "_source": doc
+                }
+                yield action
+
+    success, failed = 0, 0
+    for ok, result in streaming_bulk(es, generate_actions(), raise_on_error=False):
+        if ok:
+            success += 1
+        else:
+            failed += 1
+
+    print(f"Imported: {success} documents")
+    if failed:
+        print(f"WARNING: Failed: {failed} documents")
+
+def main():
+    parser = argparse.ArgumentParser(description="Import bulk-formatted JSONL into Elasticsearch")
+    parser.add_argument("file", help="Path to the .jsonl file")
+    parser.add_argument("--host", default="http://localhost:9200", help="Elasticsearch host URL")
+
+    args = parser.parse_args()
+
+    try:
+        import_jsonl(args.file, args.host)
+    except Exception as e:
+        print(f"ERROR: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

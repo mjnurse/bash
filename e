@@ -27,6 +27,7 @@ try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
 usage="$(echo Usage: ${tmp%%OPTIONS*})"
 run_grep=n
+fuzzy=n
 
 if [[ "$1" == "" ]]; then
   echo "${usage}"
@@ -40,7 +41,10 @@ while [[ "$1" != "" ]]; do
          echo "$help_text"
          exit
          ;;
-      -g)
+      -f|--fuzzy)
+         fuzzy=y
+         ;;
+      -g|--grep)
          run_grep=y
          ;;
       ?*)
@@ -53,14 +57,26 @@ done
 
 tmp=/tmp/e.tmp
 rm -f $tmp
-words="${*}"
-words="*${words// /*}*"
+name="${*}"
+
+# Try which
+
+which "$name" >> $tmp 2>/dev/null
+
+if [[ $fuzzy == y ]]; then
+    name="*${name// /*}*"
+    echo Searching for: "$name"
+fi
 
 if [[ $run_grep == y ]]; then
-  grep -ril "${words:1}" /c/MJN/drive/github/* >> $tmp
+  grep -ril "${name}" /c/MJN/drive/github/* >> $tmp
   echo "--------------------------------------------------------------------------------" >> $tmp
 fi
-find /c/MJN/drive/github -iname "$words" -print >> $tmp
+
+echo "Searching ./* ..."
+find . -iname "$name" -print >> $tmp
+echo "Searching MJN/* ..."
+find "/c/Users/MartinNurse/OneDrive - Quantexa Ltd/MJN" -iname "$name" -print >> $tmp
 
 let c=1
 while read line; do
@@ -75,13 +91,13 @@ if [[ $run_grep == n ]]; then
   echo "NOTE: No grep run.  Use -g to run a grep"
 fi
 echo
-read -p "Enter Number (# or v# - Vim, m# - MS Code): " n
+read -p "Enter Number (# or v# - Vim, c# - MS Code): " n
 
 editor="gvim"
 if [[ "${n:0:1}" == "v" ]]; then
   editor="gvim"
   n="${n:1}"
-elif [[ "${n:0:1}" == "m" ]]; then
+elif [[ "${n:0:1}" == "c" ]]; then
   editor="code"
   n="${n:1}"
 fi

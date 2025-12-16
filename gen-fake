@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+
+import argparse
+from faker import Faker
+import sys
+
+fake = Faker("en_GB")
+
+def generate_business_names():
+    return fake.company()
+
+def generate_person_names():
+    return fake.name()
+
+def generate_email_addresses(bus="", name=""):
+    if bus and name:
+        return f"{name.replace(' ', '.').lower()}@{bus.replace(' ', '').lower()}.com"
+    else:
+        return fake.email()
+
+def generate_addresses():
+    return f"{fake.street_address()}, {fake.city()}, {fake.postcode()}".replace("\n", ", ")
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generate fake data: business names, person names, or addresses.")
+    parser.add_argument("datatype", choices=["business", "person", "address", "email", "all"], 
+        help="Type of data to generate")
+    parser.add_argument("count", nargs="?",type=int, default=1, help="Number of items to generate")
+    args = parser.parse_args()
+
+    for _ in range(args.count):
+        if args.datatype == "business":
+            print(generate_business_names())
+        elif args.datatype == "person":
+            print(generate_person_names())
+        elif args.datatype == "address":
+            print(generate_addresses())
+        elif args.datatype == "email":
+            print(generate_email_addresses())
+        elif args.datatype == "all":
+            bus_name = generate_business_names()
+            person_name = generate_person_names()
+            json = {"business": bus_name, "person": person_name, "email": generate_email_addresses(bus_name, person_name), "address": generate_addresses()}
+            print(json)
+        else:
+            print("Unsupported datatype", file=sys.stderr)
+            sys.exit(1)
+
+if __name__ == "__main__":
+    main()

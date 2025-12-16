@@ -13,5 +13,6 @@ case $1 in
 esac
 
 if [[ "$1" == "" ]]; then
-  echo "$help_text"
+    echo "$help_text"
+    exit 1
 fi
