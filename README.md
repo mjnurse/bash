@@ -14,7 +14,7 @@
 | f |`file-watch-do` | Watch a file and each time it is modified run a command |
 | |`filename-cleanse` | Rename files to only lowercase characters and a dash. |
 | |`fsa` | File system analyzer and duplicate file finder |
-| g |`g.bac` | Creates a set of alias to 'go' to various directories |
+| g |`g` | Creates a set of alias to 'go' to various directories |
 | |`gen-bookmark-page` | Generates a bookmark web page from a folder in the Chrome bookmarks bar |
 | |`gen-readme` | Create a README.md for the bash scripts repo |
 | |`gvim` | Runs windows gvim and fixes file paths |
