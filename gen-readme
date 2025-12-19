@@ -14,7 +14,7 @@ AUTHOR
 "
 help_line="Create a README.md for the bash scripts repo"
 
-rme="$MJNWINROOT/MJN/github/bash/README.md"
+rme="/home/martin/mjnurse/bash/README.md"
 
 echo "# Bash Scripts" > "$rme"
 echo "" >> "$rme"

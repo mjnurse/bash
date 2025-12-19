@@ -56,12 +56,13 @@ done
 
 
 tmp=/tmp/e.tmp
-rm -f $tmp
+tmp2=/tmp/e.tmp2
+rm -f $tmp $tmp2
 name="${*}"
 
 # Try which
 
-which "$name" >> $tmp 2>/dev/null
+which "$name" | realpath >> $tmp 2>/dev/null
 
 if [[ $fuzzy == y ]]; then
     name="*${name// /*}*"
@@ -74,9 +75,13 @@ if [[ $run_grep == y ]]; then
 fi
 
 echo "Searching ./* ..."
-find . -iname "$name" -print >> $tmp
+find . -iname "$name" -type f -exec realpath {} \; >> $tmp
 echo "Searching MJN/* ..."
-find "/c/Users/MartinNurse/OneDrive - Quantexa Ltd/MJN" -iname "$name" -print >> $tmp
+find "/c/Users/MartinNurse/OneDrive - Quantexa Ltd/MJN" -iname "$name" -type f -exec realpath {} \; >> $tmp
+echo "Searching ~/mjnurse"
+find ~/mjnurse -iname "$name" -type f -exec realpath {} \; >> $tmp
+sort -u $tmp > $tmp2
+mv -f $tmp2 $tmp
 
 let c=1
 while read line; do

@@ -4,9 +4,7 @@
 | - | ------ | ----------- |
 | 3 |`3wp` | Generates a random 3 word password |
 | a |`ah` | Add header to web page markdown document |
-| |`article` | Creates a new website article: article <title: spaces allowed> |
 | b |`backup` | Create a dated zip archive of files and directories. |
-| |`blog` | Creates a Blog article: blog <title: spaces allowed> |
 | c |`calc` | Command line calculator |
 | |`cls` | Clear terminal and putty terminal buffer |
 | |`crreadme` | Creates a README.md document from READMEscr.md |
@@ -15,11 +13,11 @@
 | |`cve` | CVE Lookup |
 | f |`file-watch-do` | Watch a file and each time it is modified run a command |
 | |`filename-cleanse` | Rename files to only lowercase characters and a dash. |
-| g |`g` | Creates a set of alias to 'go' to various directories |
+| |`fsa` | File system analyzer and duplicate file finder |
+| g |`g.bac` | Creates a set of alias to 'go' to various directories |
 | |`gen-bookmark-page` | Generates a bookmark web page from a folder in the Chrome bookmarks bar |
 | |`gen-readme` | Create a README.md for the bash scripts repo |
 | |`gvim` | Runs windows gvim and fixes file paths |
-| i |`img` | Copy an image into website directory structure |
 | l |`lf` | A script to recursively list folders and show folder details |
 | m |`mjnfind` | Finds files in the MJN dir: mjnfind [options] <name-wildcards allowed> |
 | |`move-mail` | Move images of mail from Google Scanner a chosen folder |
@@ -31,6 +29,7 @@
 | |`parq` | Read and display parquet files in various formats |
 | |`pwd-gen` | Random Password Generator |
 | s |`script-template` | A script containing an example script-template |
+| |`sl` | sl - SQLite interactive command-line shell wrapper |
 | |`sqlite-load-csv` | Load a csv file into a sqlite3 database |
 | t |`tidy` | Tidies filenames and fixes issues such as permission issues with files in the specified directory |
 | u |`utils` | Some bash Utility Functions |
