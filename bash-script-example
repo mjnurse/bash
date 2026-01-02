@@ -1,23 +1,23 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
-  bash-func - One line description.
+    bash-func - One line description.
 
 USAGE
-  bash-func [options] <parameters>
+    bash-func [options] <parameters>
 
 OPTIONS
-  -x
-    Description...
+    -x
+        Description...
 
-  -h|--help
-    Show help text.
+    -h|--help
+        Show help text.
 
 DESCRIPTION
-  Description description description description.
+    Description description description description.
 
 AUTHOR
-  mjnurse.github.io - 2020
+    mjnurse.github.io - 2020
 "
 help_line="tbc"
 web_desc_line="Example Bash Script"
@@ -27,21 +27,20 @@ tmp="${help_text##*USAGE}"
 usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
 
 if [[ "$1" == "" ]]; then
-  echo "${usage}"
-  echo "${try}"
-  exit 1
+    echo "${usage}"
+    echo "${try}"
+    exit 1
 fi
 
 while [[ "$1" != "" ]]; do
-  case $1 in
-    -h|--help)
-      echo "$help_text"
-      exit
-      ;;
-    ?*)
-      break
-      ;;
-  esac
-  shift
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
 done
-

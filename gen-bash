@@ -1,10 +1,12 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 help_text="
 usage: gen_bash [options] <filename>
 -h : This help text.
 -b : Basic bash script only.
 "
+
+help_line="Generates a bash script from a template"
+web_desc_line="Generates a bash script from a template"
 
 basic_yn=n
 case $1 in

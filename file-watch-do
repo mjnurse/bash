@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
   file-watch-do - Watch a file (or directory) and each time it is modified run a command.
@@ -13,8 +13,8 @@ DESCRIPTION
 AUTHOR
   mjnurse.github.io - 2019
 "
-help_line="Watch a file and each time it is modified run a command"
-web_desc_line="Watch a file and each time it is modified run a command"
+help_line="Watch a file or directory and each time it or a member is modified run a command"
+web_desc_line="Watch a file or directory and each time it or a member is modified run a command"
 pack_member="default"
 
 name=${0/\.\/}
@@ -29,36 +29,63 @@ usage=${usage//[$'\n\r']}
 usage=${usage##*   }
 usage="Usage: ${usage}"
 
-if [[ "$1" == "--help" || "$1" == "-h" || "$1" == "?" ]]; then
-   echo "$help_text"
-   exit
-fi
+FD="f"  # File or directory flag
+
+function get_date {
+    if [[ "$FD" == "f" ]]; then
+        date -r "$1"
+    else
+        st=$(date +"%H%M%S%N")
+        find "$1" -type f -printf '%T@ %p\n' | sort -n | tail -1
+        ed=$(date +"%H%M%S%N")
+        if [[ $((ed - st)) -gt 500000000 ]]; then
+            echo "Warning: Scanning directory '$1' is taking > 0.5s"
+        fi
+    fi
+}
+
+case "$1" in
+    --help|-h|\?)
+        echo "$help_text"
+        exit
+        ;;
+esac
 
 if [[ "$2" == "" ]]; then
-   echo "$usage"
-   echo "$try"
-   exit
+    echo "$usage"
+    echo "$try"
+    exit
 fi
 
 file_name=$1
+if [[ -f "$file_name" ]]; then
+    echo "Watching file: $file_name"
+    FD="f"
+elif [[ -d "$file_name" ]]; then
+    echo "Watching directory: $file_name"
+    FD="d"
+else
+    echo "Error: File or directory '$file_name' not found"
+    exit 1
+fi
+
 shift
-prev_file_date=$(date -r "$file_name")
-echo $prev_file_date
+    
+prev_file_date=$(get_date "$file_name")
 file_date=$prev_file_date
 while [ 1 ]; do
-   while [[ "$file_date" == "$prev_file_date" ]]; do
-      sleep 1
-      file_date=$(date -r "$file_name")
-   done
-   prev_file_date=$file_date
-   echo
-   echo "------------------------------------------------------------"
-   echo $prev_file_date -  Run: "$*"
-   echo "------------------------------------------------------------"
-   $*
-   echo "------------------------------------------------------------"
-   echo "Run Complete"
-   echo "------------------------------------------------------------"
-   echo
+    while [[ "$file_date" == "$prev_file_date" ]]; do
+        sleep 1
+        file_date=$(get_date "$file_name")
+    done
+    prev_file_date=$file_date
+    echo
+    echo "------------------------------------------------------------"
+    echo $prev_file_date -  Run: "$*"
+    echo "------------------------------------------------------------"
+    $*
+    echo "------------------------------------------------------------"
+    echo "Run Complete"
+    echo "------------------------------------------------------------"
+    echo
 done
-

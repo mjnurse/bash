@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
     sl - SQLite interactive command-line shell wrapper.

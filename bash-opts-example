@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 help_text="Usage: ${0#*/} [options] <arguments>
 Options:
   -h               Show this help message
@@ -8,6 +7,10 @@ Options:
   --debug          Enable debug mode
   --help           Show this help message
   --file=FILENAME  Specify a file"
+
+help_line="Example Bash script processing short and long command-line options, including grouped short options."
+web_desc_line="Example Bash script processing short and long command-line options, including grouped short options."
+
 
 function arg_err {
     echo "Error: $1"
@@ -33,6 +36,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --file=*|-f=*)
+            # Treat -f= as a long option for simplicity
             file="${arg#*=}"
             if [[ -z "$file" ]]; then
                 arg_err "$arg requires an argument"

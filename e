@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
   e - Search for a file to edit in gvim or VSCode.
@@ -80,7 +80,7 @@ echo "Searching MJN/* ..."
 find "/c/Users/MartinNurse/OneDrive - Quantexa Ltd/MJN" -iname "$name" -type f -exec realpath {} \; >> $tmp
 echo "Searching ~/mjnurse"
 find ~/mjnurse -iname "$name" -type f -exec realpath {} \; >> $tmp
-sort -u $tmp > $tmp2
+sort -u $tmp | sed "/mjnurse\.github\.io/d" > $tmp2
 mv -f $tmp2 $tmp
 
 let c=1

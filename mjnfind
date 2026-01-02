@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
-   mjnfind - Finds files in the MJN directory
+   mjnfind - Finds files a set of commonly used directories
 
 USAGE
    mjnfind [options] <parameters>
@@ -10,42 +10,64 @@ OPTIONS
    -a
       Extend search to the entire C drive.
 
-   -g
-      Limit search to gdrive directory.
-
 DESCRIPTION
-   Finds files in the MJN directory.
+   Finds files a set of commonly used directories.
 
 AUTHOR
   mjnurse.uk 2020
 "
-help_line="Finds files in the MJN dir: mjnfind [options] <name-wildcards allowed>"
+help_line="Finds files in commonly used directories"
+web_desc="Finds files in commonly used directories"
+
+TMP1="/tmp/mjnfind1.tmp"
+TMP2="/tmp/mjnfind2.tmp"
+
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+   echo "$help_text"
+   exit 0
+fi
 
 if [[ "$1" == "-a" ]]; then
-   start_dir="/c"
-   shift
-elif [[ "$1" == "-g" ]]; then
-   start_dir="/c/MJN/gdrive"
+   start_dirs="/c"
    shift
 else
-   start_dir="/c/MJN"
+   start_dirs="/home/martin/mjnurse xxx yyy"
 fi
 
-echo
-echo "Default: MJN directory.  Options: -a = whole drive, -g = synced google drive."
-echo
-echo "Searching: $start_dir for ${1:-null}"
-echo
+\rm -f $TMP1 $TMP2
 
-if [[ "$1" != "" ]]; then
-   find $start_dir -iname "*$1*" -ls 2>/dev/null | \
-      sed 's/^[0-9 ]*[^ ]* *[^ ]* *[^ ]* *[^ ]*//' | grep "$2" > /tmp/mjnfind1.tmp
-   sed '=' /tmp/mjnfind1.tmp | sed 'N; s/\n/ /' > /tmp/mjnfind2.tmp
-   cat /tmp/mjnfind2.tmp
-   echo
-   read -p "Enter File Num To Edit (RTN to cancel)> " fn
+for d in $start_dirs; do
+    if [[ -d "$d" ]]; then
+        echo "Searching in: $d"
+        find "$d" -type d -name ".*" -prune -false -o -type f -iname "$1" -ls 2>/dev/null >> $TMP1
+    fi
+done
 
-   if [[ "$fn" != "" ]]; then
-      gvim $(sed "${fn}q;d" /tmp/mjnfind2.tmp | sed 's/^[^ ]* *[^ ]* *[^ ]* *[^ ]* *[^ ]* *//')
+if [[ ! -s $TMP1 ]]; then
+   echo "No files found matching: $1"
+   \rm -f $TMP1 $TMP2
+   exit 0
+fi
+
+i=1
+for f in $(cat $TMP1); do
+   if [[ "$f" == *"/"* ]]; then
+      filepath=$f
+      echo "$i $filepath" >> $TMP2
+      i=$((i+1))
    fi
+done
+cat $TMP2
+read -p "Enter c-code v-gvim and file Num To Edit (RTN to cancel) [Cv]#: " fn
+if [[ -n $fn ]]; then
+    filepath=$(sed "${fn:1:99}q; d" $TMP2 | sed "s/^[0-9 ]*//")
+    if [[ -n "$filepath" ]]; then
+        if [[ "${fn:0:1}" == "v" ]]; then
+            gvim "$filepath"
+        else
+            code "$filepath"
+        fi
+    fi
 fi
+
+\rm -f $TMP1 $TMP2

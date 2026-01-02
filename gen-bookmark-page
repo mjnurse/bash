@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
   gen-bookmark-page - generates a bookmark web page from a folder in the Chrome bookmarks bar.

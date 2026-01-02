@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
     gen-pwd - Random Password Generator using OpenSSL

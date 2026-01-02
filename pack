@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
   pack - Compresses and converts files base64 to copy / paste into a command line session. 

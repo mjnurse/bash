@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
     tidy - Tidies filenames and fixes issues such as permission issues with files in the specified directory.
@@ -88,7 +88,7 @@ for f in *; do
                 s/__*/_/g; 
                 s/--*/-/g; 
         ')
-        if [[ "$f" != "$newname" ]]; then
+        if [[ "$f" != "$newname" && "$f" != "README.md" ]]; then
             echo --------------------------------------------------------------------------------
             echo "FILE:      $f"
             echo "Rename as: $newname"
@@ -121,47 +121,54 @@ if [[ $names_only == y ]]; then
 fi
 
 cecho gre ================================================================================
-cecho gre Executable but not '#!/bin/bash'
+cecho gre Executable but not '#!/usr/bin/env'
 cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 -executable); do
 
-   if [[ -f $f && ! -L $f ]]; then
-      line1="$(head -1 $f)"
-      line1=${line1//[$' \t\r\n']}
-      if [[ "$line1" != "#!/bin/bash" ]]; then
-         echo --------------------------------------------------------------------------------
-         echo FILE: $f
-         echo --------------------------------------------------------------------------------
-         echo First 5 lines:
-         echo --------------
-         head -5 $f
-         echo
-         printf "${clblu}[i]gnore rule, [r]emove exec, [a]dd '#!/bin/bash', [s]kip, q[uit]. [iraSq]?: ${cdef}"
-         read opt
-         case $opt in
-            r|R)
-               chmod a-x $f;;
-            a|A)
-               sed -i '1i#!/bin/bash' $f;;
-            i|I)
-               break;;
-            q|Q)
-               exit;;
-         esac
-      fi 
-   fi
+    if [[ -f $f && ! -L $f ]]; then
+        line1="$(head -1 $f)"
+        if [[ "${line1:0:14}" != "#!/usr/bin/env" ]]; then
+            echo --------------------------------------------------------------------------------
+            echo FILE: $f
+            echo --------------------------------------------------------------------------------
+            echo First 5 lines:
+            echo --------------
+            head -5 $f
+            echo
+            printf "${clblu}[i]gnore rule, [r]emove exec, add [b]ash, add [p]ython3, [s]kip, q[uit]. [irbpSq]?: ${cdef}"
+            read opt
+            case $opt in
+                r|R)
+                    chmod a-x $f
+                    ;;
+                b|B)
+                    sed -i '/^#!\/bin\/bash/d' $f
+                    sed -i '1i#!/usr/bin/env bash' $f
+                    ;;
+                p|P)
+                    sed -i '1i#!/usr/bin/env python3' $f
+                    ;;
+                i|I)
+                    break
+                    ;;
+                q|Q)
+                    exit
+                    ;;
+            esac
+        fi 
+    fi
 done
 
 cecho gre ================================================================================
-cecho gre '#!/bin/bash' but not Executable
+cecho gre '#!/usr/bin/env' but not Executable
 cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 ! -executable); do
    if [[ -f $f && ! -L $f ]]; then
       line1="$(head -1 $f)"
       line1=${line1//[$' \t\r\n']}
-      if [[ "$line1" == "#!/bin/bash" ]]; then
+      if [[ "$line1" == "#!/usr/bin/env" ]]; then
          echo --------------------------------------------------------------------------------
          echo FILE: $f
          echo --------------------------------------------------------------------------------
@@ -169,7 +176,7 @@ for f in $(find . -maxdepth 1 ! -executable); do
             echo --------------
          head -5 $f
          echo
-         read -p "[i]gnore rule, [d]elete '#!/bin/bash', [m]ake exec, [s]kip, q[uit]. [idmSq]?: " opt
+         read -p "[i]gnore rule, [d]elete '#!/usr/bin/env', [m]ake exec, [s]kip, q[uit]. [idmSq]?: " opt
          case $opt in
             d|D)
                sed -i '1d' $f;;
@@ -274,35 +281,38 @@ cecho gre ======================================================================
 
 for f in $(find . -maxdepth 1 -executable); do
    if [[ -f $f && ! -L $f ]]; then
+      l1="$(cat $f | sed -n '1p')"
       l2="$(cat $f | sed -n '2p')"
-      if [[ "${l2:0:10}" != "help_text=" ]]; then
+      if [[ "$l1" == "#!/usr/bin/env bash" && "${l2:0:10}" != "help_text=" ]]; then
          echo --------------------------------------------------------------------------------
          ls -al $f
          echo
-         read -p "[i]gnore , [a]dd header, [s]kip, q[uit]. [iaSq]?: " opt
+         head -15 $f
+         echo
+         read -p "[i]gnore rule, [a]dd header, edit [v]im, edit [c]ode, [s]kip, q[uit]. [iavcSq]?: " opt
          case $opt in
             a|A)
                tidytmp="/tmp/tidy.tmp"
-echo '#!/bin/bash
+echo '#!/usr/bin/env
 help_text="
 NAME
-   '${f:2}' - One line description.
+    '${f:2}' - One line description.
 
 USAGE
-   '${f:2}' [options] <parameters>
+    '${f:2}' [options] <parameters>
 
 OPTIONS
-   -x
-      Description...
+    -x
+        Description...
 
-   -h|--help
-      Show help text.
+    -h|--help
+        Show help text.
 
 DESCRIPTION
-   Description description description description.
+    Description description description description.
 
 AUTHOR
-  mjnurse.github.io - 2025
+    mjnurse.github.io - 2025
 "
 help_line="'tbc'"
 web_desc_line="'tbc'"
@@ -312,24 +322,33 @@ tmp="${help_text##*USAGE}"
 usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
 
 if [[ "$1" == "" ]]; then
-  echo "${usage}"
-  echo "${try}"
-  exit 1
+    echo "${usage}"
+    echo "${try}"
+    exit 1
 fi
 
-if [[ "$1" == "--help" || "$1" == "-h" || "$1" == "?" ]]; then
-   echo "$help_text"
-   exit
-fi
+case $1 in
+    -h|--help)
+        echo "$help_text"
+        exit
+        ;;
+esac
 ' > $tidytmp
                tail +2 $f >> $tidytmp
                cp -f $tidytmp $f
-               gvim $f
+               ;;
+            v|V)
+               vgim $f
+               ;;
+            c|C)
+               code $f
                ;;
             i|I)
-               break;;
+               break
+               ;;
             q|Q)
-               exit;;
+               exit
+               ;;
          esac
       fi
    fi

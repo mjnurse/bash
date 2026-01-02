@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
   gen-bash-readme - Create a README.md for the bash scripts repo.

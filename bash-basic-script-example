@@ -1,9 +1,11 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 help_text="
 usage: <<FILENAME>> [options] <filename>
 -h : This help text.
 "
+
+help_line="tbc"
+web_desc_line="Example Bash Script"
 
 case $1 in
     -h|--help)

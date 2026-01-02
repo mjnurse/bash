@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
   csvplot - Generates a HTML page containing a Google Chart plotting the csv data.

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
   ms-office - Launches the Microsoft Office application associated with the given file.

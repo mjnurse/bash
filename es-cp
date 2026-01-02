@@ -1,5 +1,4 @@
-#!/bin/bash
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
   es-cp - Elasticsearch index copy utility.

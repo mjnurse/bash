@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
   optional-step-run - A template script which prompts a user to decide if steps should be run.

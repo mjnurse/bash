@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 help_text="
 NAME
   or - Connect to oracle using sqlplus.
@@ -15,7 +15,8 @@ AUTHOR
 help_line="Connect to oracle using sqlplus"
 web_desc_line="Connect to oracle using sqlplus"
 
-export ORACLE_PATH=.:/c/MJN/gdrive/code/oracle:/c/MJN/gdrive/code/private/oracle
+export ORACLE_PATH=.:/home/martin/code/oracle:/home/martin/code/private/oracle
 
-rlwrap /c/MJN/oracle_client/product/11.2.0/client_1/bin/sqlplus.exe /NOLOG
+rlwrap /home/martin/oracle_client/product/11.2.0/client_1/bin/sqlplus.exe /NOLOG
+
 #rlwrap sqlplus /NOLOG
