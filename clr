@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
+
 help_text="
 NAME
-    bash-func - One line description.
+    -func - One line description.
 
 USAGE
-    bash-func [options] <parameters>
+    -func [options] <parameters>
 
 OPTIONS
     -x
@@ -21,6 +22,8 @@ AUTHOR
 "
 help_line="tbc"
 web_desc_line="Example Bash Script"
+
+# set -x
 
 # Terminal Colours
 cdef="\e[39m" # default colour
@@ -63,6 +66,11 @@ if [[ "$push_yn" == "n" ]]; then
     changes_yn=n
     for d in /home/martin/mjnurse/bash \
              /home/martin/mjnurse/shortcut-keys \
+             /home/martin/mjnurse/python \
+             /home/martin/mjnurse/cli-builder \
+             /home/martin/mjnurse/website-builder \
+             /home/martin/mjnurse/mjnurse-website \
+             /home/martin/mjnurse/mjnurse.github.io \
             ; do
         cd $d
         if [[ "$(git status --short)" != "" ]]; then
@@ -72,26 +80,31 @@ if [[ "$push_yn" == "n" ]]; then
     done
     if [[ "$changes_yn" == "y" ]]; then
         echo
-        cecho lmag "Run check-local-repos -p to selectively commit/push changes."
+        cecho lmag "Run clr -p to selectively commit/push changes."
     fi
     exit 1
 fi
 
 for d in /home/martin/mjnurse/bash \
          /home/martin/mjnurse/shortcut-keys \
+         /home/martin/mjnurse/python \
+         /home/martin/mjnurse/cli-builder \
+         /home/martin/mjnurse/website-builder \
+         /home/martin/mjnurse/mjnurse-website \
+         /home/martin/mjnurse/mjnurse.github.io \
         ; do
     cd $d
     if [[ "$(git status --short)" != "" ]]; then
         echo
-        cecho lcya "------------------------------------------------------------"
-        cecho lcya "Repository: $d"
-        cecho lcya "------------------------------------------------------------"
+        cecho lmag "------------------------------------------------------------"
+        cecho lmag "Repository: $d"
+        cecho lmag "------------------------------------------------------------"
         git status
         echo
-        printf "${clmag}Commit and Push changes in repo [yN]? ${cdef}"
+        printf "${clcya}Commit and Push changes in repo [yN]? ${cdef}"
         read yn
         if [[ "${yn^}" == "Y" ]]; then
-            printf "${clmag}Commit Message (Blank to use 'Various'): ${cdef}" 
+            printf "${clcya}Commit Message (Blank to use 'Various'): ${cdef}" 
             read cm
             if [[ -z "$cm" ]]; then
                 cm="Various"

@@ -22,6 +22,8 @@ AUTHOR
 help_line="tbc"
 web_desc_line="Example Bash Script"
 
+# Set -x for debugging
+
 # Terminal Colours
 cdef="\e[39m" # default colour
 cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
