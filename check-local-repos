@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    bash-func - One line description.
+
+USAGE
+    bash-func [options] <parameters>
+
+OPTIONS
+    -x
+        Description...
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Description description description description.
+
+AUTHOR
+    mjnurse.github.io - 2020
+"
+help_line="tbc"
+web_desc_line="Example Bash Script"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+push_yn=n
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -p|--push)
+            push_yn=y
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+if [[ "$push_yn" == "n" ]]; then 
+    changes_yn=n
+    for d in /home/martin/mjnurse/bash \
+             /home/martin/mjnurse/shortcut-keys \
+            ; do
+        cd $d
+        if [[ "$(git status --short)" != "" ]]; then
+            echo "Uncommitted changes in repo: $d"
+            changes_yn=y
+        fi
+    done
+    if [[ "$changes_yn" == "y" ]]; then
+        echo
+        echo "Run check-local-repos -p to selectively commit/push changes."
+    fi
+    exit 1
+fi
+
+for d in /home/martin/mjnurse/bash \
+            /home/martin/mjnurse/shortcut-keys \
+        ; do
+    cd $d
+    if [[ "$(git status --short)" != "" ]]; then
+        git status
+        echo
+        read -p "Commit and Push changes in repo [yN]? " yn
+        if [[ "${yn^}" == "Y" ]]; then
+            read -p "Commit Message (Blank to use \'Various\'): " cm
+            if [[ -z "$cm" ]]; then
+                cm="Various"
+            fi
+            git add .
+            git commit -m "$cm"
+            git push
+        fi
+    fi
+done

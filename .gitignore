@@ -7,3 +7,5 @@ dme.*
 *.db
 *.tmp
 g
+q-*
+q_*

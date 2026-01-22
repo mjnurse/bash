@@ -84,9 +84,9 @@ if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
 fi
 
 # Create the zip archive
-zip -r "$ZIPFILE" "$@"
+zip -r "$ZIPFILE" "$@" -x "*/.*" -x "__pycache__/*" -x "venv/*"
 
-# Copy to BACKUP_DIR
-cp "$ZIPFILE" "$BACKUP_DIR/"
+# Move to BACKUP_DIR
+mv "$ZIPFILE" "$BACKUP_DIR/"
 
 echo "Backup complete: $BACKUP_DIR/$ZIPFILE"

@@ -16,6 +16,9 @@ OPTIONS
   -e|--edit
     Edit the notes text file.
 
+  -m|--markdown
+    Generate a markdown version of the notes file.
+
 DESCRIPTION
   Record and query notes.
 
@@ -49,6 +52,16 @@ case ${1-} in
   -e|--edit)
     vi "$nf"
     ;;
+  -m|--markdown)
+    # Generate a markdown version of the notes file
+    echo "# Miscellaneous Notes"
+    echo
+    echo "The notes captured in the Linux notes tool = \`n\`."
+    echo
+    echo "\`\`\`"
+    cat "$nf"
+    echo "\`\`\`"
+    ;;
   -h|--help)
     echo "$help_text"
     exit
@@ -56,12 +69,14 @@ case ${1-} in
   *)
     echo "NOTES"
     echo "-----"
-    grep --color=auto "$1" "$nf"
+    grep  --ignore-case --color=auto "$1" "$nf"
     exit
     ;;
 esac
 
 sort "$nf"| sed '/^$/d' > "$nf".tmp
+
+# Group lines by their first word, inserting a blank line whenever the first word changes.
 awk '
     {
         split($0, words, " ")
@@ -76,4 +91,4 @@ awk '
             print
         }
     }' "$nf".tmp > "$nf"
-    rm -f "$nf".tmp
+rm -f "$nf".tmp

@@ -48,7 +48,7 @@ echo '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
 <head>
 <TITLE>Bookmarks</TITLE>
 
-<link rel="icon" type="image/x-icon" href="'"$winroot"'\MJN\github\mjnurse-github-io\images\Star.png">
+<link rel="icon" type="image/x-icon" href="'"$winroot"'\Pictures\Star.png">
 
 <style>
   h3, p {
@@ -112,6 +112,7 @@ for f in $(cat $tmp_file | sed 's/"//g'); do
   fi
   let c=c+1
   echo '{s:"'$f'"},' >> "$bm_page"
+
   cat $bm_file | jq '.roots.bookmark_bar.children[] | 
     select(.name == "Page").children[] | 
     select (.name == "'$f'").children[] | 
