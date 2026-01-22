@@ -62,10 +62,14 @@ if [[ "$push_yn" == "n" ]]; then
 fi
 
 for d in /home/martin/mjnurse/bash \
-            /home/martin/mjnurse/shortcut-keys \
+         /home/martin/mjnurse/shortcut-keys \
         ; do
     cd $d
     if [[ "$(git status --short)" != "" ]]; then
+        echo
+        echo "------------------------------------------------------------"
+        echo "Repository: $d"
+        echo "------------------------------------------------------------"
         git status
         echo
         read -p "Commit and Push changes in repo [yN]? " yn
