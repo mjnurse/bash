@@ -2,26 +2,30 @@
 
 help_text="
 NAME
-    -func - One line description.
+    clr - Check Local Repositories for uncommitted changes.
 
 USAGE
-    -func [options] <parameters>
+    clr [options]
 
 OPTIONS
-    -x
-        Description...
+    -p|--push
+        Interactively commit and push changes for each repository
+        with uncommitted changes.
 
     -h|--help
         Show help text.
 
 DESCRIPTION
-    Description description description description.
+    Checks a predefined list of local git repositories for uncommitted
+    changes. When run without options, displays a list of repositories
+    that have uncommitted changes. With the -p option, iterates through
+    each repository with changes and prompts to commit and push.
 
 AUTHOR
-    mjnurse.github.io - 2020
+    mjnurse.github.io - 2026
 "
-help_line="tbc"
-web_desc_line="Example Bash Script"
+help_line="Check Local Repositories for uncommitted changes"
+web_desc_line="Check Local Repositories for uncommitted changes"
 
 # set -x
 
