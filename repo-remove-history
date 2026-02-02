@@ -1,26 +1,23 @@
 #!/usr/bin/env bash
 help_text="
 NAME
-   - One line description.
+    repo-remove-history - Remove entire commit history from the current Git repo and push to origin.
 
 USAGE
-   [options] <parameters>
+    repo-remove-history [options]
 
 OPTIONS
-  -x
-    Description...
-
-  -h|--help
-    Show help text.
+    -h|--help
+        Show help text.
 
 DESCRIPTION
-  Description description description description.
+    Remove entire commit history from the current Git repo and push to origin.
 
 AUTHOR
-  Martin N 2025  
+    Martin N 2025
 "
-help_line="tbc"
-web_desc_line="tbc"
+help_line="Remove entire commit history from the current Git repo and push to origin."
+web_desc_line="Remove entire commit history from the current Git repo and push to origin."
 
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
@@ -28,16 +25,16 @@ usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "
 " | sed "s/  */ /g")
 
 while [[ "$1" != "" ]]; do
-  case $1 in
-    -h|--help)
-      echo "$help_text"
-      exit
-      ;;
-    ?*)
-      break
-      ;;
-  esac
-  shift
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
 done
 
 echo "This removes the history from the current repo and pushes/commits this to the origin"

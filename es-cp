@@ -1,43 +1,59 @@
 #!/usr/bin/env bash
 help_text="
 NAME
-  es-cp - Elasticsearch index copy utility.
+    es-cp - Elasticsearch index copy utility.
 
 USAGE
-  es-cp <source_index> <destination_index>
+    es-cp <source_index> <destination_index>
 
 OPTIONS
-  -h|--help
-    Show help text.
+    -h|--help
+        Show help text.
 
 ENVIRONMENT VARIABLES
-  QES_HOST
-    Elasticsearch host (default: localhost)
+    QES_HOST
+        Elasticsearch host (default: localhost)
 
-  QES_PORT
-    Elasticsearch port (default: 9200)
+    QES_PORT
+        Elasticsearch port (default: 9200)
 
 DESCRIPTION
-  Copies an Elasticsearch index to a new index with the same settings and mappings.
+    Copies an Elasticsearch index to a new index with the same settings and mappings.
   
-  The script performs the following operations:
-  1. Creates the destination index with the same configuration as the source index.
-  2. Reindexes all data from source to destination
+    The script performs the following operations:
+    1. Creates the destination index with the same configuration as the source index.
+    2. Reindexes all data from source to destination
 
 EXAMPLES
-  # Copy an index locally
-  es-cp my-old-index my-new-index
+    # Copy an index locally
+    es-cp my-old-index my-new-index
 
-  # Copy with custom host
-  QES_HOST=elasticsearch.example.com es-cp source-idx dest-idx
+    # Copy with custom host
+    QES_HOST=elasticsearch.example.com; es-cp source-idx dest-idx
 
 AUTHOR
-  mjnurse.github.io - 2025
+    mjnurse.github.io - 2025
 "
+
+help_line="Copy Elasticsearch index to new index with same settings and mappings"
+web_desc_line="Copy Elasticsearch index to new index with same settings and mappings"
 
 # Connection settings from environment or defaults
 ES_HOST="${QES_HOST:-localhost}"
 ES_PORT="${QES_PORT:-9200}"
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
 
 # Validate arguments
 if [[ "$#" -ne 2 || "$1" == "-h" || "$1" == "--help" ]]; then

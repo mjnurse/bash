@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
 help_text="
 NAME
-  file-watch-do - Watch a file (or directory) and each time it is modified run a command.
+    file-watch-do - Watch a file (or directory) and each time it is modified run a command.
 
 USAGE
-  file-watch-do <file name> <command> [<command parameters>]
+    file-watch-do [options] <file name> <command> [<command parameters>]
+
+OPTIONS
+
+    -f|--frequency <seconds>
+        Set the frequency of checks in seconds. Default is 1 second.
 
 DESCRIPTION
-  Watch a file (or directory) and each time the file or a file within the directory is 
-  modified run a command.
+    Watch a file (or directory) and each time the file or a file within the directory is 
+    modified run a command.
 
 AUTHOR
-  mjnurse.github.io - 2019
+    mjnurse.github.io - 2019
 "
 help_line="Watch a file or directory and each time it or a member is modified run a command"
 web_desc_line="Watch a file or directory and each time it or a member is modified run a command"
@@ -28,6 +33,14 @@ usage=${usage%%DESCRIPTION*}
 usage=${usage//[$'\n\r']}
 usage=${usage##*   }
 usage="Usage: ${usage}"
+
+if [[ "$1" == "-f" || "$1" == "--frequency" ]]; then
+    shift
+    SLEEP_TIME=$1
+    shift
+else
+    SLEEP_TIME=1
+fi
 
 FD="f"  # File or directory flag
 
@@ -75,7 +88,7 @@ prev_file_date=$(get_date "$file_name")
 file_date=$prev_file_date
 while [ 1 ]; do
     while [[ "$file_date" == "$prev_file_date" ]]; do
-        sleep 1
+        sleep $SLEEP_TIME
         file_date=$(get_date "$file_name")
     done
     prev_file_date=$file_date

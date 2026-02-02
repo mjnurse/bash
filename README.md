@@ -7,18 +7,24 @@
 | b |`backup` | Create a dated zip archive of files and directories. |
 | |`bash-opts-example` | Example Bash script processing short and long command-line options, including grouped short options. |
 | c |`calc` | Command line calculator |
+| |`clr` | Check Local Repositories for uncommitted changes |
 | |`cls` | Clear terminal and putty terminal buffer |
 | |`crreadme` | Creates a README.md document from READMEscr.md |
 | |`csvplot` | Generates a HTML page containing a Google Chart plotting the csv data |
 | |`csvsql` | Run a SQL query over a csv file |
 | |`cve` | CVE Lookup |
+| e |`es-cp` | Copy Elasticsearch index to new index with same settings and mappings |
 | f |`file-watch-do` | Watch a file or directory and each time it or a member is modified run a command |
+| |`find-kill` | Find and kill processes interactively |
 | |`fsa` | File system analyzer and duplicate file finder |
 | g |`g` | Creates a set of alias to 'go' to various directories |
+| |`gen-bash-func` | Generates code and header of a bash function |
 | |`gen-bash` | Generates a bash script from a template |
 | |`gen-bookmark-page` | Generates a bookmark web page from a folder in the Chrome bookmarks bar |
 | |`gen-readme` | Create a README.md for the bash scripts repo |
 | |`gvim` | Runs windows gvim and fixes file paths |
+| i |`imp` | Improve text using Claude AI |
+| k |`keep-delete` | Runs through a set if files prompting for keep (move, rename) or delete |
 | l |`lf` | A script to recursively list folders and show folder details |
 | m |`mjnfind` | Finds files in commonly used directories |
 | n |`n` | Record and query notes |
@@ -28,7 +34,9 @@
 | |`parameters-function` | Contains a function to parse and print details about script parameters |
 | |`parq` | Read and display parquet files in various formats |
 | |`pwd-gen` | Random Password Generator |
+| q |`q-wbs` | Create a new WBS from a template |
 | r |`rep` | Repeats a command each time you press return |
+| |`repo-remove-history` | Remove entire commit history from the current Git repo and push to origin. |
 | s |`sl` | sl - SQLite interactive command-line shell wrapper |
 | |`sqlite-load-csv` | Load a csv file into a sqlite3 database |
 | t |`tidy` | Tidies filenames and fixes issues such as permission issues with files in the specified directory |

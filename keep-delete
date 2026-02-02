@@ -1,4 +1,4 @@
-#!/usr/bin/env
+#!/usr/bin/env bash
 help_text="
 NAME
     keep-delete - One line description.
@@ -14,13 +14,14 @@ OPTIONS
         Show help text.
 
 DESCRIPTION
-    Description description description description.
+    Runs through a set if files prompting for keep (move, rename) or delete.
 
 AUTHOR
     mjnurse.github.io - 2025
 "
-help_line="tbc"
-web_desc_line="tbc"
+
+help_line="Runs through a set if files prompting for keep (move, rename) or delete"
+web_desc_line="Runs through a set if files prompting for keep (move, rename) or delete"
 
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
@@ -39,14 +40,10 @@ case $1 in
         ;;
 esac
 
-
 cdef="\e[39m" # default colour
-
 cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
-
 cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
 cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
-
 clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
 clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
 
