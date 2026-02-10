@@ -8,8 +8,8 @@ Options:
   --help           Show this help message
   --file=FILENAME  Specify a file"
 
-help_line="Example Bash script processing short and long command-line options, including grouped short options."
-web_desc_line="Example Bash script processing short and long command-line options, including grouped short options."
+help_line="Example Bash script processing short and long command-line options, including grouped short options"
+web_desc_line="Example Bash script processing short and long command-line options, including grouped short options"
 
 
 function arg_err {

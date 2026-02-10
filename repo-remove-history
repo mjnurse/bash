@@ -16,8 +16,8 @@ DESCRIPTION
 AUTHOR
     Martin N 2025
 "
-help_line="Remove entire commit history from the current Git repo and push to origin."
-web_desc_line="Remove entire commit history from the current Git repo and push to origin."
+help_line="Remove entire commit history from the current Git repo and push to origin"
+web_desc_line="Remove entire commit history from the current Git repo and push to origin"
 
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"

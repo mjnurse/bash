@@ -4,8 +4,8 @@ usage: <<FILENAME>> [options] <filename>
 -h : This help text.
 "
 
-help_line="tbc"
-web_desc_line="Example Bash Script"
+help_line="Example Basic Bash Script"
+web_desc_line="Example Basic Bash Script"
 
 case $1 in
     -h|--help)

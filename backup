@@ -29,7 +29,7 @@ DESCRIPTION
 AUTHOR
     Martin N 2025  
 "
-help_line="Create a dated zip archive of files and directories."
+help_line="Create a dated zip archive of files and directories"
 web_desc_line="Creates dated zip backups and copies them to BACKUP_DIR"
 
 try="Try ${0##*/} -h for more information"

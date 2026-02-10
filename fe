@@ -1,27 +1,30 @@
 #!/usr/bin/env bash
 help_text="
 NAME
-  e - Search for a file to edit in gvim or VSCode.
+    fe - Search for a file and edit in gvim or VSCode.
 
 USAGE
-  e <search words>
+    fe <search words>
 
 OPTIONS
-  -g
-    Run grep - search content of files instead of filename.
+    -h|--help
+        Show help text.
 
-  -h|--help
-    Show help text.
+    -f|--fuzzy
+        Run a fuzzy search - adds wildcards before and after each word.
+
+    -g
+        Run grep - search content of files instead of filename.
 
 DESCRIPTION
-  Search for a file to edit in gvim or VSCode.  A list of matching files will
-  be shown with the option to select one for edit.
+    Search for a file and edit in gvim or VSCode.  A list of matching files will
+    be shown with the option to select one for edit.
 
 AUTHOR
-  mjnurse.github.io - 2020
+    mjnurse.github.io - 2020
 "
-help_line="tbc"
-web_desc_line="tbc"
+help_line="Search for a file and edit"
+web_desc_line="Search for a file and edit"
 
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
@@ -53,7 +56,6 @@ while [[ "$1" != "" ]]; do
    esac 
    shift
 done 
-
 
 tmp=/tmp/e.tmp
 tmp2=/tmp/e.tmp2
@@ -98,7 +100,7 @@ fi
 echo
 read -p "Enter Number (# or v# - Vim, c# - MS Code): " n
 
-editor="gvim"
+editor="code"
 if [[ "${n:0:1}" == "v" ]]; then
   editor="gvim"
   n="${n:1}"
@@ -114,4 +116,3 @@ while read line; do
   fi
   let c=c+1
 done < $tmp
-

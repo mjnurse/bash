@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
 help_text="
-usage: gen_bash [options] <filename>
+usage: gen_python [options] <filename>
 -h : This help text.
--b : Basic bash script only.
 "
 
-help_line="Generates a bash script from a template"
-web_desc_line="Generates a bash script from a template"
+help_line="Generates a python script from a template"
+web_desc_line="Generates a python script from a template"
 
 basic_yn=n
 case $1 in
     -h|--help)
         echo "$help_text"
         exit
-        ;;
-    -b|--basic)
-        basic_yn=y
-        shift
         ;;
 esac
 
@@ -33,11 +28,8 @@ if [[ -f "$new_file" ]]; then
     exit 1
 fi
 
-if [[ $basic_yn == y ]]; then
-    cat "$B/bash-basic-script-ex" | sed "s/<<FILENAME>>/$1/" > "$new_file"
-else
-    cat "$B/bash-script-example" > "$new_file"
-fi
+cat "$B/python-script-example" > "$new_file"
+
 chmod +x "$new_file"
 
 read -p "Edit $1? c - code, g - gvim, n - No [cgN]: " cgn

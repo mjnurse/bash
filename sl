@@ -38,7 +38,7 @@ DESCRIPTION
 AUTHOR
     mjnurse.github.io - 2020
 "
-help_line="sl - SQLite interactive command-line shell wrapper"
+help_line="An interactive SQLite shell wrapper with enhanced CLI features"
 web_desc_line="An interactive SQLite shell wrapper with enhanced CLI features"
 
 try="Try ${0##*/} -h for more information"

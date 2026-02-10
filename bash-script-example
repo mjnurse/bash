@@ -19,7 +19,7 @@ DESCRIPTION
 AUTHOR
     mjnurse.github.io - 2026
 "
-help_line="tbc"
+help_line="Example Bash Script"
 web_desc_line="Example Bash Script"
 
 # set -x # for debugging

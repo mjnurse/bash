@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+DESCRIPTION="""
+An example Python script template. A set of example arguments are defined below.
+"""
+ARGS= [
+    {"name": "-f", "name2": "--flag", "action": "store_true", "help": "Flag desc."},
+    {"name": "-m", "name2": "--metric-optional", "type": int, "default": 10, "help": "Metric desc."},
+    {"name": "arg_1_multi_choice", "choices": ["choice1", "choice2"], "help": "Arg 1 desc."},
+    {"name": "arg_2_number", "nargs": "?", "type": int, "default": 1, "help": "Arg 2 desc."},
+    {"name": "arg_3_string", "nargs": "?", "type": str, "default": "la la", "help": "Arg 3 desc."}
+]
+AUTHOR="mjnurse.github.io - 2026"
+
+HELP_LINE="Example Python Script"
+WEB_DESC_LINE="Example Python Script"
+
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="description:" + DESCRIPTION.replace("\n", "\n  ")[:-2],
+        epilog="author:\n  " + AUTHOR,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    for arg in ARGS:
+        names = [arg["name"]] + ([arg["name2"]] if "name2" in arg else [])
+        kwargs = {k: v for k, v in arg.items() if k not in ("name", "name2") and v is not None}
+        parser.add_argument(*names, **kwargs)
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+    print(args)
+
+if __name__ == "__main__":
+    main()
