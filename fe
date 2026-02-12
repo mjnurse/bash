@@ -77,11 +77,17 @@ if [[ $run_grep == y ]]; then
 fi
 
 echo "Searching ./* ..."
-find . -iname "$name" -type f -exec realpath {} \; >> $tmp
+find . -iname "$name" -type f \
+    -not -path '*/.*' -not -name '.*' \
+    -exec realpath {} \; >> $tmp
 echo "Searching MJN/* ..."
-find "/c/Users/MartinNurse/OneDrive - Quantexa Ltd/MJN" -iname "$name" -type f -exec realpath {} \; >> $tmp
+find "/c/Users/MartinNurse/OneDrive - Quantexa Ltd/MJN" -iname "$name" -type f \
+    -not -path '*/.*' -not -name '.*' \
+    -exec realpath {} \; >> $tmp
 echo "Searching ~/mjnurse"
-find ~/mjnurse -iname "$name" -type f -exec realpath {} \; >> $tmp
+find ~/mjnurse -iname "$name" -type f \
+    -not -path '*/.*' -not -name '.*' \
+    -exec realpath {} \; >> $tmp
 sort -u $tmp | sed "/mjnurse\.github\.io/d" > $tmp2
 mv -f $tmp2 $tmp
 

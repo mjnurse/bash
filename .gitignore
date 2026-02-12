@@ -1,11 +1,14 @@
 dme
 dme.*
+tmp.*
 *.pack
 *.dme
 *.bat
 *.swp
 *.db
 *.tmp
+*.py*
 g
 q-*
 q_*
+__*

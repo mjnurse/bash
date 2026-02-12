@@ -23,8 +23,27 @@ DESCRIPTION
 AUTHOR
     mjnurse.github.io - 2025
 "
+
 help_line="Improve text using Claude AI"
 web_desc_line="Improve text using Claude AI"
+
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
+cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
+clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
+function cpf {
+    color=c$1; shift
+    printf "${!color}$*${cdef}"
+}
 
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
@@ -55,23 +74,31 @@ request="$*"
 while [[ 1 ]]; do
 
     if [[ "$request" == "" ]]; then
-        read -p "Text to improve: " input_text
+        cpf lcya "Text to improve (CTRL-D to end input): "
+        tmp="$(cat)"
+        input_text="$(echo "$tmp" | tr -d "\r")"
     else
         input_text="$request"
     fi
 
     if [[ "$input_text" == "" ]]; then
-        echo "Exiting."
-        exit 0
+        input_text="$(powershell.exe -NoProfile -Command Get-Clipboard)"
+        if [[ "$input_text" != "" ]]; then
+            cecho lcya "Using clipboard content as input:"
+            echo "$input_text"
+        else
+            echo "Exiting."
+            exit 0
+        fi
     fi
 
     echo
-    echo "Generating improved text..."
+    cecho lcya "Generating improved text..."
 
     response="$(improve "${input_text}")"
 
     echo
-    echo "Response (copied to clipboard):"
+    cecho lcya "Response (copied to clipboard):"
     echo
     echo "$response"
     echo
