@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    bash-func - One line description.
+
+USAGE
+    bash-func [options] <parameters>
+
+OPTIONS
+    -x
+        Description...
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Description description description description.
+
+AUTHOR
+    mjnurse.github.io - 2026
+"
+help_line="Example Bash Script"
+web_desc_line="Example Bash Script"
+
+# set -x # for debugging
+
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
+cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
+clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+    cat $0.dat
+    exit
+fi
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -a|--add)
+            shift
+            ls -d "$1"* 2>/dev/null | sed 's/\(^.*\/\)\(.*\)/\2, \1\2/' >> $0.dat
+            cat $0.dat | sed '/^ *$/d;
+                              s/,/                                            /; 
+                              s/\(^................\)[^ ]*   *\(.*\)/\1, \2/' | sort -u > $0.tmp
+            mv $0.tmp $0.dat
+            exit
+            ;;
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -r)
+            if [[ -f "$0.tmp" ]]; then
+                dest="$(cat $0.tmp)"
+                rm $0.tmp
+                echo "cd \"$dest\"; ls"
+            fi
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+tf=/tmp/g-$$.tmp
+
+egrep ".*$1.*," $0.dat > $tf
+
+if [[ "$(wc -l < $tf)" == "0" ]]; then
+    echo "No match found for '$1'"
+    rm $tf
+    exit 1
+fi
+
+if [[ "$(wc -l < $tf)" == "1" ]]; then
+    cat $tf | sed 's/^[^,]*, *//' > $0.tmp
+else
+    echo "Multiple matches found for '$1':"
+    cat $tf | grep --color=auto -n -- "$1"
+    read -p "Enter destination number (blank to cancel): " num
+    if [[ "$num" != "" ]]; then
+        awk -v n=$num '{if (NR==n) print }' $tf | sed 's/^[^,]*, *//' > $0.tmp
+    fi
+fi
+rm $tf
