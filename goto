@@ -24,7 +24,8 @@ DESCRIPTION
     directory as the goto script. Each line in the file should contain a directory name and its corresponding
     path, separated by a comma.
 
-    Calling goto without any arguments will display the contents of goto.dat. 
+    Calling goto without any arguments will display the contents of goto.dat and indicate if any paths are
+    invalid directories. 
 
     When the script is run with a directory name details argument, it searches the goto.dat file for matches.
     If there is a single match, it outputs the corresponding path. If there are multiple matches, it lists
@@ -50,10 +51,8 @@ web_desc_line="Quickly navigate to frequently used directories"
 # Terminal Colours
 cdef="\e[39m" # default colour
 cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
-cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
-cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
-clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
-clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m"; cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"; clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
 
 function cecho {
     color=c$1; shift
@@ -65,7 +64,14 @@ tmp="${help_text##*USAGE}"
 usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
 
 if [[ "$1" == "" ]]; then
-    cat $0.dat
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        path_part="${line#*, }"
+        if [[ -d "$path_part" ]]; then
+            cecho gre "$line"
+        else
+            cecho red "$line (invalid path)"
+        fi
+    done < "$0.dat"
     exit
 fi
 
