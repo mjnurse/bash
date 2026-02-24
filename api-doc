@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+help_text="
+Generate API endpoint documentation in markdown format
+
+Options:
+    -e|--example      Show an example of how to use the api-doc command
+    -n <api-name>     Name of the API endpoint (e.g., example-api)
+    -d <description>  Description of the API endpoint
+    -p <param>        Parameter in the format 'name|type|description' (can be used multiple times)
+    -j <request-json> JSON string representing the request body
+    -r <response>     Response in the format 'CODE - Description|Action description|<optional response json>' (can be used multiple times)
+"
+
+help_line="Generate API endpoint documentation in markdown format"
+web_desc_line="Generates API endpoint documentation in markdown format based on provided parameters, request JSON, and response details."
+
+function example_desc() {
+    echo "Example:"
+    echo
+    echo "api-doc -n example-api \\"
+    echo "    -d \"This is an API endpoint document generation example.\" \\"
+    echo "    -p \"id|UUID|Example id parameter\" \\"
+    echo "    -p \"param name|PARAM TYPE|Parameter description\" \\"
+    echo "    -j '{\"desc\": \"example request json\", \"value\": 1234}' \\"
+    echo "    -r 'CODE - Code Description|Action description' \\"
+    echo "    -r '200 - Success|Record created|{\"desc\": \"example response json\", \"value\": 1234}'"
+}
+function usage() {
+    echo "Usage: api-doc -n <api-name> \\"
+    echo "               -d <description> \\"
+    echo "               [-p <param1>] [-p <param2>] ... \\"
+    echo "               [-j <request-json>] \\"
+    echo "               [-r <response1>] [-r <response2>] ..."
+}
+
+if [[ $# == 0 ]]; then
+    usage
+    echo "Try api-doc -h for more information"
+    exit 1
+fi
+
+case "$1" in
+    -h|--help)
+        usage
+        echo
+        echo "$help_text"
+        echo
+        example_desc
+
+        exit
+        ;;
+    -e|--example)
+        example_desc
+        echo
+        api-doc \
+            -n example-api \
+            -d "This is an API endpoint document generation example." \
+            -p "id|UUID|Example id parameter" \
+            -p "param name|PARAM TYPE|Parameter description" \
+            -j '{"desc": "example request json", "value": 1234}' \
+            -r 'CODE - Code Description|Action description' \
+            -r '200 - Success|Record created|{"desc": "example response json", "value": 1234}'
+        exit
+        ;;
+    *)
+        ;;
+esac
+
+# Initialize variables
+params=()
+request=""
+responses=()
+desc=""
+name=""
+
+# Parse remaining command-line arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -d)
+            shift
+            if [[ $# -gt 0 ]]; then
+                desc="$1"
+                shift
+            fi
+            ;;
+        -n)
+            shift
+            if [[ $# -gt 0 ]]; then
+                name="$1"
+                shift
+            fi
+            ;;
+        -p)
+            shift
+            if [[ $# -gt 0 ]]; then
+                params+=("$1")
+                shift
+            fi
+            ;;
+        -j)
+            shift
+            if [[ $# -gt 0 ]]; then
+                request="$1"
+                shift
+            fi
+            ;;
+        -r)
+            shift
+            if [[ $# -gt 0 ]]; then
+                responses+=("$1")
+                shift
+            fi
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Output parsed values
+echo
+echo "${name}" | sed "s/-/ /g; s/\b\(.\)/\U\1/g; s/^/## API: /; s/$/: \`${name}\`  →  \`JSON\`/"
+echo
+echo "$desc"
+echo
+echo "### Request"
+echo
+if [[ "$params" != "" ]]; then
+    for p in "${params[@]}"; do
+        echo "$p" | sed "s/|/:/; s/|/\` - /; s/^/- \`/"
+        echo
+    done
+fi
+if [[ "$request" != "" ]]; then
+    echo "\`\`\`json"
+    echo "$request" | jq
+    echo "\`\`\`"
+    echo
+fi
+echo "### Response"
+echo
+if [[ "$responses" != "" ]]; then
+    for r in "${responses[@]}"; do
+        echo "$r" | sed "s/|/\` - /; s/^/- \`/; s/|.*//"
+        json="$(echo $r | sed 's/.*|//')"
+        if [[ "${json:0:1}" == "{" ]]; then
+            echo "$json" | jq
+        fi
+        echo
+    done
+fi
+echo "## Exceptions"
+echo
+if [[ "$params" != "" ]]; then
+    for param in "${params[@]}"; do
+        p="$(echo $param | sed 's/|.*//')"
+        if [[ "$p" == "id" ]]; then
+            echo "- If \`$p\` is passed and does not exist, return \`404 - Not Found\`: No record found for id: <id>."
+            echo
+        fi
+        echo "- If $p is passed "
+        echo
+    done
+fi
+if [[ "$request" != "" ]]; then
+    echo "- If the request contains a \`???\` which already exists for the specified ???, return: \`409 - Conflict\`: ????: <value> already exists."
+fi
+echo

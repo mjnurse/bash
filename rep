@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+help_text="
+usage: rep [options] <command>
+-h : This help text.
+"
+
+help_line="Repeats a command each time you press return"
+web_desc_line="Repeats a command each time you press return"
+
+case $1 in
+    -h|--help)
+        echo "$help_text"
+        exit
+        ;;
+esac
+
+if [[ "$1" == "" ]]; then
+    echo "Error: no command provided"
+    echo "$help_text"
+    exit 1
+fi
+
+while [[ 1 ]]; do
+
+    $*
+    echo
+    echo "---------------------------------------"
+    echo "Press RTN to run again (or CTRL-C exit)"
+    echo "---------------------------------------"
+    read dummy
+
+done

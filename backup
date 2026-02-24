@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    backup - Create a dated zip archive of files and directories.
+
+USAGE
+    backup [options] [<backup_name>] [<file_or_directory>] [...]
+
+OPTIONS
+    -h|--help
+        Show help text.
+    
+    -f|--force
+        Force the backup without prompting.
+
+DESCRIPTION
+    Creates a zip archive with the format <backup_name>_YYMMDD.zip containing
+    the specified files and directories, then copies it to \$BACKUP_DIR.
+  
+    Requires the BACKUP_DIR environment variable to be set.
+
+    If no parameters are passed in, then the contents of the $BACKUP_DIR are
+    shown.
+
+    If a single parameter <backup_name> is passed, then all backups in the
+    $BACKUP_DIR which match the backup_name are shown.  Wildcards can be
+    used but must be passed inside quotes.
+
+AUTHOR
+    Martin N 2025  
+"
+help_line="Create a dated zip archive of files and directories"
+web_desc_line="Creates dated zip backups and copies them to BACKUP_DIR"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "
+" | sed "s/  */ /g")
+
+FORCE_YN=n
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -f|--forced)
+            FORCE_YN=y
+            ;;    
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+set -e
+
+if [[ $# -lt 2 ]]; then
+    echo "$usage"
+    echo "Try ${0##*/} -h for more information."
+    exit 1
+fi
+
+# Ensure BACKUP_DIR is set
+if [ -z "$BACKUP_DIR" ]; then
+    echo "Error: BACKUP_DIR environment variable is not set."
+    exit 1
+fi
+
+if [ $# = 0 ]; then
+    ls -ltr "$BACKUP_DIR"
+    exit 
+fi
+
+if [ $# = 1 ]; then
+    cd "$BACKUP_DIR"
+    ls -ltr $1_??????.zip
+    exit
+fi
+
+# First argument is the NAME
+NAME=$1
+shift
+
+# Date in yymmdd format
+DATE=$(date +%y%m%d)
+
+# Output zip filename
+ZIPFILE="${NAME}_${DATE}.zip"
+
+# Ensure BACKUP_DIR exists
+mkdir -p "$BACKUP_DIR"
+
+# Confirm request
+if [[ $FORCE_YN == n ]]; then
+    if [[ -f "$BACKUP_DIR/$ZIPFILE" ]]; then
+        read -p "Backup dated today already exists, overwrite [yN]: " CONFIRM
+        if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+            echo "Backup cancelled."
+            exit 0
+        fi
+    fi
+    echo "Creating backup: $ZIPFILE"
+    echo "Including files/directories: $*"
+    ls $*
+    read -p "Proceed? [yN]: " CONFIRM
+    if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+        echo "Backup cancelled."
+        exit 0
+    fi
+fi
+
+# Create the zip archive
+zip -r "$ZIPFILE" "$@" -x "*/.*" -x "__pycache__/*" -x "venv/*" -x ".git/*"
+
+# Move to BACKUP_DIR
+mv "$ZIPFILE" "$BACKUP_DIR/"
+
+echo
+echo "Backup complete: $(du -h "$BACKUP_DIR/$ZIPFILE")"

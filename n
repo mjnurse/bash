@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  n - Notes
+
+USAGE
+  n [options] <text - consider wrapping in quotes>
+
+OPTIONS
+  -h|--help
+    Show this help message.
+
+  -a|--add
+    Add the <text> as a new note.
+
+  -e|--edit
+    Edit the notes text file.
+
+  -m|--markdown
+    Generate a markdown version of the notes file.
+
+DESCRIPTION
+  Record and query notes.
+
+AUTHOR
+  mjnurse.github.io - 2023
+"
+
+help_line="Record and query notes"
+web_desc_line="Record and query notes"
+
+nf=~/.notes.txt
+
+if [[ "$1" == "" ]]; then
+  echo ' _  _     _'
+  echo '| \| |___| |_ ___ ___'
+  echo '| .` / _ \  _/ -_|_-<'
+  echo '|_|\_\___/\__\___/__/'
+  echo
+  cat "$nf"
+  echo
+  echo "Usage: n [options] <text - consider wrapping in quotes>"
+  echo "Try:  \"n -h\" for more information."
+  exit
+fi
+
+case ${1-} in
+  -a|--add)
+    shift
+    echo "$*" >> "$nf"
+    ;;
+  -e|--edit)
+    vi "$nf"
+    ;;
+  -m|--markdown)
+    # Generate a markdown version of the notes file
+    echo "# Miscellaneous Notes"
+    echo
+    echo "The notes captured in the Linux notes tool = \`n\`."
+    echo
+    echo "\`\`\`"
+    cat "$nf"
+    echo "\`\`\`"
+    ;;
+  -h|--help)
+    echo "$help_text"
+    exit
+    ;;
+  *)
+    echo "NOTES"
+    echo "-----"
+    grep  --ignore-case --color=auto "$1" "$nf"
+    exit
+    ;;
+esac
+
+sort "$nf"| sed '/^$/d' > "$nf".tmp
+
+# Group lines by their first word, inserting a blank line whenever the first word changes.
+awk '
+    {
+        split($0, words, " ")
+        if (NR == 1) {
+            prev = words[1]
+            print
+        } else {
+            if (words[1] != prev) {
+            print ""
+            prev = words[1]
+            }
+            print
+        }
+    }' "$nf".tmp > "$nf"
+rm -f "$nf".tmp

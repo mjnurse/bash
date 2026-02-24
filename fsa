@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    fsa - File system analyzer and duplicate file finder.
+
+USAGE
+    fsa [options]
+
+OPTIONS
+    -r|--reuse
+        Reuse the previous scan instead of running a new one.
+
+    -h|--help
+        Show help text.
+
+COMMANDS
+    c           Show file count by type (file/directory).
+    ds          Show directory sizes.
+    fd          Find duplicate files (same name and size).
+    f           Show current filter settings.
+    f fn <pat>  Set filename filter pattern.
+    f ms <size> Set minimum size filter.
+    lg          List 100 largest files.
+    sq          Open SQLite3 shell for custom queries.
+    !<cmd>      Run a shell command.
+    h|help      Show command help.
+    q|quit      Quit the program.
+
+DESCRIPTION
+    A file system analyzer that scans directories and stores file metadata
+    in a SQLite database for querying. Useful for finding duplicate files,
+    identifying large files consuming disk space, and analyzing directory
+    structure. Scans are cached in /tmp and can be reused. Automatically
+    excludes .git, node_modules, and oracle_client directories.
+
+AUTHOR
+    mjnurse.github.io - 2020
+"
+help_line="File system analyzer and duplicate file finder"
+web_desc_line="A file system analyzer for finding duplicates and analyzing disk usage"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+div="#@&#"
+reuse_yn=n
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -r|--reuse)
+            reuse_yn=y
+            ;;
+    esac
+    shift
+done
+
+if [[ "$reuse_yn" == "y" ]]; then
+    tmp="$(ls /tmp/fsa:*.db)"
+    file="${tmp/.db/}"
+else
+    if [[ "$(ls /tmp/fsa:* 2> /dev/null | wc -l )" == "1" ]]; then
+        tmp="$(ls /tmp/fsa:*.db)"
+        file="${tmp/.db/}"
+        echo "Scan last run: ${file##*:}"
+        read -p "Reuse this scan [yN]: " reuse_yn
+    fi
+fi
+
+if [[ "${reuse_yn^^}" != "Y" ]]; then
+    rm -f /tmp/fsa:*
+    file="/tmp/fsa:$(date +'%y%m%d-%H%M')"
+    echo "Running Scan - this may take a while"
+    echo "f,d,s,b,t" > $file.csv
+    find . -printf "%f${div}%h${div}%s${div}%b${div}%y\n" | sed "s/,//g; s/${div}/,/g" >> $file.csv
+    echo -e '.mode csv\n.import '$file.csv' files\n' | sqlite3 $file.db
+    rm -f $file.csv
+fi
+
+prompt="fsa: $(pwd) > "
+filename_filter="%"
+min_size_filter="0"
+max_depth="999"
+
+std_filter="AND d NOT LIKE '%oracle_client%' AND d NOT LIKE '%\/.git\/%'"
+std_filter="$std_filter AND d NOT LIKE '%\/node_modules\/%'"
+
+function sq() {
+    table="(SELECT * FROM files WHERE f LIKE '${filename_filter}' AND (s+0) > ${min_size_filter} $std_filter)"
+    echo "$1" | sed "s/^ *//; s/{table}/$table/; s/{max_depth}/$max_depth/" | sqlite3 $file.db
+}
+
+function set_filter() {
+    case $1 in
+        fn)
+            filename_filter="$2"
+            ;;
+        fs)
+            min_size_filter="$2"
+            ;;
+    esac
+}
+
+file_count="
+    .mode column
+    .headers on
+    SELECT CASE t
+        WHEN 'f' THEN 'file'
+        WHEN 'd' THEN 'directory'
+        ELSE t END AS type
+         , COUNT(*) num
+    FROM {table} GROUP BY t;
+"
+
+file_dups="
+    .mode column
+    .width 40 10 60
+    SELECT    f, s, details
+    FROM (
+        SELECT    f
+                , s
+                , 0
+                , COUNT(*)||' ----------------------------------' AS details 
+        FROM      {table}
+        WHERE     t = 'f'
+        GROUP BY  f
+                , s
+        HAVING    COUNT(*) > 1
+        UNION
+        SELECT    f
+                , s
+                , 1
+                , d||'/'||f AS details
+        FROM      {table}
+        WHERE     (f, s) IN (
+            SELECT    f, s
+            FROM      {table}
+            WHERE     t = 'f'
+            GROUP BY  f, s
+            HAVING    COUNT(*) > 1 )
+        ORDER BY 1,2,3
+    );"
+
+largest_files="
+    .mode column
+    .headers on
+    .width 40 10 60
+    SELECT f, (s/1024)||'KB' AS kb, d||'/'||f AS file
+    FROM   {table}
+    ORDER BY (s+0)
+    LIMIT 100;"
+
+dir_sizes="
+    .mode column
+    .headers on
+    .width 60 10 20
+
+    SELECT  dirs.d,
+            COUNT(f),
+            SUM(s) 
+    FROM (
+        SELECT  d
+        FROM    files 
+        WHERE   LENGTH(d) - LENGTH(REPLACE(d, '/', '')) <= {max_depth}
+        GROUP BY d) dirs
+    JOIN files ON (files.d LIKE dirs.d||'%')
+    GROUP BY    dirs.d
+    ORDER BY    dirs.d;
+"
+
+while [ 1 ]; do
+    read -e -p "$prompt" option
+    history -s "$option"
+
+    case $option in
+        c)
+            sq "$file_count"
+            ;;
+        ds)
+            sq "$dir_sizes"
+            ;;
+        fd)
+            sq "$file_dups"
+            ;;
+        o)
+            echo "Options:"
+            echo "- filename filter (fn): ${filename_filter}"
+            echo "- min size filter (fs): ${min_size_filter}"
+            echo "- max dir depth   (md): ${max_depth}"
+            ;;
+        f*)
+            set_filter $option
+            ;;
+        h|help)
+            echo "Commands:"
+            echo "c      - file count by type"
+            echo "ds     - directory sizes"
+            echo "fd     - file duplicates"
+            echo "fn     - set filename filter option"
+            echo "fs     - set minimum file size filter option"
+            echo "md     - set maximum directory depth option"
+            echo "o      - show options"
+            echo "sq     - open sqlite3"
+            echo "!<cmd> - Run shell command"
+            echo "q      - quit"
+            ;;
+        lg)
+            sq "$largest_files"
+            ;;
+        md*)
+            max_depth="${option#md }"
+            ;;
+        q|quit)
+            exit
+            ;;
+        sq)
+            sqlite3 $file.db
+            ;;
+        !*)
+            ${option:1}
+            ;;
+        *)
+            echo "No such option.  Try h for help"
+            ;;
+    esac
+done

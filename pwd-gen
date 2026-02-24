@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    gen-pwd - Random Password Generator using OpenSSL
+
+USAGE
+    gen-pwd [options]
+
+OPTIONS
+    -l|--length <number>
+        Specify the length of the generated password. Default is 16.
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    This script generates a random password of specified length using OpenSSL.
+    The password includes a mix of uppercase, lowercase, digits, and special characters.
+
+AUTHOR
+  Martin N 2025  
+"
+help_line="Random Password Generator"
+web_desc_line="Random Password Generator"
+
+# Default password length
+length=16
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "
+" | sed "s/  */ /g")
+
+while [[ "$1" != "" ]]; do
+  case $1 in
+    -h|--help)
+      echo "$help_text"
+      exit
+      ;;
+    -l|--length)
+      shift
+      length=$1
+      ;;
+    ?*)
+      break
+      ;;
+  esac
+  shift
+done
+
+# Generate password using OpenSSL
+password=$(openssl rand -base64 $((length * 3 / 4 + 1)) | tr -dc 'A-Za-z0-9!@#$%^&*()-_=+' | head -c "$length")
+
+# Output the password
+echo "$password"

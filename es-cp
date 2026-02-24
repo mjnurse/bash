@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    es-cp - Elasticsearch index copy utility.
+
+USAGE
+    es-cp <source_index> <destination_index>
+
+OPTIONS
+    -h|--help
+        Show help text.
+
+ENVIRONMENT VARIABLES
+    QES_HOST
+        Elasticsearch host (default: localhost)
+
+    QES_PORT
+        Elasticsearch port (default: 9200)
+
+DESCRIPTION
+    Copies an Elasticsearch index to a new index with the same settings and mappings.
+  
+    The script performs the following operations:
+    1. Creates the destination index with the same configuration as the source index.
+    2. Reindexes all data from source to destination
+
+EXAMPLES
+    # Copy an index locally
+    es-cp my-old-index my-new-index
+
+    # Copy with custom host
+    QES_HOST=elasticsearch.example.com; es-cp source-idx dest-idx
+
+AUTHOR
+    mjnurse.github.io - 2025
+"
+
+help_line="Copy Elasticsearch index to new index with same settings and mappings"
+web_desc_line="Copy Elasticsearch index to new index with same settings and mappings"
+
+# Connection settings from environment or defaults
+ES_HOST="${QES_HOST:-localhost}"
+ES_PORT="${QES_PORT:-9200}"
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+# Validate arguments
+if [[ "$#" -ne 2 || "$1" == "-h" || "$1" == "--help" ]]; then
+    echo "Usage: ${0/\.\//} <index_name> <new_index_name>"
+    echo "Try es-cp -h' for more information"
+    exit 1
+fi
+
+old_index="$1"
+new_index="$2"
+
+# Check if new index already exists
+if curl -s -o /dev/null -w "%{http_code}" "$ES_HOST:$ES_PORT/$new_index" | grep -q "200"; then
+  echo "Error: Index '$new_index' already exists."
+  exit 1
+fi
+
+# Extract settings and mappings (excluding auto-generated metadata)
+settings=$(curl -s -X GET "$ES_HOST:$ES_PORT/$old_index" | jq ".\"$old_index\".settings.index | del(.creation_date, .uuid, .provided_name, .version)")
+mappings=$(curl -s -X GET "$ES_HOST:$ES_PORT/$old_index/_mapping" | jq ".\"$old_index\".mappings")
+
+# Create new index with same configuration
+curl -X PUT "$ES_HOST:$ES_PORT/$new_index" -H 'Content-Type: application/json' -d @- <<EOF
+{
+  "settings": $settings,
+  "mappings": $mappings
+}
+EOF
+
+# Reindex all data from source to destination
+curl -X POST "$ES_HOST:$ES_PORT/_reindex" -H 'Content-Type: application/json' -d @- <<EOF
+{
+  "source": {
+    "index": "$old_index"
+  },
+  "dest": {
+    "index": "$new_index"
+  }
+}
+EOF

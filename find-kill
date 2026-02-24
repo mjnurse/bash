@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    find-kill - Find and kill processes interactively
+
+USAGE
+    find-kill [options] <parameters>
+
+OPTIONS
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    This script finds processes matching a given name or pattern
+    and prompts the user to kill each one individually.
+
+AUTHOR
+    mjnurse.github.io - 2026
+"
+help_line="Find and kill processes interactively"
+web_desc_line="Find and kill processes interactively"
+
+# set -x # for debugging
+
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
+cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
+clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+    echo "${usage}"
+    echo "${try}"
+    exit 1
+fi
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+ps -edf | grep "$1" | grep -v grep | grep -v "$0" > /tmp/$$.lst
+if [[ ! -s /tmp/$$.lst ]]; then
+    cecho red "No processes found matching '$1'"
+    rm /tmp/$$.lst
+    exit 1
+fi
+cecho cya "Processes matching '$1':"
+cat /tmp/$$.lst | \
+    sed 's/^\([^ ]* *[^ ]*\) *[^ ]* *[^ ]* *[^ ]* *[^ ]* *[^ ]* *\([^ ]*\).*/  \1 \2/' | \
+    grep --color "$1"
+echo
+while read -r line; do
+    pid=$(echo "$line" | awk '{print $2}')
+    pname=$(echo "$line" | awk '{print $8}')
+    printf "Kill PID ${pid} (${pname}) [yNq]? "
+    read -r yn </dev/tty
+    if [[ "${yn^}" == "Q" ]]; then
+        cecho yel "Quitting"
+        break
+    fi
+    if [[ "${yn^}" == "Y" ]]; then
+        cecho yel "Killing PID ${pid} (${pname})" 
+        kill -9 "$pid"
+    fi
+done < /tmp/$$.lst
+
+rm /tmp/$$.lst

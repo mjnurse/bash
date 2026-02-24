@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    bash-func - One line description.
+
+USAGE
+    bash-func [options] <parameters>
+
+OPTIONS
+    -x
+        Description...
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Description description description description.
+
+AUTHOR
+    mjnurse.github.io - 2026
+"
+help_line="Example Bash Script"
+web_desc_line="Example Bash Script"
+
+# set -x # for debugging
+
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m"; cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"; clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+# if [[ "$1" == "" ]]; then
+#     echo "${usage}"
+#     echo "${try}"
+#     exit 1
+# fi
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+cat $0

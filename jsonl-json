@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+
+import argparse
+import json
+import sys
+import os
+
+def jsonl_to_json(jsonl_path, json_path):
+    with open(jsonl_path, "r", encoding="utf-8") as f_in:
+        data = [json.loads(line) for line in f_in]
+
+    with open(json_path, "w", encoding="utf-8") as f_out:
+        json.dump(data, f_out, indent=2)
+
+def json_to_jsonl(json_path, jsonl_path):
+    with open(json_path, "r", encoding="utf-8") as f_in:
+        data = json.load(f_in)
+
+    with open(jsonl_path, "w", encoding="utf-8") as f_out:
+        for obj in data:
+            f_out.write(json.dumps(obj) + "\n")
+
+def main():
+    parser = argparse.ArgumentParser(description="Convert between JSON and JSONL formats.")
+    parser.add_argument("input", help="Input file path (.json or .jsonl)")
+    parser.add_argument("-o", "--output", help="Output file path (optional)")
+
+    args = parser.parse_args()
+    input_path = args.input
+    output_path = args.output
+
+    if not os.path.isfile(input_path):
+        print(f"ERROR: File not found: {input_path}")
+        sys.exit(1)
+
+    if input_path.endswith(".jsonl"):
+        output_path = output_path or input_path.replace(".jsonl", ".json")
+        jsonl_to_json(input_path, output_path)
+        print(f"Converted JSONL → JSON: {output_path}")
+    elif input_path.endswith(".json"):
+        output_path = output_path or input_path.replace(".json", ".jsonl")
+        json_to_jsonl(input_path, output_path)
+        print(f"Converted JSON → JSONL: {output_path}")
+    else:
+        print("ERROR: Unsupported file type. Use .json or .jsonl")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

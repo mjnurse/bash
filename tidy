@@ -1,0 +1,355 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    tidy - Tidies filenames and fixes issues such as permission issues with files in the specified directory.
+
+USAGE
+    tidy [<folder>]
+
+OPTIONS
+    -n|--name
+        Only tidy filenames - do not check permissions etc.
+    
+    -fn|-nf
+        Force rename of filenames without prompting.  Implies -n.
+    
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Tidies filenames and fixes issues such as permission issues with files in the specified directory.
+
+AUTHORS
+    mjnurse.github.io - 2020
+"
+help_line="Tidies filenames and fixes issues such as permission issues with files in the specified directory"
+web_desc_line="Tidies filenames and fixes issues such as permission issues with files in the specified directory"
+
+force=n
+names_only=n
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -n|--name)
+            names_only=y
+            ;;
+        -fn|-nf)
+            force=y
+            names_only=y
+            ;;
+        -*)
+            echo "Unknown option: $1"
+            echo "Try ${0##*/} -h for more information"
+            exit 1
+            ;;
+        ?*)
+            cd $1
+            ;;
+    esac 
+    shift
+done
+
+cdef="\e[39m" # default colour
+
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
+cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
+clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+
+function cecho {
+    color=c$1
+    shift
+    message="$*"
+    echo -e "${!color}${message}${cdef}"
+}
+cecho gre ================================================================================
+cecho gre "Filename contains character other than [a-z][0-9]_-."
+cecho gre ================================================================================
+
+for f in *; do
+    if [[ -f "$f" && ! -L "$f" ]]; then
+        newname=$(echo "$f" | \
+            sed 's/[^a-zA-Z0-9._-]/_/g; 
+                    s/\([A-Z]\)\([A-Z][A-Z]*\)/\1\L\2/g;
+                s/^\([A-Z]\)/\L\1/;
+                s/\([A-Z]\)/-\L\1/g;
+                s/__*/_/g; 
+                s/--*/-/g; 
+                s/_\./\./g;
+                s/_-/-/g;
+                s/-_/-/g;
+                s/__*/_/g; 
+                s/--*/-/g; 
+        ')
+        if [[ "$f" != "$newname" && "$f" != "README.md" ]]; then
+            echo --------------------------------------------------------------------------------
+            echo "FILE:      $f"
+            echo "Rename as: $newname"
+            echo --------------------------------------------------------------------------------
+            if [[ $force == y ]]; then
+                opt="r"
+            else
+                printf "${clblu}[i]gnore rule, [r]ename, [s]kip, q[uit]. [irSq]?: ${cdef}"
+                read opt
+            fi
+            case $opt in
+                r|R)
+                    # rename via a temp tile name to avoid the Windows file system saying 
+                    # a.txt is same as A.txt etc.
+                    val=$RANDOM
+                    mv "$f" "${newname}.tmp.${val}"
+                    mv "${newname}.tmp.${val}" "$newname"
+                    ;;
+                i|I)
+                    break;;
+                q|Q)
+                    exit;;
+            esac
+        fi
+    fi
+done
+
+if [[ $names_only == y ]]; then
+    exit
+fi
+
+cecho gre ================================================================================
+cecho gre Executable but not '#!/usr/bin/env'
+cecho gre ================================================================================
+
+for f in $(find . -maxdepth 1 -executable); do
+
+    if [[ -f $f && ! -L $f ]]; then
+        line1="$(head -1 $f)"
+        if [[ "${line1:0:14}" != "#!/usr/bin/env" ]]; then
+            echo --------------------------------------------------------------------------------
+            echo FILE: $f
+            echo --------------------------------------------------------------------------------
+            echo First 5 lines:
+            echo --------------
+            head -5 $f
+            echo
+            printf "${clblu}[i]gnore rule, [r]emove exec, add [b]ash, add [p]ython3, [s]kip, q[uit]. [irbpSq]?: ${cdef}"
+            read opt
+            case $opt in
+                r|R)
+                    chmod a-x $f
+                    ;;
+                b|B)
+                    sed -i '/^#!\/bin\/bash/d' $f
+                    sed -i '1i#!/usr/bin/env bash' $f
+                    ;;
+                p|P)
+                    sed -i '1i#!/usr/bin/env python3' $f
+                    ;;
+                i|I)
+                    break
+                    ;;
+                q|Q)
+                    exit
+                    ;;
+            esac
+        fi 
+    fi
+done
+
+cecho gre ================================================================================
+cecho gre '#!/usr/bin/env' but not Executable
+cecho gre ================================================================================
+
+for f in $(find . -maxdepth 1 ! -executable); do
+   if [[ -f $f && ! -L $f ]]; then
+      line1="$(head -1 $f)"
+      line1=${line1//[$' \t\r\n']}
+      if [[ "$line1" == "#!/usr/bin/env" ]]; then
+         echo --------------------------------------------------------------------------------
+         echo FILE: $f
+         echo --------------------------------------------------------------------------------
+         echo First 5 lines:
+            echo --------------
+         head -5 $f
+         echo
+         read -p "[i]gnore rule, [d]elete '#!/usr/bin/env', [m]ake exec, [s]kip, q[uit]. [idmSq]?: " opt
+         case $opt in
+            d|D)
+               sed -i '1d' $f;;
+            m|M)
+               chmod u+x $f;;
+            i|I)
+               break;;
+            q|Q)
+               exit;;
+         esac
+      fi 
+   fi
+done
+
+cecho gre ================================================================================
+cecho gre Writable by Other
+cecho gre ================================================================================
+
+for f in $(find . -maxdepth 1 -perm -o=w); do
+   if [[ -f $f && ! -L $f ]]; then
+      echo --------------------------------------------------------------------------------
+      ls -al $f
+      echo
+      read -p "[i]gnore rule, [r]remove writeable other, [s]kip, q[uit]. [irSq]?: " opt
+      case $opt in
+         r|R)
+            chmod o-w $f;;
+         i|I)
+            break;;
+         q|Q)
+            exit;;
+      esac
+   fi
+done
+
+cecho gre ================================================================================
+cecho gre Writable by Group
+cecho gre ================================================================================
+
+for f in $(find . -maxdepth 1 -perm -g=w); do
+   if [[ -f $f && ! -L $f ]]; then
+      echo --------------------------------------------------------------------------------
+      ls -al $f
+      echo
+      read -p "[i]gnore rule, [r]remove writeable group, [s]kip, q[uit]. [irSq]?: " opt
+      case $opt in
+         r|R)
+            chmod g-w $f;;
+         i|I)
+            break;;
+         q|Q)
+            exit;;
+      esac
+   fi
+done
+
+cecho gre ================================================================================
+cecho gre Executable by Other
+cecho gre ================================================================================
+
+for f in $(find . -maxdepth 1 -perm -o=x); do
+   if [[ -f $f && ! -L $f ]]; then
+      echo --------------------------------------------------------------------------------
+      ls -al $f
+      echo
+      read -p "[i]gnore rule, [r]remove Exec other, [s]kip, q[uit]. [irSq]?: " opt
+      case $opt in
+         r|R)
+            chmod o-x $f;;
+         i|I)
+            break;;
+         q|Q)
+            exit;;
+      esac
+   fi
+done
+
+cecho gre ================================================================================
+cecho gre Executable by Group
+cecho gre ================================================================================
+
+for f in $(find . -maxdepth 1 -perm -g=x); do
+   if [[ -f $f && ! -L $f ]]; then
+      echo --------------------------------------------------------------------------------
+      ls -al $f
+      echo
+      read -p "[i]gnore rule, [r]remove Exec group, [s]kip, q[uit]. [irSq]?: " opt
+      case $opt in
+         r|R)
+            chmod g-x $f;;
+         i|I)
+            break;;
+         q|Q)
+            exit;;
+      esac
+   fi
+done
+
+cecho gre ================================================================================
+cecho gre No header
+cecho gre ================================================================================
+
+for f in $(find . -maxdepth 1 -executable); do
+   if [[ -f $f && ! -L $f ]]; then
+      l1="$(cat $f | sed -n '1p')"
+      l2="$(cat $f | sed -n '2p')"
+      if [[ "$l1" == "#!/usr/bin/env bash" && "${l2:0:10}" != "help_text=" ]]; then
+         echo --------------------------------------------------------------------------------
+         ls -al $f
+         echo
+         head -15 $f
+         echo
+         read -p "[i]gnore rule, [a]dd header, edit [v]im, edit [c]ode, [s]kip, q[uit]. [iavcSq]?: " opt
+         case $opt in
+            a|A)
+               tidytmp="/tmp/tidy.tmp"
+echo '#!/usr/bin/env
+help_text="
+NAME
+    '${f:2}' - One line description.
+
+USAGE
+    '${f:2}' [options] <parameters>
+
+OPTIONS
+    -x
+        Description...
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Description description description description.
+
+AUTHOR
+    mjnurse.github.io - 2025
+"
+help_line="'tbc'"
+web_desc_line="'tbc'"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+    echo "${usage}"
+    echo "${try}"
+    exit 1
+fi
+
+case $1 in
+    -h|--help)
+        echo "$help_text"
+        exit
+        ;;
+esac
+' > $tidytmp
+               tail +2 $f >> $tidytmp
+               cp -f $tidytmp $f
+               ;;
+            v|V)
+               vgim $f
+               ;;
+            c|C)
+               code $f
+               ;;
+            i|I)
+               break
+               ;;
+            q|Q)
+               exit
+               ;;
+         esac
+      fi
+   fi
+done

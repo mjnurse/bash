@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+DESCRIPTION="""
+Generate fake data: business names, person names, or addresses.
+"""
+ARGS= [
+    {"name": "datatype", "choices": ["business", "person", "address", "email", "all"], "help": "Type of data to generate"},
+    {"name": "count", "nargs": "?", "type": int, "default": 1, "help": "Number of items to generate"}
+]
+AUTHOR="mjnurse.github.io - 2026"
+
+HELP_LINE="Generate fake data"
+WEB_DESC_LINE="Generate fake data"
+
+import argparse
+from faker import Faker
+import sys
+
+fake = Faker("en_GB")
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="description:" + DESCRIPTION.replace("\n", "\n  ")[:-2],
+        epilog="author:\n  " + AUTHOR,
+        formatter_class=argparse.RawDescriptionHelpFormatter )
+    for arg in ARGS:
+        names = [arg["name"]] + ([arg["name2"]] if "name2" in arg else [])
+        kwargs = {k: v for k, v in arg.items() if k not in ("name", "name2") and v is not None}
+        parser.add_argument(*names, **kwargs)
+    return parser.parse_args()
+
+def generate_business_names():
+    return fake.company()
+
+def generate_person_names():
+    return fake.name()
+
+def generate_email_addresses(bus="", name=""):
+    if bus and name:
+        return f"{name.replace(' ', '.').lower()}@{bus.replace(' ', '').lower()}.com"
+    else:
+        return fake.email()
+
+def generate_addresses():
+    return f"{fake.street_address()}, {fake.city()}, {fake.postcode()}".replace("\n", ", ")
+
+def main():
+
+    args = parse_args()
+
+    for _ in range(args.count):
+        if args.datatype == "business":
+            print(generate_business_names())
+        elif args.datatype == "person":
+            print(generate_person_names())
+        elif args.datatype == "address":
+            print(generate_addresses())
+        elif args.datatype == "email":
+            print(generate_email_addresses())
+        elif args.datatype == "all":
+            bus_name = generate_business_names()
+            person_name = generate_person_names()
+            json = {"business": bus_name, "person": person_name, "email": generate_email_addresses(bus_name, person_name), "address": generate_addresses()}
+            print(json)
+        else:
+            print("Unsupported datatype", file=sys.stderr)
+            sys.exit(1)
+
+if __name__ == "__main__":
+    main()

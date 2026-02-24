@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    keep-delete - One line description.
+
+USAGE
+    keep-delete [options] <parameters>
+
+OPTIONS
+    -x
+        Description...
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Runs through a set if files prompting for keep (move, rename) or delete.
+
+AUTHOR
+    mjnurse.github.io - 2025
+"
+
+help_line="Runs through a set if files prompting for keep (move, rename) or delete"
+web_desc_line="Runs through a set if files prompting for keep (move, rename) or delete"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+    echo "${usage}"
+    echo "${try}"
+    exit 1
+fi
+
+case $1 in
+    -h|--help)
+        echo "$help_text"
+        exit
+        ;;
+esac
+
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
+cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
+clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+
+function cecho {
+    color=c$1
+    shift
+    message="$*"
+    echo -e "${!color}${message}${cdef}"
+}
+
+cecho lgre ================================================================================
+cecho lgre "Files being considered"
+cecho lgre ================================================================================
+
+files=""
+for f in $*; do
+    [ -e "$f" ] || continue  # skip if no match
+    [ -d "$f" ] && continue  # skip if directory
+    files="$files $f"
+done
+if [[ "$files" == "" ]]; then
+    cecho red "No files found matching '$*'"
+    exit 1
+fi
+ls -l $files
+for f in $*; do
+    [ -e "$f" ] || continue  # skip if no match
+    [ -d "$f" ] && continue  # skip if directory
+    cecho lgre -------------------------------------------------------------------------------
+    cecho lgre FILE: "$f" - $(stat -c "%s bytes, modified %y" "$f" | sed 's/\.0000*//')
+    cecho lgre -------------------------------------------------------------------------------
+    opt=""
+    while [[ "$opt" == "" ]]; do
+        printf "${clblu}(K)eep, (o)pen, d(elete), (m)ove, (r)ename, (v)iew, (q)uit. [Kodmrvq]?: ${cdef}"
+        read opt
+        opt=${opt:-K}
+        case ${opt^^} in
+            K)
+                cecho yel "Keeping $f"
+                break
+                ;;
+            O)
+                opt=""
+                if [[ "$f" =~ \.drawio$ ]]; then
+                    cecho yel "Opening drawio file $f"
+                    drawio "$f"
+                elif [[ "$f" =~ \.pdf$ ]]; then
+                    cecho yel "Opening PDF file $f"
+                    edge "$f"
+                elif [[ "$f" =~ \.svg$ ]] || [[ "$f" =~ \.png$ ]] || [[ "$f" =~ \.jpg$ ]] || \
+                     [[ "$f" =~ \.jpeg$ ]]; then
+                    cecho yel "Opening file $f"
+                    edge "$f"
+                elif [[ "$f" =~ \.pptx?$ ]]; then
+                    cecho yel "Opening Powerpoint file $f"
+                    ms-office "$f"
+                elif [[ "$f" =~ \.docx?$ ]]; then
+                    cecho yel "Opening Word file $f"
+                    ms-office "$f"
+                elif [[ "$f" =~ \.xlsx?$ ]]; then
+                    cecho yel "Opening Excel file $f"
+                    ms-office "$f"
+                else
+                    cecho yel "Opening file $f in vi"
+                    vi "$f"
+                fi
+                ;;
+            V)
+                cecho yel "Cat file $f"
+                cat "$f"
+                opt=""
+                ;;
+            R)
+                read -p "New name: " newname
+                if [[ "$newname" != "" && "$newname" != "$f" ]]; then
+                    mv "$f" "$newname"
+                    cecho yel "Renamed $f to $newname"
+                    f="$newname"
+                    cecho lgre "FILE: $f"
+                else
+                    cecho red "Invalid name or same as current name. Not renaming."
+                fi
+                opt=""
+                ;;
+            M)
+                # Enable tab-completion for directory names
+                shopt -s direxpand
+
+                ls -d */
+                read -e -p "Move to directory (leave blank to cancel): " dest
+                if [[ "$dest" == "" ]]; then
+                    cecho yel "No destination provided. Not moving."
+                    opt=""
+                elif [[ -f "$dest" ]]; then
+                    cecho red "Destination '$dest' is a file. Not moving."
+                    opt=""
+                elif [[ -d "$dest" ]]; then
+                    mv "$f" "$dest"
+                    cecho yel "Moved $f to $dest"
+                elif [[ -e "$dest" ]]; then
+                    cecho red "Destination '$dest' is not a directory. Not moving."
+                    opt=""
+                else
+                    read -p "Directory '$dest' does not exist. Create [yN]?: " yn
+                    if [[ "${yn^^}" == "Y" ]]; then
+                        mkdir -p "$dest"
+                        mv "$f" "$dest"
+                        cecho yel "Created directory and moved $f to $dest"
+                    else
+                        opt=""
+                    fi
+                fi
+                ;;
+            D)
+                cecho yel "Deleting PDF file $f"
+                rm -f "$f"
+                ;;
+            Q)
+                exit
+                ;;
+            
+        esac
+    done
+done

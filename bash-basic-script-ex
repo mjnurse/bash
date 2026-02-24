@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+help_text="
+usage: <<FILENAME>> [options] <filename>
+-h : This help text.
+"
+
+help_line="Example Basic Bash Script"
+web_desc_line="Example Basic Bash Script"
+
+case $1 in
+    -h|--help)
+        echo "$help_text"
+        exit
+        ;;
+esac
+
+if [[ "$1" == "" ]]; then
+    echo "$help_text"
+    exit 1
+fi

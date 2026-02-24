@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  cve - CVE Lookup
+
+USAGE
+  cve [options] <cve-code>
+
+OPTIONS
+  -h|--help
+    Show help text.
+
+DESCRIPTION
+  Lookup CVE using the services.nvd.nist.gov API.
+
+AUTHOR
+  mjnurse.github.io - 2024
+"
+help_line="CVE Lookup"
+web_desc_line="CVE Lookup"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+  echo "${usage}"
+  echo "${try}"
+  exit 1
+fi
+
+while [[ "$1" != "" ]]; do
+  case $1 in
+    -h|--help)
+      echo "$help_text"
+      exit
+      ;;
+    ?*)
+      break
+      ;;
+  esac
+  shift
+done
+
+tmpfile1=/tmp/cve.json.1
+tmpfile2=/tmp/cve.json.2
+
+cve="${1^^}"
+
+if [[ "${cve:0:3}" != CVE ]]; then
+   cve="CVE-$cve"
+fi
+
+curl -s https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${cve} > $tmpfile1
+
+cat $tmpfile1 | jq '.vulnerabilities[] | {id: .cve.id, description: (.cve.descriptions[] | select(.lang == "en").value), baseSeverity: .cve.metrics.cvssMetricV31[0].cvssData.baseSeverity}' | \
+   sed 's/\\n/ /g; s/ *\./\./g; s/ *",/",/g; s/  */ /g; /^[{}]/d; s/ *"id": *"//; s/ *"description": *"//; s/ *"baseSeverity"/Severity/; s/", *$/\n/' > $tmpfile2
+
+if [[ "$(cat $tmpfile2 | wc -c)" == 0 ]]; then
+   echo "$cve - not found"
+else
+   cat $tmpfile2
+fi 
+
+rm -f $tmpfile1 $tmpfile2

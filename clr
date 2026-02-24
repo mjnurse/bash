@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+
+help_text="
+NAME
+    clr - Check Local Repositories for uncommitted changes.
+
+USAGE
+    clr [options]
+
+OPTIONS
+    -p|--push
+        Interactively commit and push changes for each repository
+        with uncommitted changes.
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Checks a predefined list of local git repositories for uncommitted
+    changes. When run without options, displays a list of repositories
+    that have uncommitted changes. With the -p option, iterates through
+    each repository with changes and prompts to commit and push.
+
+AUTHOR
+    mjnurse.github.io - 2026
+"
+help_line="Check Local Repositories for uncommitted changes"
+web_desc_line="Check Local Repositories for uncommitted changes"
+
+# set -x
+
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
+cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
+clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+push_yn=n
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -p|--push)
+            push_yn=y
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+echo
+cecho lgre "Checking local git repositories for uncommitted changes..."
+
+if [[ "$push_yn" == "n" ]]; then 
+    changes_yn=n
+    for d in /home/martin/mjnurse/bash \
+             /home/martin/mjnurse/shortcut-keys \
+             /home/martin/mjnurse/python \
+             /home/martin/mjnurse/cli-builder \
+             /home/martin/mjnurse/website-builder \
+             /home/martin/mjnurse/mjnurse-website \
+             /home/martin/mjnurse/mjnurse.github.io \
+            ; do
+        cd $d
+        if [[ "$(git status --short)" != "" ]]; then
+            echo -e "${ccya}- Uncommitted changes in repo: ${clcya}$d${cdef}"
+            changes_yn=y
+        fi
+    done
+    if [[ "$changes_yn" == "y" ]]; then
+        echo
+        cecho lmag "Run clr -p to selectively commit/push changes."
+    fi
+    exit 1
+fi
+
+for d in /home/martin/mjnurse/bash \
+         /home/martin/mjnurse/shortcut-keys \
+         /home/martin/mjnurse/python \
+         /home/martin/mjnurse/cli-builder \
+         /home/martin/mjnurse/website-builder \
+         /home/martin/mjnurse/mjnurse-website \
+         /home/martin/mjnurse/mjnurse.github.io \
+        ; do
+    cd $d
+    if [[ "$(git status --short)" != "" ]]; then
+        echo
+        cecho lmag "------------------------------------------------------------"
+        cecho lmag "Repository: $d"
+        cecho lmag "------------------------------------------------------------"
+        git status
+        echo
+        printf "${clcya}Commit and Push changes in repo [yN]? ${cdef}"
+        read yn
+        if [[ "${yn^}" == "Y" ]]; then
+            printf "${clcya}Commit Message (Blank to use 'Various'): ${cdef}" 
+            read cm
+            if [[ -z "$cm" ]]; then
+                cm="Various"
+            fi
+            git add .
+            git commit -m "$cm"
+            git push
+        fi
+    fi
+done

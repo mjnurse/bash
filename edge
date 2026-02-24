@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  edge - Launches the Microsoft Edge browser.
+
+USAGE
+  edge <path/url>
+
+OPTIONS
+  -h, --help
+    Show help text.
+
+DESCRIPTION
+  Launches the Microsoft Edge browser with the specified path or URL.
+  Automatically converts WSL paths to Windows paths when needed.
+
+EXAMPLES
+  edge https://www.example.com
+  edge /mnt/c/Users/Documents/file.html
+  edge ./local-file.html
+
+AUTHOR
+  mjnurse.github.io - 2025
+"
+
+# Function to display help
+show_help() {
+    echo "$help_text"
+    exit 0
+}
+
+# Function to display error and exit
+error_exit() {
+    echo "Error: $1" >&2
+    echo "Try '${0##*/} --help' for more information." >&2
+    exit 1
+}
+
+# Check for help flag
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+fi
+
+# Validate that an argument was provided
+if [[ $# -eq 0 ]]; then
+    error_exit "No path or URL provided."
+fi
+
+# Get the path/URL argument
+target="$1"
+
+# Check if it's a URL or a file path
+if [[ "$target" =~ ^https?:// ]]; then
+    # It's a URL, use it directly
+    edge_path="$target"
+else
+    # It's a file path, convert to Windows path
+    if ! edge_path=$(wslpath -w "$target" 2>/dev/null); then
+        error_exit "Failed to convert path '$target' to Windows format."
+    fi
+    
+    # Verify the file exists (for local files)
+    if [[ ! -e "$target" ]]; then
+        error_exit "File '$target' does not exist."
+    fi
+fi
+
+# Launch Edge browser
+# if ! powershell.exe /c start msedge "$edge_path"; then
+if ! cmd.exe /c start msedge "$edge_path"; then
+    error_exit "Failed to launch Microsoft Edge. Ensure Edge is installed and accessible."
+fi
+
+exit 0

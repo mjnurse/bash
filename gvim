@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  gvim - Runs windows gvim and fixes files paths
+
+USAGE
+  gvim <filename(s)>
+
+DESCRIPTION
+  Runs windows gvim and fixes files paths.
+
+AUTHOR
+  mjnurse.github.io - 2020
+"
+help_line="Runs windows gvim and fixes file paths"
+web_desc_line="Runs windows gvim and fixes file paths"
+
+files="$*"
+fixed_files="$(echo $files | sed 's/\/c\//C:\//g')"
+/c/Program\ Files\ \(x86\)/Vim/vim90/gvim.exe "$fixed_files" &

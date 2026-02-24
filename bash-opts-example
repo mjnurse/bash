@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+help_text="Usage: ${0#*/} [options] <arguments>
+Options:
+  -h               Show this help message
+  -d               Enable debug mode
+  -f FILENAME      Specify a file
+  --debug          Enable debug mode
+  --help           Show this help message
+  --file=FILENAME  Specify a file"
+
+help_line="Example Bash script processing short and long command-line options, including grouped short options"
+web_desc_line="Example Bash script processing short and long command-line options, including grouped short options"
+
+
+function arg_err {
+    echo "Error: $1"
+    echo "Try ${0#*/} -h for more information"
+    exit 1
+}
+
+file=""
+debug=false
+
+# --- Parse arguments ---
+while [[ $# -gt 0 ]]; do
+    arg="$1"
+
+    # --- Long options ---
+    case "$arg" in
+        --help)
+            echo "$help_text"
+            exit 0
+            ;;
+        --debug)
+            debug=true
+            shift
+            ;;
+        --file=*|-f=*)
+            # Treat -f= as a long option for simplicity
+            file="${arg#*=}"
+            if [[ -z "$file" ]]; then
+                arg_err "$arg requires an argument"
+            fi
+            shift
+            ;;
+        --file)
+            if [[ -z "$2" ]]; then
+                arg_err "$arg requires an argument"
+            fi
+            file="$2"
+            shift 2
+            ;;
+        --*)
+            arg_err "Unknown option: $arg"
+            ;;
+    esac
+
+    arg="$1" # Get $1 again in case it was shifted
+
+    # --- Short options (grouped or single) ---
+    if [[ "$arg" == -* ]]; then
+        opts="${arg#-}"
+
+        for (( i=0; i<${#opts}; i++ )); do
+            opt="${opts:$i:1}"
+
+            case "$opt" in
+                h)
+                    echo "$help_text"
+                    exit 0
+                    ;;
+                d)
+                    debug=true
+                    ;;
+                f)
+                    # Option with argument: -f filename
+                    if (( i < ${#opts}-1 )); then
+                        arg_err "-$opt requires an argument and cannot be grouped"
+                    fi
+                    if [[ -z "$2" ]]; then
+                        arg_err "-$opt requires an argument"
+                    fi
+                    file="$2"
+                    shift
+                    ;;
+                *)
+                    arg_err "Unknown option: -$opt"
+                    ;;
+            esac
+        done
+        shift
+    fi
+    break
+done
+
+echo "debug: $debug"
+echo "File: $file"

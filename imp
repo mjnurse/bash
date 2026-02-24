@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    imp - Improve text using Claude AI.
+
+USAGE
+    imp [options] [text]
+
+OPTIONS
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    A text improvement tool that uses Claude AI to enhance clarity, tone,
+    grammar, and flow while preserving the original meaning. 
+
+    If text is provided as an argument, it will be improved and the result
+    copied to the clipboard, then the script exits.
+
+    If no text is provided, the script enters interactive mode, repeatedly
+    prompting for text to improve until an empty input is given.
+
+AUTHOR
+    mjnurse.github.io - 2025
+"
+
+help_line="Improve text using Claude AI"
+web_desc_line="Improve text using Claude AI"
+
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
+cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
+clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
+function cpf {
+    color=c$1; shift
+    printf "${!color}$*${cdef}"
+}
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+function improve() {
+    local text="$(sed 's/(/\\(/g; s/)/\\)/g' <<<"$1")"
+    local instruction="You are a concise senior technical editor. Improve clarity, tone, grammar, and flow; preserve meaning; Improve the following text and return only the improved text"
+
+    claude --print "${instruction}: ${text}"
+}
+
+request="$*"
+
+while [[ 1 ]]; do
+
+    if [[ "$request" == "" ]]; then
+        cpf lcya "Text to improve (CTRL-D to end input): "
+        tmp="$(cat)"
+        input_text="$(echo "$tmp" | tr -d "\r")"
+    else
+        input_text="$request"
+    fi
+
+    if [[ "$input_text" == "" ]]; then
+        input_text="$(powershell.exe -NoProfile -Command Get-Clipboard)"
+        if [[ "$input_text" != "" ]]; then
+            cecho lcya "Using clipboard content as input:"
+            echo "$input_text"
+        else
+            echo "Exiting."
+            exit 0
+        fi
+    fi
+
+    echo
+    cecho lcya "Generating improved text..."
+
+    response="$(improve "${input_text}")"
+
+    echo
+    cecho lcya "Response (copied to clipboard):"
+    echo
+    echo "$response"
+    echo
+    echo -------------------
+
+    echo "$response" | clip.exe
+
+    if [[ "$request" != "" ]]; then
+        exit 0
+    fi
+done

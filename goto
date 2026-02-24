@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+help_text='
+NAME
+    goto - quickly navigate to frequently used directories
+
+USAGE
+    goto [options] [<directory-name-details>]
+
+OPTIONS
+    -a|--add <directory-name-details>
+        Add directory(s) to the list of saved directories. All directories which have a name which starts
+        with the provided details will be added.
+
+    -r|--redirection
+        Output the commands to change the current directory to the a directory selected in the previous
+        run of goto, and list its contents.
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Navigate to frequently used directories by matching the provided directory name details against a list
+    of saved directories. The list of saved directories is stored in a file named goto.dat in the same
+    directory as the goto script. Each line in the file should contain a directory name and its corresponding
+    path, separated by a comma.
+
+    Calling goto without any arguments will display the contents of goto.dat and indicate if any paths are
+    invalid directories. 
+
+    When the script is run with a directory name details argument, it searches the goto.dat file for matches.
+    If there is a single match, it outputs the corresponding path. If there are multiple matches, it lists
+    them and prompts the user to select one.
+
+    As you cannot change the current directory of a parent process, this script needs to be called from a
+    function. The function is called in two parts: the first part calls goto with the directory name details,
+    and the second part evaluates the output of goto -r to change the current directory.
+
+    g () {
+        goto "$1"
+        eval "$(goto -r)"
+    }
+
+AUTHOR
+    mjnurse.github.io - 2026
+'
+help_line="Quickly navigate to frequently used directories"
+web_desc_line="Quickly navigate to frequently used directories"
+
+# set -x # for debugging
+
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m"; cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"; clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        path_part="${line#*, }"
+        if [[ -d "$path_part" ]]; then
+            cecho gre "$line"
+        else
+            cecho red "$line (invalid path)"
+        fi
+    done < "$0.dat"
+    exit
+fi
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -a|--add)
+            shift
+            ls -d "$1"* 2>/dev/null | sed 's/\(^.*\/\)\(.*\)/\2, \1\2/' >> $0.dat
+                cat $0.dat | sed '/^ *$/d;
+                              s/,/                                            /; 
+                              s/\(^................\)[^ ]*   *\(.*\)/\1, \2/' | sort -u > $0.tmp
+            mv $0.tmp $0.dat
+            exit
+            ;;
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -r|--redirection)
+            if [[ -f "$0.tmp" ]]; then
+                dest="$(cat $0.tmp)"
+                rm $0.tmp
+                echo "cd \"$dest\"; ls"
+            fi
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+tf=/tmp/g-$$.tmp
+
+egrep ".*$1.*," $0.dat > $tf
+
+if [[ "$(wc -l < $tf)" == "0" ]]; then
+    echo "No match found for '$1'"
+    rm $tf
+    exit 1
+fi
+
+if [[ "$(wc -l < $tf)" == "1" ]]; then
+    cat $tf | sed 's/^[^,]*, *//' > $0.tmp
+else
+    echo "Multiple matches found for '$1':"
+    cat $tf | grep --color=auto -n -- "$1"
+    read -p "Enter destination number (blank to cancel): " num
+    if [[ "$num" != "" ]]; then
+        awk -v n=$num '{if (NR==n) print }' $tf | sed 's/^[^,]*, *//' > $0.tmp
+    fi
+fi
+rm $tf

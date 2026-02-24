@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  gen-bash-readme - Create a README.md for the bash scripts repo.
+
+USAGE
+  gen-bash-readme
+
+DESCRIPTION
+  Create a README.md for the bash scripts repo.
+
+AUTHOR
+  mjnurse.github.io - 2020
+"
+help_line="Create a README.md for the bash scripts repo"
+
+rme="/home/martin/mjnurse/bash/README.md"
+
+echo "# Bash Scripts" > "$rme"
+echo "" >> "$rme"
+
+echo "| c | Script | Description |" >> "$rme"
+echo "| - | ------ | ----------- |" >> "$rme"
+h -m | sed "s/^\(..\). /\1|\`/; s/: */\` | /; s/^/| /; s/$/ |/; s/  */ /g" >> "$rme"

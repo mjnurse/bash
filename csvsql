@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  csvsql - Run a SQL query over a csv file
+
+USAGE
+  csvsql <csv-filename> <sql-query: in quotes>
+
+DESCRIPTION
+  A script to run a SQL query over data in a csv file using sqlite3.
+
+  The table to query has the same name as the csv file (with the file extension - 
+  anything after a '.' removed).
+
+AUTHOR
+  mjnurse.github.io - 2022
+"
+
+help_line="Run a SQL query over a csv file"
+web_desc_line="Run a SQL query over a csv file"
+
+if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+   echo "$help_text"
+   exit
+fi
+
+if [[ "$2" == "" ]]; then
+  echo "Usage: csvsql <csv-filename> <sql-query: in quotes>"
+  echo "Try csvsql -h' for more information"
+  exit
+fi
+
+sqlite3 :memory: -cmd ".mode csv" -cmd ".import $1 ${1//.*/}" \
+        -cmd ".mode column" -header "$2"

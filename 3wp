@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  3wp - Generates a random 3 word password
+
+USAGE
+  3wp
+
+DESCRIPTION
+  A script to generate a 3 word password.
+
+AUTHOR
+  mjnurse.github.io - 2025
+"
+
+help_line="Generates a random 3 word password"
+web_desc_line="Generates a random 3 word password"
+
+if [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+   echo "$help_text"
+   exit
+fi
+
+words="$MJNWINROOT/MJN/words.txt"
+
+num_words=$(cat "$words" | wc -l) 
+
+num=$(openssl rand -base64 4 | od -An -tu4 | awk '{print 1 + ($1 % '$num_words')}')
+word1=$(sed -n ${num}p "$words")
+num=$(openssl rand -base64 4 | od -An -tu4 | awk '{print 1 + ($1 % '$num_words')}')
+word2=$(sed -n ${num}p "$words")
+num=$(openssl rand -base64 4 | od -An -tu4 | awk '{print 1 + ($1 % '$num_words')}')
+word3=$(sed -n ${num}p "$words")
+echo ${word1}-${word2}-${word3}

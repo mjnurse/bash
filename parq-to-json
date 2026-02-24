@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  bash-func - One line description.
+
+USAGE
+  bash-func [options] <parameters>
+
+OPTIONS
+  -x
+    Description...
+
+  -h|--help
+    Show help text.
+
+DESCRIPTION
+  Description description description description.
+
+AUTHOR
+  mjnurse.github.io - 2020
+"
+help_line="tbc"
+web_desc_line="Example Bash Script"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+  echo "${usage}"
+  echo "${try}"
+  exit 1
+fi
+
+while [[ "$1" != "" ]]; do
+  case $1 in
+    -h|--help)
+      echo "$help_text"
+      exit
+      ;;
+    ?*)
+      break
+      ;;
+  esac
+  shift
+done
+
+echo -e '
+import sys
+import pandas as pd
+
+if len(sys.argv) < 2:
+    print("Usage: python read_parquet.py <filename>")
+    sys.exit(1)
+
+filename = sys.argv[1]
+
+if len(sys.argv) > 2:
+    output_filename = sys.argv[2]
+else:
+    output_filename = filename.rsplit(".", 1)[0] + ".json"
+
+try:
+    df = pd.read_parquet(filename)
+    print(df.head())  # or any other processing
+
+    # Write to JSON
+    df.to_json(output_filename, orient="records", lines=True)
+    print(f"Data written to {output_filename}")
+
+except Exception as e:
+    print(f"Error reading {filename}: {e}")
+
+' > /tmp/parq-to-json.py
+
+python /tmp/parq-to-json.py "$@"
+
+rm -f /tmp/parq-to-json.py

@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  parq - Read and display parquet files in various formats.
+
+USAGE
+  parq [options] <parquet-file>
+
+OPTIONS
+  -a|--all
+    Display all records (default shows 10 records).
+
+  -c|--csv
+    Output data in CSV format (default is JSON).
+
+  -h|--help
+    Show help text.
+
+  -n|--num <number>
+    Specify number of records to display.
+
+  -s|--schema
+    Display the parquet file schema only.
+
+DESCRIPTION
+  parq is a utility for reading Apache Parquet files and displaying their
+  contents in different formats. By default, it displays the first 10 records
+  in JSON format. The script uses Python's pandas and pyarrow libraries to
+  read parquet files and can output in JSON, CSV, or display the schema.
+  
+  If required Python libraries (pandas, pyarrow) are not installed, the script
+  will offer to install them automatically.
+
+AUTHOR
+  mjnurse.github.io - 2025
+"
+help_line="Read and display parquet files in various formats"
+web_desc_line="A bash utility for viewing Apache Parquet files in JSON, CSV, or schema format"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+  echo "${usage}"
+  echo "${try}"
+  exit 1
+fi
+
+mode=json
+recs=10
+
+while [[ "$1" != "" ]]; do
+  case $1 in
+    -a|--all) recs=0 ;;
+    -c|--csv) mode=csv ;;
+    -h|--help) echo "$help_text"; exit ;;
+    -n|--num) shift; recs=$1 ;;
+    -s|--schema) mode=schema ;;
+    ?*) break ;;
+  esac
+  shift
+done
+
+# Check if python libraries are installed, if not offer to install
+for lib in pandas pyarrow; do
+  if ! pip3 list 2>/dev/null | grep -q "$lib"; then
+    echo "Missing python library: $lib"
+    read -p "Install $lib? [Yn]: " yn
+    [[ "${yn^}" != "Y" ]] && exit
+    pip3 install $lib
+  fi
+done
+
+# Execute Python and display results
+exec_py() {
+  python3 -c "$1" 2>/dev/null
+}
+
+show_recs() {
+  local total=$(wc -l < "$1")
+  [[ $mode == csv ]] && ((total--))
+  
+  if [[ $recs == 0 ]]; then
+    cat "$1" | ${2:-cat}
+  else
+    head -n $((recs + (mode == csv ? 1 : 0))) "$1" | ${2:-cat}
+  fi
+  echo
+  echo "$([[ $recs == 0 ]] && echo $total || echo $recs of $total) total records"
+}
+
+case $mode in
+  csv)
+    tmpfile="/tmp/parq_$$.csv"
+    exec_py "import pandas as pd; pd.read_parquet('$1').to_csv('$tmpfile')"
+    show_recs "$tmpfile"
+    rm -f "$tmpfile"
+    ;;
+  json)
+    tmpfile="/tmp/parq_$$.json"
+    exec_py "import pandas as pd, json; df=pd.read_parquet('$1'); [print(json.dumps(r)) for r in json.loads(df.to_json(orient='records'))]" > "$tmpfile"
+    show_recs "$tmpfile" "$(command -v jq || echo cat)"
+    rm -f "$tmpfile"
+    ;;
+  schema)
+    exec_py "import pyarrow.parquet as pq; print(pq.read_table('$1').schema)" | sed -n "/-- schema/q; /./p" | grep --color=auto " .*"
+    ;;
+esac

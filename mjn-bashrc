@@ -1,0 +1,130 @@
+# DESCRIPTION
+#     My portable .bashrc file.
+#
+# AUTHOR
+#     mjnurse.github.io - 2026
+
+if [[ "$GITBASH" != "Y" ]]; then
+    sudo sh -c "echo '/mnt/c /c none bind' >> /etc/fstab"
+    sudo mount -a
+    sudo sed -i "/#/d;/8.8.8.8/d" /etc/resolv.conf
+    sudo sed -i "1inameserver 8.8.8.8" /etc/resolv.conf
+fi
+
+export PATH="$PATH:."
+export PATH="$PATH:/home/martin/mjnurse/bash"
+export PATH="$PATH:/home/martin/mjnurse/cli-builder"
+export PATH="$PATH:/home/martin/mjnurse/shortcut-keys"
+export PATH="$PATH:/home/martin/mjnurse/website-builder"
+
+export QES_HOST=localhost
+export QES_PORT=9200
+
+for f in /home/martin/mjnurse/cli-builder/*.alias; do
+    source "$f"
+done
+
+alias fwd=file-watch-do
+alias lm=list-move
+alias kd=keep-delete
+alias mo=ms-office
+alias pp=ms-office
+alias ex=ms-office
+alias wo=ms-office
+alias mdu="sudo du -sh --exclude=c --exclude=mnt/c * | sort -h"
+alias lt="ls -altr"
+alias psg='ps -edf | grep'
+alias sbc="source ~/.bashrc"
+
+lld() {
+   ls -ld ${*:-*} | sed '/^[^d]/d; s/^[^ ]*  *[0-9]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *//'
+}
+
+rm="rm -i"
+mrm=trash
+
+trash() {
+    mkdir -p ~/.trash
+
+    if [[ "$1" == "" ]]; then
+        echo 20 largest
+        echo ----------
+        ls -alSr ~/.trash | tail -20
+        echo 20 most recent
+        echo --------------
+        ls -altr ~/.trash | tail -20
+        echo "Size: $(du -d0 -h ~/.trash 2>/dev/null)"
+    fi
+    force_yn=y
+
+    # Parse -f option
+    if [[ "$1" == "-i" ]]; then
+        force_yn=n
+        shift
+    fi
+
+    for f in "$@"; do
+        if [ ! -e "$f" ]; then
+            echo "trash: '$f' not found"
+            continue
+        fi
+
+        if [[ $force_yn == n ]]; then
+            read -p "trash: Are you sure you want to delete '$f' [yN] " answer
+            [[ "${answer^^}" == "Y" ]] || { echo "Skipped '$f'"; continue; }
+        fi
+
+        timestamp=$(date +%Y%m%d_%H%M%S)
+        base=$(basename "$f")
+        dest=~/.trash/"$base.$timestamp"
+        mv "$f" "$dest"
+        if [[ -d $dest ]]; then
+            tar -czf "$dest.tar.gz" "$dest" > /tmp/trash.log 2>&1
+            \rm -rf "$dest"
+        else
+	         gzip "$dest" > /tp/trash.log 2>&1
+        fi
+    done
+}
+
+g () {
+    goto "$1"
+    eval "$(goto -r)"
+}
+
+alias rm='trash'
+alias drm="command rm -i"
+alias cat="batcat"
+
+md() {
+    marktext --disable-gpu --no-sandbox $1 > /dev/null 2>&1 &
+}
+
+f() {
+    find . -iname "$1"
+}
+
+ff() {
+    find . -iname "*$1*"
+}
+
+[ -d ~/.trash ] && echo -e "\nTrash Size: $(du ~/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls ~/.trash | wc -l) Items"
+
+# Silence the bell
+xset -b
+
+# refresh misc notes web page
+n -m > /home/martin/mjnurse/mjnurse-website/notes/Miscellaneous_Notes.md
+
+# check if website been built today, if not build it
+build-website -d
+
+# check for website changes
+check-for-website-updates
+
+# Check local repos
+clr
+
+alias bw='build-website'
+alias svg='chafa --scale=20 --size=80x80'
+alias img='catimg'
