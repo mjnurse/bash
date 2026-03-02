@@ -34,6 +34,17 @@ AUTHOR
     # set -o xtrace
 # fi
 
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m"; cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"; clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
 help_line="Extracts and displays the help_lines"
 web_desc_line="Extracts and displays the help_lines"
 
@@ -62,10 +73,10 @@ location="$(which h)"
 cd "${location:0:-2}"
 
 if [[ "$1" != "" ]]; then
-    HIGHLIGHT_STR="$1"
+    filter="$1"
 else
     # Default highlight string unlikely to be in any help_line
-    HIGHLIGHT_STR="-=-=-=-==-="
+    filter=".*"
 fi
 
 if [[ $matches_only_yn == n ]]; then
@@ -78,11 +89,11 @@ if [[ $matches_only_yn == n ]]; then
       | sed '/README.*.md/d; /^h:/d; /tmp0/d' \
       | sort -f > /tmp/h.tmp
 
-    if [[ $(cat /tmp/h.tmp | wc -l) != 0 ]]; then
-        echo -------------
-        echo No help_line:
-        echo -------------
-        cat /tmp/h.tmp | sed "s/$HIGHLIGHT_STR/\x1b[31m&\x1b[0m/I"
+    if [[ $(cat /tmp/h.tmp | wc -l) != 0 && "$filter" == ".*" ]]; then
+        cecho lmag -------------
+        cecho lmag No help_line:
+        cecho lmag -------------
+        cat /tmp/h.tmp
     fi
     # Create a file so that the grep command never fails
     echo 'help_line="tbc"' > /tmp/h.tmp0
@@ -91,18 +102,18 @@ if [[ $matches_only_yn == n ]]; then
       | sed '/README.*.md/d; /^h$/d; /tmp0/d' \
       | sort -f > /tmp/h.tmp
 
-    if [[ $(cat /tmp/h.tmp | wc -l) != 0 ]]; then
-        echo --------------
-        echo help_line: tbc
-        echo --------------
-        cat /tmp/h.tmp | sed "/tidy/d" | sed "s/$HIGHLIGHT_STR/\x1b[31m&\x1b[0m/I"
+    if [[ $(cat /tmp/h.tmp | wc -l) != 0 && "$filter" == ".*" ]]; then
+        cecho lmag --------------
+        cecho lmag help_line: tbc
+        cecho lmag --------------
+        cat /tmp/h.tmp | sed "/tidy/d"
     fi
     rm -f /tmp/h.tmp0
 
     if [[ $issues_only_yn == n ]]; then
-        echo -----------
-        echo help_lines:
-        echo -----------
+        cecho lmag -----------
+        cecho lmag help_lines:
+        cecho lmag -----------
     fi
 fi
 
@@ -112,7 +123,7 @@ fi
 
 prev_char=""
 
-grep -H -s -i -e "^help_line=" -e "^-- help_line:" * > /tmp/h.tmp
+grep -H -s -i -e "^help_line=" -e "^-- help_line:" * | egrep "$filter" > /tmp/h.tmp
 
 cat /tmp/h.tmp | \
 sed ' 
@@ -125,13 +136,13 @@ sort | while IFS= read -r line ; do
     curr_char="${line:0:1}"
     if [[ "$curr_char" != "$prev_char" ]]; then
          prev_char="$curr_char"
-         echo "$curr_char - $line"
+         echo -e "${clmag}${curr_char}${cdef} - ${clcya}$line"
     else
-         echo "    $line" 
+         echo -e "${cdef}${cdef}    ${clcya}$line" 
     fi
-done | sed  '
-    s/: /:                          /;
-    s/\(...........................\) *\(.*\)/\1\2/; /tidy:.*echo/d' > /tmp/h.out 
+done | sed  "
+     s/: /:\x1b[37m                                                     /;
+     s/\(...............................................\) *\(.*\)/\1\2/; /tidy:.*echo/d" > /tmp/h.out 
 
-cat /tmp/h.out | sed "s/$HIGHLIGHT_STR/\x1b[31m&\x1b[0m/I"
+cat /tmp/h.out
 rm -f /tmp/h.out /tmp/h.tmp
