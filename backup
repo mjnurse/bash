@@ -37,6 +37,17 @@ tmp="${help_text##*USAGE}"
 usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "
 " | sed "s/  */ /g")
 
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m"; cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"; clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
 FORCE_YN=n
 
 while [[ "$1" != "" ]]; do
@@ -57,12 +68,6 @@ done
 
 set -e
 
-if [[ $# -lt 2 ]]; then
-    echo "$usage"
-    echo "Try ${0##*/} -h for more information."
-    exit 1
-fi
-
 # Ensure BACKUP_DIR is set
 if [ -z "$BACKUP_DIR" ]; then
     echo "Error: BACKUP_DIR environment variable is not set."
@@ -70,13 +75,15 @@ if [ -z "$BACKUP_DIR" ]; then
 fi
 
 if [ $# = 0 ]; then
+    cecho lcya "BACKUP_DIR Contents:"
     ls -ltr "$BACKUP_DIR"
     exit 
 fi
 
 if [ $# = 1 ]; then
+    cecho lcya "Looking for $1 in BACKUP_DIR:"
     cd "$BACKUP_DIR"
-    ls -ltr $1_??????.zip
+    ls -ltr $1*.zip | grep --color -i " $1" 
     exit
 fi
 

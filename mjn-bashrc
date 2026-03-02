@@ -46,6 +46,10 @@ mrm=trash
 trash() {
     mkdir -p ~/.trash
 
+    if [[ "$1" == "-r" ]]; then
+        shift
+    fi
+
     if [[ "$1" == "" ]]; then
         echo 20 largest
         echo ----------
@@ -82,7 +86,7 @@ trash() {
             tar -czf "$dest.tar.gz" "$dest" > /tmp/trash.log 2>&1
             \rm -rf "$dest"
         else
-	         gzip "$dest" > /tp/trash.log 2>&1
+	         gzip "$dest" > /tmp/trash.log 2>&1
         fi
     done
 }

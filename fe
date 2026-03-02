@@ -84,6 +84,10 @@ echo "Searching MJN/* ..."
 find "$MJNWINROOT/MJN" -iname "$name" -type f \
     -not -path '*/.*' -not -name '.*' \
     -exec realpath {} \; >> $tmp
+echo "Searching Documents/* ..."
+find "$MJNWINROOT/Documents" -iname "$name" -type f \
+    -not -path '*/.*' -not -name '.*' \
+    -exec realpath {} \; >> $tmp
 echo "Searching ~/mjnurse"
 find ~/mjnurse -iname "$name" -type f \
     -not -path '*/.*' -not -name '.*' \
