@@ -20,6 +20,9 @@ AUTHOR
   mjnurse.github.io - 2025
 "
 
+help_line="Launch Draw.io application with specified file or URL"
+web_desc_line="Launch Draw.io application with specified file or URL"
+
 # Function to display help
 show_help() {
     echo "$help_text"

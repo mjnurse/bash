@@ -93,7 +93,7 @@ if [[ $matches_only_yn == n ]]; then
         cecho lmag -------------
         cecho lmag No help_line:
         cecho lmag -------------
-        cat /tmp/h.tmp
+        cat /tmp/h.tmp | sed "/\.dat$/d; /^vimspell/d;"
     fi
     # Create a file so that the grep command never fails
     echo 'help_line="tbc"' > /tmp/h.tmp0

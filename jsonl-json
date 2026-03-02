@@ -5,6 +5,9 @@ import json
 import sys
 import os
 
+web_desc_line="Convert between JSON and JSONL formats"
+help_line="Convert between JSON and JSONL formats"
+
 def jsonl_to_json(jsonl_path, json_path):
     with open(jsonl_path, "r", encoding="utf-8") as f_in:
         data = [json.loads(line) for line in f_in]
