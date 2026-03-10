@@ -1,0 +1,11 @@
+# set -x
+
+options="$(grep '# arg' bash-opts-example | grep -v 'grep' | sed 's/^ */    /; s/) *# *arg: *\(<[^>]*>\)/ \1\n       /; s/) *# *arg: */\n        /; s/$/\.\n/; s/\.\.\n/\.\n/')"
+
+
+
+safe_options=$(printf '%s' "$options" | sed 's/[&]/\\&/g; :a;N;$!ba;s/\n/#NL#/g')
+
+echo -e "$safe_options"
+
+cat mr | head -20 | sed "/^OPTIONS/,/^DESCRIPTION/{/^\(OPTIONS\|DESCRIPTION\)/!d}; s@^OPTIONS@OPTIONS\n${safe_options}\n@; s/#NL#/\n/g"

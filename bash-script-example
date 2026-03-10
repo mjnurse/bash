@@ -22,6 +22,9 @@ AUTHOR
 help_line="Example Bash Script"
 web_desc_line="Example Bash Script"
 
+tmpfile=$(mktemp)
+trap 'rm -f "$tmpfile"' EXIT
+
 # set -x # for debugging
 
 # Terminal Colours

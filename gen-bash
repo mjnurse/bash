@@ -8,6 +8,8 @@ usage: gen_bash [options] <filename>
 help_line="Generates a bash script from a template"
 web_desc_line="Generates a bash script from a template"
 
+BASH_HOME="/home/martin/mjnurse/bash"
+
 basic_yn=n
 case $1 in
     -h|--help)
@@ -34,9 +36,9 @@ if [[ -f "$new_file" ]]; then
 fi
 
 if [[ $basic_yn == y ]]; then
-    cat "$B/bash-basic-script-ex" | sed "s/<<FILENAME>>/$1/" > "$new_file"
+    cat "$BASH_HOME/bash-basic-script-ex" | sed "s/<<FILENAME>>/$1/" > "$new_file"
 else
-    cat "$B/bash-script-example" > "$new_file"
+    cat "$BASH_HOME/bash-script-example" > "$new_file"
 fi
 chmod +x "$new_file"
 

@@ -35,12 +35,24 @@ cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
 clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
 clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
 
+silent_yn=n
+
 function cecho {
+    if [[ "$silent_yn" == "y" ]]; then
+        return
+    fi
+    if [[ "$1" == "" ]]; then
+        echo
+        return
+    fi
     color=c$1; shift
     echo -e "${!color}$*${cdef}"
 }
 
 function cpf {
+    if [[ "$silent_yn" == "y" ]]; then
+        return
+    fi
     color=c$1; shift
     printf "${!color}$*${cdef}"
 }
@@ -49,11 +61,31 @@ try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
 usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
 
+input_file_yn=n
+update_file_yn=n
+
 while [[ "$1" != "" ]]; do
     case $1 in
         -h|--help)
             echo "$help_text"
             exit
+            ;;
+        -f|--file)
+            shift
+            if [[ -f "$1" ]]; then
+                file_name="$1"
+                request="$(cat "$1")"
+                input_file_yn=y
+            else
+                cecho cred "File not found: $1"
+                exit 1
+            fi
+            ;;
+        -s|--silent)
+            silent_yn=y
+            ;;
+        -u|--update)
+            update_file_yn=y
             ;;
         ?*)
             break
@@ -69,7 +101,9 @@ function improve() {
     claude --print "${instruction}: ${text}"
 }
 
-request="$*"
+if [[ "$request" == "" ]]; then
+    request="$*"
+fi
 
 while [[ 1 ]]; do
 
@@ -85,24 +119,29 @@ while [[ 1 ]]; do
         input_text="$(powershell.exe -NoProfile -Command Get-Clipboard)"
         if [[ "$input_text" != "" ]]; then
             cecho lcya "Using clipboard content as input:"
-            echo "$input_text"
+            cecho def "$input_text"
         else
-            echo "Exiting."
+            cecho def "Exiting."
             exit 0
         fi
     fi
 
-    echo
+    cecho
     cecho lcya "Generating improved text..."
 
     response="$(improve "${input_text}")"
 
-    echo
+    cecho
     cecho lcya "Response (copied to clipboard):"
     echo
-    echo "$response"
-    echo
-    echo -------------------
+    if [[ "$update_file_yn" == "y" && "$input_file_yn" == "y" ]]; then
+        echo >> "$file_name"
+        echo "$response" >> "$file_name"
+    else
+        echo "$response"
+    fi
+    cecho
+    cecho def -------------------
 
     echo "$response" | clip.exe
 

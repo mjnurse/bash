@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    mr - Find most recent files matching a pattern.
+
+USAGE
+    mr [options] <pattern>
+
+OPTIONS
+    -n|--number N
+        Number of results to show (default: 20).
+
+    -i|--ignore-case
+        Case-insensitive matching.
+
+    -h|--help
+        Show this help text.
+
+DESCRIPTION
+    This script searches for files matching a shell pattern in the current
+    directory and its subdirectories. It then sorts the results by
+    modification time and displays the most recent ones.
+
+AUTHOR
+    mjnurse.github.io - 2026
+"
+help_line="Find most recent files matching a pattern"
+web_desc_line="Find most recent files matching a pattern"
+
+# set -x # for debugging
+
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m"; cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"; clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
+# Defaults
+COUNT=20
+CASE_INSENSITIVE=0
+
+debug=false
+
+usage() {
+    echo "Usage: ${0##*/} [options] <pattern>"
+    echo "Options:"
+    grep "# arg:" $0 | grep -v "grep" | sed 's/^ *//; s/).*# *arg://'
+    echo "Try ${0##*/} -h for more information"
+    exit 1
+}
+
+# Split combined short arguments (eg -abc) into individual arguments (-a -b -c). Remove = symbols.
+new_args=()
+while [[ "$1" != "" ]]; do
+    if [[ $1 == -* && $1 != --* && ${#1} -gt 2 ]]; then
+        for ((i=1; i<${#1}; i++)); do
+            arg="${1:i:1}"
+            if [[ $arg == "=" ]]; then new_args+=("${1:i+1}"); break; fi
+            if [[ $arg == "d" ]]; then debug=true; else new_args+=("-$arg"); fi
+        done
+    else
+        if [[ $1 == --*=* ]]; then
+            new_args+=("${1%%=*}"); new_args+=("${1##*=}")
+        else
+            if [[ $1 == "-d" || $1 == "--debug" ]]; then debug=true; else new_args+=("$1"); fi
+        fi
+    fi
+    shift
+done
+
+if $debug; then
+    echo "DEBUG ENABLED"
+    printf "args: "; printf '%s ' "${new_args[@]}"; echo
+    # set -x
+fi
+
+# Process the arguments
+set -- "${new_args[@]}"
+while [[ "$1" != "" ]]; do
+    case "$1" in
+        -n|--number) # arg: <number>     Number of results to show
+            COUNT="$2"
+            if [[ "$COUNT" == "" || "$COUNT" == -* ]]; then
+                echo "Error: Missing value for $1"
+                usage
+            fi
+            shift
+            ;;
+        -h|--help)
+            echo -e "$help_text"
+            exit 0
+            ;;
+        -i|--ignore-case) # arg:         Set a flag
+            CASE_INSENSITIVE=1
+            ;;
+        -*|--*)
+            echo "Unknown option: $1"
+            usage
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift
+done
+
+# Require a pattern
+if [[ $# -lt 1 ]]; then
+  echo "Error: missing pattern." >&2
+  usage
+  exit 2
+fi
+PATTERN="$1"
+
+# Choose find name flag based on case sensitivity
+if [[ $CASE_INSENSITIVE -eq 1 ]]; then
+  NAMEFLAG="-iname"
+else
+  NAMEFLAG="-name"
+fi
+
+tmpfile=$(mktemp)
+trap 'rm -f "$tmpfile"' EXIT
+
+# Note: Using while-read loop to handle arbitrary filenames safely.
+while IFS= read -r -d '' f; do
+  # If file was deleted between find and stat, skip errors
+  if out=$(stat -c "%y" "$f" 2>/dev/null); then
+    mtime=${out:2:14} # "YYYY-MM-DD HH:MM:SS"
+    echo "${mtime// /-} $f"
+  fi
+done < <(find . -type d -name .git -prune -o -type f $NAMEFLAG "$PATTERN" -print0) > "$tmpfile"
+
+# Show the N most recent
+msg="$COUNT most recent files matching '$PATTERN':"
+echo "$msg"
+echo "${msg//?/-}"
+sort -r -n -k1,1 "$tmpfile" | head -n "$COUNT" | cut -f2-
