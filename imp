@@ -101,6 +101,18 @@ function improve() {
     claude --print "${instruction}: ${text}"
 }
 
+if [[ "$1" != "" && -f "$1" ]]; then
+    file_name="$1"
+    request="$(cat "$file_name")"
+    input_file_yn=y
+    echo
+    cecho lcya "$1 is a file, using its content as input."
+    if [[ $update_file_yn == "n" ]]; then
+        echo
+        cecho lmag "Note: To update the file with the improved text, use the -u or --update option."
+    fi
+fi
+
 if [[ "$request" == "" ]]; then
     request="$*"
 fi
@@ -113,6 +125,7 @@ while [[ 1 ]]; do
         input_text="$(echo "$tmp" | tr -d "\r")"
     else
         input_text="$request"
+        echo 
     fi
 
     if [[ "$input_text" == "" ]]; then
@@ -137,6 +150,7 @@ while [[ 1 ]]; do
     if [[ "$update_file_yn" == "y" && "$input_file_yn" == "y" ]]; then
         echo >> "$file_name"
         echo "$response" >> "$file_name"
+        cecho lcya "Improved text appended to $file_name"
     else
         echo "$response"
     fi

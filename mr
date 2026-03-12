@@ -7,14 +7,11 @@ USAGE
     mr [options] <pattern>
 
 OPTIONS
-    -n|--number N
-        Number of results to show (default: 20).
+    -n|--number <number>
+            Number of results to show.
 
     -i|--ignore-case
-        Case-insensitive matching.
-
-    -h|--help
-        Show this help text.
+        Set a flag.
 
 DESCRIPTION
     This script searches for files matching a shell pattern in the current

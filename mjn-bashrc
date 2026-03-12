@@ -92,7 +92,7 @@ trash() {
 }
 
 g () {
-    goto "$1"
+    goto -s "$1"
     eval "$(goto -r)"
 }
 

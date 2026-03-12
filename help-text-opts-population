@@ -1,11 +1,29 @@
-# set -x
+file="$1"
+if [[ -z "$file" ]]; then
+    echo "Usage: $0 <file>"
+    exit 1
+fi
 
-options="$(grep '# arg' bash-opts-example | grep -v 'grep' | sed 's/^ */    /; s/) *# *arg: *\(<[^>]*>\)/ \1\n       /; s/) *# *arg: */\n        /; s/$/\.\n/; s/\.\.\n/\.\n/')"
+if [[ ! -f "$file" ]]; then
+    echo "Error: File '$file' not found."
+    exit 1
+fi
 
+if ! $(grep "# *arg:" "$file" > /dev/null); then
+    echo "No '# arg:' arguments found in $file. No changes made."
+    exit 0
+fi
 
+options="$(grep '# arg' "$file" | grep -v 'grep' | sed 's/^ */    /; s/) *# *arg: *\(<[^>]*>\)/ \1\n       /; s/) *# *arg: */\n        /; s/$/\.\n/; s/\.\.\n/\.\n/')"
 
 safe_options=$(printf '%s' "$options" | sed 's/[&]/\\&/g; :a;N;$!ba;s/\n/#NL#/g')
 
-echo -e "$safe_options"
+echo "Extracted options:"
+echo
+echo OPTIONS
+echo -e "$safe_options" | sed 's/#NL#/\n/g' 
 
-cat mr | head -20 | sed "/^OPTIONS/,/^DESCRIPTION/{/^\(OPTIONS\|DESCRIPTION\)/!d}; s@^OPTIONS@OPTIONS\n${safe_options}\n@; s/#NL#/\n/g"
+sed -i "/^OPTIONS/,/^DESCRIPTION/{/^\(OPTIONS\|DESCRIPTION\)/!d}; s@^OPTIONS@OPTIONS\n${safe_options}\n@; s/#NL#/\n/g" $file
+
+echo
+echo File: $file updated

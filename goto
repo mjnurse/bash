@@ -36,7 +36,7 @@ DESCRIPTION
     and the second part evaluates the output of goto -r to change the current directory.
 
     g () {
-        goto "$1"
+        goto -s "$1"
         eval "$(goto -r)"
     }
 
@@ -62,6 +62,8 @@ function cecho {
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
 usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+SUPPRESS_WARNING=false
 
 if [[ "$1" == "" ]]; then
     while IFS= read -r line || [[ -n "$line" ]]; do
@@ -98,6 +100,9 @@ while [[ "$1" != "" ]]; do
             fi
             exit
             ;;
+        -s|--suppress-warning)
+            SUPPRESS_WARNING=true
+            ;;
         ?*)
             break
             ;;
@@ -106,6 +111,10 @@ while [[ "$1" != "" ]]; do
 done
 
 tf=/tmp/g-$$.tmp
+
+if ! $SUPPRESS_WARNING; then
+    echo "Warning - this execution will not change directory - check help for details"
+fi
 
 egrep ".*$1.*," $0.dat > $tf
 

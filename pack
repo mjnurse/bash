@@ -7,14 +7,17 @@ USAGE
   pack [options] <filename(s)>
 
 OPTIONS
-  -h|--help
-    Show help text.
+    -f|--force
+        Overwrite existing pack if one already exists.
 
-  -n|--name
-    Specify a name from the pack file.
+    -h|--help
+        Show help text.
 
-  -s|--silent
-    Suppress terminal output.
+    -n|--name <name>
+        Specify a name from the pack file.
+
+    -s|--silent
+        Suppress terminal output.
 
 DESCRIPTION
   Compresses one or more files and converts these to base64 to copy and paste into a command
@@ -45,18 +48,18 @@ fi
 
 while [[ "$1" != "" ]]; do
   case $1 in
-    -f|--force)
+    -f|--force) # arg: Overwrite existing pack if one already exists.
       force_yn=y
       ;;
-    -h|--help)
+    -h|--help) # arg: Show help text.
       echo "$help_text"
       exit
       ;;
-    -n|--name)
+    -n|--name) # arg: <name> Specify a name from the pack file.
       shift
       pack_name="$1"
       ;;
-    -s|--silent)
+    -s|--silent) # arg: Suppress terminal output.
       silent_yn=y
       ;;
     ?*)

@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 help_text="
 NAME
-  cve - CVE Lookup
+    cve - CVE Lookup
 
 USAGE
-  cve [options] <cve-code>
+    cve [options] <cve-code>
 
 OPTIONS
-  -h|--help
-    Show help text.
+    -h|--help
+        Show help text.
 
 DESCRIPTION
-  Lookup CVE using the services.nvd.nist.gov API.
+    Lookup CVE using the services.nvd.nist.gov API.
 
 AUTHOR
-  mjnurse.github.io - 2024
+    mjnurse.github.io - 2024
 "
 help_line="CVE Lookup"
 web_desc_line="CVE Lookup"
@@ -31,7 +31,7 @@ fi
 
 while [[ "$1" != "" ]]; do
   case $1 in
-    -h|--help)
+    -h|--help) # arg: Show help text.
       echo "$help_text"
       exit
       ;;
