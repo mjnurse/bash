@@ -34,8 +34,9 @@ cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m"; cblu="\e[34m"; cmag="\e[35m"; ccya=
 clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"; clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
 
 function cecho {
-    color=c$1; shift
-    echo -e "${!color}$*${cdef}"
+    if [[ "$1" == "-u" ]]; then ul=true; shift; else ul=false; fi
+    color=c$1; shift; echo -e "${!color}$*${cdef}"
+    if $ul; then echo -e "${!color}${*//?/-}${cdef}"; fi
 }
 
 try="Try ${0##*/} -h for more information"

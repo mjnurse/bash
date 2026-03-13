@@ -6,16 +6,16 @@ NAME
 USAGE
     es-cp <source_index> <destination_index>
 
-OPTIONS
-    -h|--help
-        Show help text.
-
 ENVIRONMENT VARIABLES
     QES_HOST
         Elasticsearch host (default: localhost)
 
     QES_PORT
         Elasticsearch port (default: 9200)
+
+OPTIONS
+    -h|--help
+        Show help text.
 
 DESCRIPTION
     Copies an Elasticsearch index to a new index with the same settings and mappings.
@@ -44,7 +44,7 @@ ES_PORT="${QES_PORT:-9200}"
 
 while [[ "$1" != "" ]]; do
     case $1 in
-        -h|--help)
+        -h|--help) # arg: Show help text.
             echo "$help_text"
             exit
             ;;
