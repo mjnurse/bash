@@ -13,7 +13,7 @@ OPTIONS
     -f|--fuzzy
         Run a fuzzy search - adds wildcards before and after each word.
 
-    -g
+    -g|--use-grep
         Run grep - search content of files instead of filename.
 
 DESCRIPTION
@@ -33,28 +33,28 @@ run_grep=n
 fuzzy=n
 
 if [[ "$1" == "" ]]; then
-  echo "${usage}"
-  echo "${try}"
-  exit 1
+    echo "${usage}"
+    echo "${try}"
+    exit 1
 fi
 
 while [[ "$1" != "" ]]; do
-   case $1 in 
-      -h|--help)
-         echo "$help_text"
-         exit
-         ;;
-      -f|--fuzzy)
-         fuzzy=y
-         ;;
-      -g|--grep)
-         run_grep=y
-         ;;
-      ?*)
-         break
-         ;;
-   esac 
-   shift
+    case $1 in 
+        -h|--help) # arg: Show help text.
+            echo "$help_text"
+            exit
+            ;;
+        -f|--fuzzy) # arg: Run a fuzzy search - adds wildcards before and after each word.
+            fuzzy=y
+            ;;
+        -g|--use-grep) # arg: Run grep - search content of files instead of filename.
+            run_grep=y
+            ;;
+        ?*)
+            break
+            ;;
+    esac 
+    shift
 done 
 
 tmp=/tmp/e.tmp
@@ -97,32 +97,32 @@ mv -f $tmp2 $tmp
 
 let c=1
 while read line; do
-  if [[ ! $line =~ .*index.md && ! $line =~ ./node_modules/.* ]]; then
-    echo $c - $line
-    let c=c+1
-  fi
+    if [[ ! $line =~ .*index.md && ! $line =~ ./node_modules/.* ]]; then
+        echo $c - $line
+        let c=c+1
+    fi
 done < $tmp
 
 if [[ $run_grep == n ]]; then
-  echo
-  echo "NOTE: No grep run.  Use -g to run a grep"
+    echo
+    echo "NOTE: No grep run.  Use -g to run a grep"
 fi
 echo
 read -p "Enter Number (# or v# - Vim, c# - MS Code): " n
 
 editor="code"
 if [[ "${n:0:1}" == "v" ]]; then
-  editor="gvim"
-  n="${n:1}"
+    editor="gvim"
+    n="${n:1}"
 elif [[ "${n:0:1}" == "c" ]]; then
-  editor="code"
-  n="${n:1}"
+    editor="code"
+    n="${n:1}"
 fi
 
 let c=1
 while read line; do
-  if [[ $c == $n ]]; then
-    $editor "$line"
-  fi
-  let c=c+1
+    if [[ $c == $n ]]; then
+        $editor "$line"
+    fi
+    let c=c+1
 done < $tmp

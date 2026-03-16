@@ -65,7 +65,7 @@ if ! $(grep "# *arg:" "$file" > /dev/null); then
     exit 0
 fi
 
-options="$(grep '# arg' "$file" | grep -v 'grep' | sed 's/^ */    /; s/) *# *arg: *\(<[^>]*>\)/ \1\n       /; s/) *# *arg: */\n        /; s/$/\.\n/; s/\.\.\n/\.\n/')"
+options="$(grep '# arg' "$file" | grep -v '^ *grep' | sed 's/^ */    /; s/) *# *arg: *\(<[^>]*>\)/ \1\n       /; s/) *# *arg: */\n        /; s/$/\.\n/; s/\.\.\n/\.\n/')"
 
 safe_options=$(printf '%s' "$options" | sed 's/[&]/\\&/g; :a;N;$!ba;s/\n/#NL#/g')
 
