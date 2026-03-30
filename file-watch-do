@@ -64,26 +64,26 @@ case "$1" in
         ;;
 esac
 
-if [[ "$2" == "" ]]; then
-    echo "$usage"
-    echo "$try"
-    exit
+
+file_name="$1"
+shift
+command="$*"
+
+if [[ "$command" == "" ]]; then
+    command="$file_name"
 fi
 
-file_name=$1
 if [[ -f "$file_name" ]]; then
-    echo "Watching file: $file_name"
+    echo "Watching file: $file_name - running command: $command"
     FD="f"
 elif [[ -d "$file_name" ]]; then
-    echo "Watching directory: $file_name"
+    echo "Watching directory: $file_name - running command: $command"
     FD="d"
 else
     echo "Error: File or directory '$file_name' not found"
     exit 1
 fi
 
-shift
-    
 prev_file_date=$(get_date "$file_name")
 file_date=$prev_file_date
 while [ 1 ]; do
@@ -94,9 +94,9 @@ while [ 1 ]; do
     prev_file_date=$file_date
     echo
     echo "------------------------------------------------------------"
-    echo $prev_file_date -  Run: "$*"
+    echo $prev_file_date -  Run: "$command"
     echo "------------------------------------------------------------"
-    $*
+    $command
     echo "------------------------------------------------------------"
     echo "Run Complete"
     echo "------------------------------------------------------------"

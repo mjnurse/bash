@@ -79,19 +79,19 @@ fi
 echo "Searching ./* ..."
 find . -iname "$name" -type f \
     -not -path '*/.*' -not -name '.*' \
-    -exec realpath {} \; >> $tmp
+    -exec realpath {} \; >> $tmp 2>/dev/null
 echo "Searching MJN/* ..."
 find "$MJNWINROOT/MJN" -iname "$name" -type f \
     -not -path '*/.*' -not -name '.*' \
-    -exec realpath {} \; >> $tmp
+    -exec realpath {} \; >> $tmp 2>/dev/null
 echo "Searching Documents/* ..."
 find "$MJNWINROOT/Documents" -iname "$name" -type f \
     -not -path '*/.*' -not -name '.*' \
-    -exec realpath {} \; >> $tmp
+    -exec realpath {} \; >> $tmp 2>/dev/null
 echo "Searching ~/mjnurse"
 find ~/mjnurse -iname "$name" -type f \
     -not -path '*/.*' -not -name '.*' \
-    -exec realpath {} \; >> $tmp
+    -exec realpath {} \; >> $tmp 2>/dev/null
 sort -u $tmp | sed "/mjnurse\.github\.io/d" > $tmp2
 mv -f $tmp2 $tmp
 
