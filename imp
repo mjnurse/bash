@@ -4,11 +4,21 @@ NAME
     imp - Improve text using Claude AI.
 
 USAGE
-    imp [options] [text]
+    imp [options] [text string or filename]
 
 OPTIONS
     -h|--help
         Show help text.
+    
+    -f|--file <file>
+        Use the content of the specified file as input text.
+    
+    -s|--silent
+        Suppress all output except the improved text.
+    
+    -u|--update
+        If a file is provided as input, append the improved text to the file 
+        instead of printing to console.
 
 DESCRIPTION
     A text improvement tool that uses Claude AI to enhance clarity, tone,
