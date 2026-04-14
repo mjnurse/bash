@@ -105,8 +105,13 @@ for d in /home/martin/mjnurse/bash \
         cecho lmag "------------------------------------------------------------"
         git status
         echo
-        printf "${clcya}Commit and Push changes in repo [yN]? ${cdef}"
+        printf "${clcya}Commit and Push changes in repo (Y/N) or view diff (D) [dyN]? ${cdef}"
         read yn
+        if [[ "${yn^}" == "D" ]]; then
+            git diff
+            printf "${clcya}Commit and Push changes in repo [yN]? ${cdef}"
+            read yn
+        fi
         if [[ "${yn^}" == "Y" ]]; then
             printf "${clcya}Commit Message (Blank to use 'Various'): ${cdef}" 
             read cm
