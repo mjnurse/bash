@@ -51,13 +51,11 @@ trash() {
     fi
 
     if [[ "$1" == "" ]]; then
-        echo 20 largest
-        echo ----------
-        ls -alSr ~/.trash | tail -20
-        echo 20 most recent
-        echo --------------
-        ls -altr ~/.trash | tail -20
-        echo "Size: $(du -d0 -h ~/.trash 2>/dev/null)"
+        echo -e "\e[92m20 largest:\e[39m"
+        ls -alSr ~/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | tail -20
+        echo -e "\e[92m20 most recent:\e[39m"
+        ls -altr ~/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | tail -20
+        echo -e "\e[92mSize:\e[39m $(du -d0 -h ~/.trash 2>/dev/null)"
     fi
     force_yn=y
 
