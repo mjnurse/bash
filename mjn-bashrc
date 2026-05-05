@@ -24,25 +24,11 @@ for f in /home/martin/mjnurse/cli-builder/*.alias; do
     source "$f"
 done
 
-alias fwd=file-watch-do
-alias lm=list-move
-alias kd=keep-delete
-alias mo=ms-office
-alias pp=ms-office
-alias ex=ms-office
-alias wo=ms-office
-alias mdu="sudo du -sh --exclude=c --exclude=mnt/c * | sort -h"
-alias lt="ls -altr"
-alias psg='ps -edf | grep'
-alias sbc="source ~/.bashrc"
-
 lld() {
    ls -ld ${*:-*} | sed '/^[^d]/d; s/^[^ ]*  *[0-9]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *//'
 }
 
-rm="rm -i"
-mrm=trash
-
+# Custom trash function that moves files to ~/.trash instead of deleting them
 trash() {
     mkdir -p ~/.trash
 
@@ -102,44 +88,59 @@ trash() {
     done
 }
 
+# Custom goto function that uses the 'goto' command and evaluates the result
 g () {
     goto -s "$1"
     eval "$(goto -r)"
 }
 
-alias rm='trash'
-alias drm="command rm -i"
-alias cat="batcat"
-
+# Custom function to open MarkText with GPU disabled and no sandbox, suppressing output
 md() {
     marktext --disable-gpu --no-sandbox $1 > /dev/null 2>&1 &
 }
 
+# Custom functions for find with case-insensitive search
 f() {
     find . -iname "$1"
 }
 
+# Custom function for find with case-insensitive search and wildcard - "fuzzy find"
 ff() {
     find . -iname "*$1*"
 }
 
-[ -d ~/.trash ] && echo -e "\nTrash Size: $(du ~/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls ~/.trash | wc -l) Items"
-
 # Silence the bell
 xset -b
 
-# refresh misc notes web page
+# Refresh misc notes web page
 n -m > /home/martin/mjnurse/mjnurse-website/notes/Miscellaneous_Notes.md
 
-# check if website been built today, if not build it
+# Check if website been built today, if not build it
 build-website -d
 
-# check for website changes
+# Check for website changes
 check-for-website-updates
 
 # Check local repos
 clr
 
+alias fwd=file-watch-do
+alias lm=list-move
+alias kd=keep-delete
+alias mo=ms-office
+alias pp=ms-office
+alias ex=ms-office
+alias wo=ms-office
+alias mdu="sudo du -sh --exclude=c --exclude=mnt/c * | sort -h"
+alias lt="ls -altr"
+alias psg='ps -edf | grep'
+alias sbc="source ~/.bashrc"
+alias rm='trash'
+alias drm="command rm -i"
+alias cat="batcat"
 alias bw='build-website'
 alias svg='chafa --scale=20 --size=80x80'
 alias img='catimg'
+
+# Display trash size and item count if ~/.trash exists
+[ -d ~/.trash ] && echo -e "\nTrash Size: $(du ~/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls ~/.trash | wc -l) Items"
