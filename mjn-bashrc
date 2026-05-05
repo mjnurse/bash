@@ -46,21 +46,34 @@ mrm=trash
 trash() {
     mkdir -p ~/.trash
 
-    if [[ "$1" == "-r" ]]; then
+    if [[ "$1" == "" ]]; then
+        echo -e "\e[92m20 largest:\e[39m"
+        ls -alhS ~/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
+        echo -e "\e[92m20 most recent:\e[39m"
+        ls -alht ~/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
+        echo -e "\e[92mSize:\e[39m $(du -d0 -h ~/.trash 2>/dev/null)"
+        echo -e "\e[92mOptions:\e[39m"
+        echo "-f|--force (force delete without confirmation)"
+        echo "-i|--interactive (prompt before deleting each file)"
+        echo "-p|--purge <filename> (delete file from trash)"
+    fi
+    force_yn=n
+
+    # Parse -p option
+    if [[ "$1" == "-p" || "$1" == "--purge" ]]; then
+        shift
+        \rm "/home/martin/.trash/$1"
+        return 1
+    fi
+
+    # Parse -f option
+    if [[ "$1" == "-f" || "$1" == "--force" ]]; then
+        force_yn=y
         shift
     fi
 
-    if [[ "$1" == "" ]]; then
-        echo -e "\e[92m20 largest:\e[39m"
-        ls -alSr ~/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | tail -20
-        echo -e "\e[92m20 most recent:\e[39m"
-        ls -altr ~/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | tail -20
-        echo -e "\e[92mSize:\e[39m $(du -d0 -h ~/.trash 2>/dev/null)"
-    fi
-    force_yn=y
-
-    # Parse -f option
-    if [[ "$1" == "-i" ]]; then
+    # Parse -i option
+    if [[ "$1" == "-i" || "$1" == "--interactive" ]]; then
         force_yn=n
         shift
     fi
