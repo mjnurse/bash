@@ -16,6 +16,7 @@ export PATH="$PATH:/home/martin/mjnurse/bash"
 export PATH="$PATH:/home/martin/mjnurse/cli-builder"
 export PATH="$PATH:/home/martin/mjnurse/shortcut-keys"
 export PATH="$PATH:/home/martin/mjnurse/website-builder"
+export PATH="$PATH:/home/martin/mjnurse/todo-done"
 
 export QES_HOST=localhost
 export QES_PORT=9200
