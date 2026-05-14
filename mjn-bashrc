@@ -113,6 +113,11 @@ ff() {
 # Silence the bell
 xset -b
 
+# Backup important files
+export BACKUP_DIR=/c/Users/MartinNurse/OneDrive\ -\ Quantexa\ Ltd/Documents/m_backup
+backup -f -d toto-db ~/.todo.db
+echo
+
 # Refresh misc notes web page
 n -m > /home/martin/mjnurse/mjnurse-website/notes/Miscellaneous_Notes.md
 

@@ -19,11 +19,11 @@ DESCRIPTION
   
     Requires the BACKUP_DIR environment variable to be set.
 
-    If no parameters are passed in, then the contents of the $BACKUP_DIR are
+    If no parameters are passed in, then the contents of the \$BACKUP_DIR are
     shown.
 
     If a single parameter <backup_name> is passed, then all backups in the
-    $BACKUP_DIR which match the backup_name are shown.  Wildcards can be
+    \$BACKUP_DIR which match the backup_name are shown.  Wildcards can be
     used but must be passed inside quotes.
 
 AUTHOR
@@ -49,14 +49,18 @@ function cecho {
 }
 
 FORCE_YN=n
+DOTFILES_YN=n
 
 while [[ "$1" != "" ]]; do
     case $1 in
+        -d|--dotfiles)
+            DOTFILES_YN=y
+            ;;
         -h|--help)
             echo "$help_text"
             exit
             ;;
-        -f|--forced)
+        -f|--force)
             FORCE_YN=y
             ;;    
         ?*)
@@ -76,14 +80,14 @@ fi
 
 if [ $# = 0 ]; then
     cecho lcya "BACKUP_DIR Contents:"
-    ls -ltr "$BACKUP_DIR"
+    ls -ltrh "$BACKUP_DIR"
     exit 
 fi
 
 if [ $# = 1 ]; then
     cecho lcya "Looking for $1 in BACKUP_DIR:"
     cd "$BACKUP_DIR"
-    ls -ltr $1*.zip | grep --color -i " $1" 
+    ls -ltrh $1*.zip | grep --color -i " $1" 
     exit
 fi
 
@@ -120,10 +124,13 @@ if [[ $FORCE_YN == n ]]; then
 fi
 
 # Create the zip archive
-zip -r "$ZIPFILE" "$@" -x "*/.*" -x "__pycache__/*" -x "venv/*" -x ".git/*"
+if [[ $DOTFILES_YN == y ]]; then
+    zip -r "$ZIPFILE" "$@" -x "__pycache__/*" -x "venv/*" -x ".git/*" > /dev/null
+else
+    zip -r "$ZIPFILE" "$@" -x "*/.*" -x "__pycache__/*" -x "venv/*" -x ".git/*" > /dev/null
+fi
 
 # Move to BACKUP_DIR
 mv "$ZIPFILE" "$BACKUP_DIR/"
 
-echo
 echo "Backup complete: $(du -h "$BACKUP_DIR/$ZIPFILE")"
