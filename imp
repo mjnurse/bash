@@ -74,6 +74,8 @@ usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
 input_file_yn=n
 update_file_yn=n
 
+echo -ne "\033]0;✨ Text Improver\007"
+
 while [[ "$1" != "" ]]; do
     case $1 in
         -h|--help)

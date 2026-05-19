@@ -108,14 +108,13 @@ if [[ $run_grep == n ]]; then
     echo "NOTE: No grep run.  Use -g to run a grep"
 fi
 echo
-read -p "Enter Number (# or v# - Vim, c# - MS Code): " n
+read -p "Enter Number (# or c# - MS Code, v# - Vim): " n
 
 editor="code"
 if [[ "${n:0:1}" == "v" ]]; then
     editor="gvim"
     n="${n:1}"
 elif [[ "${n:0:1}" == "c" ]]; then
-    editor="code"
     n="${n:1}"
 fi
 
