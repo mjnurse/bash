@@ -102,12 +102,19 @@ md() {
 
 # Custom functions for find with case-insensitive search
 f() {
-    find . -iname "$1"
-}
-
-# Custom function for find with case-insensitive search and wildcard - "fuzzy find"
-ff() {
-    find . -iname "*$1*"
+    if [[ "$1" == "" ]]; then
+        echo "Usage: f <filename> - Search for a file with case-insensitive name"
+        return 1
+    fi
+    args=()
+    for f in "$@"; do
+        args+=(-o -iname "$f")
+    done
+    find -type d -name ".?*" -prune \
+      -o -type d -name venv -prune \
+      -o -type d -name google-cloud-sdk -prune \
+      -o -type d -name pkg -prune \
+      "${args[@]}" -print | sort
 }
 
 # Silence the bell
@@ -130,6 +137,7 @@ check-for-website-updates
 # Check local repos
 clr
 
+alias ebc='code $0'
 alias fwd=file-watch-do
 alias lm=list-move
 alias kd=keep-delete
