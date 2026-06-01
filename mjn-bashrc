@@ -17,6 +17,7 @@ export PATH="$PATH:/home/martin/mjnurse/cli-builder"
 export PATH="$PATH:/home/martin/mjnurse/shortcut-keys"
 export PATH="$PATH:/home/martin/mjnurse/website-builder"
 export PATH="$PATH:/home/martin/mjnurse/todo-done"
+export PATH="$PATH:/home/martin/spark"
 
 export QES_HOST=localhost
 export QES_PORT=9200
@@ -27,6 +28,21 @@ done
 
 lld() {
    ls -ld ${*:-*} | sed '/^[^d]/d; s/^[^ ]*  *[0-9]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *//'
+}
+
+lmr() {
+    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+        echo "Usage: lmr [-n <number>] <pattern> - List most recently modified files matching pattern"
+        return 1
+    fi
+    if [[ "$1" == "-n" ]]; then
+        shift
+        n="$1"
+        shift
+    else
+        n=10
+    fi
+    find . -type f -printf '%T@ %TY/%Tm/%Td %TH:%TM:%.2TS %p\n' | sort -rn | head -"$n" | cut -d' ' -f2-
 }
 
 # Custom trash function that moves files to ~/.trash instead of deleting them
@@ -117,6 +133,15 @@ f() {
       "${args[@]}" -print | sort
 }
 
+c() {
+    if [[ "$1" == "" ]]; then
+        echo "Usage: c \"<question for Claude>\""
+        return 1
+    fi
+    question="$*"
+    claude --print "$question"
+}
+
 # Silence the bell
 xset -b
 
@@ -137,7 +162,7 @@ check-for-website-updates
 # Check local repos
 clr
 
-alias ebc='code $0'
+alias ebc='code /home/martin/mjnurse/bash/mjn-bashrc'
 alias fwd=file-watch-do
 alias lm=list-move
 alias kd=keep-delete
@@ -155,6 +180,7 @@ alias cat="batcat"
 alias bw='build-website'
 alias svg='chafa --scale=20 --size=80x80'
 alias img='catimg'
+alias web='/mnt/c/Windows/System32/cmd.exe /c start'
 
 # Display trash size and item count if ~/.trash exists
 [ -d ~/.trash ] && echo -e "\nTrash Size: $(du ~/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls ~/.trash | wc -l) Items"

@@ -9,8 +9,7 @@ USAGE
 DESCRIPTION
   A script to run a SQL query over data in a csv file using sqlite3.
 
-  The table to query has the same name as the csv file (with the file extension - 
-  anything after a '.' removed).
+  The table to query has the name 't'
 
 AUTHOR
   mjnurse.github.io - 2022
@@ -30,5 +29,5 @@ if [[ "$2" == "" ]]; then
   exit
 fi
 
-sqlite3 :memory: -cmd ".mode csv" -cmd ".import $1 ${1//.*/}" \
+sqlite3 :memory: -cmd ".mode csv" -cmd ".import $1 t" \
         -cmd ".mode column" -header "$2"

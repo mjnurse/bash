@@ -10,6 +10,8 @@ OPTIONS
     -a|--add <directory-name-details>
         Add directory(s) to the list of saved directories. All directories which have a name which starts
         with the provided details will be added.
+    -e|--edit
+        Edit the list of save directories.
 
     -r|--redirection
         Output the commands to change the current directory to the a directory selected in the previous
@@ -86,6 +88,10 @@ while [[ "$1" != "" ]]; do
                               s/,/                                            /; 
                               s/\(^................\)[^ ]*   *\(.*\)/\1, \2/' | sort -u > $0.tmp
             mv $0.tmp $0.dat
+            exit
+            ;;
+        -e|--edit)
+            vi $0.dat
             exit
             ;;
         -h|--help)

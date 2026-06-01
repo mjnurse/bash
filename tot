@@ -1,0 +1,116 @@
+#!/bin/bash
+help_text="
+NAME
+    tot - Sum, average, min, max for a list of values with optional size units.
+
+USAGE
+    tot [options] [values...]
+
+OPTIONS
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Calculates sum, average, min and max for a list of numeric values.
+    Values can include size units: b, kb, mb, gb, tb (e.g. 2.5gb, 300kb).
+    Values without a unit are treated as plain numbers.
+
+    If values are passed as arguments they are used directly.  Otherwise
+    an interactive prompt reads values (one or many per line) until Ctrl-D.
+
+AUTHOR
+    mjnurse.github.io - 2026
+"
+help_line="Sum, average, min, max calculator with size unit support"
+web_desc_line="Sum, average, min, max calculator with size unit support"
+
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift
+done
+
+parse_token() {
+  local token=$1
+  local val=$(echo "$token" | grep -oiE '^[0-9]*\.?[0-9]+')
+  local unit=$(echo "$token" | grep -oiE '[a-z]+$' | tr '[:upper:]' '[:lower:]')
+
+  if [[ -z "$val" ]]; then
+    echo "Skipping invalid: $token" >&2
+    return
+  fi
+
+  local bytes
+  case "$unit" in
+    b)  bytes=$(echo "$val" | awk '{printf "%.0f", $1}') ;;
+    kb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024}') ;;
+    mb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024 * 1024}') ;;
+    gb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024 * 1024 * 1024}') ;;
+    tb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024 * 1024 * 1024 * 1024}') ;;
+    "") bytes=$(echo "$val" | awk '{printf "%.0f", $1}') ;;
+    *)  echo "Unknown unit '$unit' in: $token" >&2; return ;;
+  esac
+
+  values+=("$bytes")
+}
+
+values=()
+
+if [[ $# -gt 0 ]]; then
+  for token in "$@"; do
+    parse_token "$token"
+  done
+else
+  echo "Enter values (e.g. 100 2.5gb 300kb), Ctrl-D to finish:"
+  echo ""
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    for token in $line; do
+      parse_token "$token"
+    done
+  done
+fi
+if [[ ${#values[@]} -eq 0 ]]; then
+  echo "No values entered."
+  exit 1
+fi
+
+fmt_size() {
+  local commas=$(printf "%0.f" "$1" | sed ':a;s/\B[0-9]\{3\}\>/,&/;ta')
+  local human=$(awk -v b="$1" 'BEGIN {
+    if (b >= 1024^4)      printf "%.2f tb", b / 1024^4
+    else if (b >= 1024^3) printf "%.2f gb", b / 1024^3
+    else if (b >= 1024^2) printf "%.2f mb", b / 1024^2
+    else if (b >= 1024)   printf "%.2f kb", b / 1024
+    else                  printf "%.0f b", b
+  }')
+  echo "$commas ($human)"
+}
+
+sum=0
+min=${values[0]}
+max=${values[0]}
+
+for v in "${values[@]}"; do
+  sum=$(echo "$sum + $v" | bc)
+  if (( $(echo "$v < $min" | bc -l) )); then min=$v; fi
+  if (( $(echo "$v > $max" | bc -l) )); then max=$v; fi
+done
+
+avg=$(echo "scale=0; $sum / ${#values[@]}" | bc)
+
+echo ""
+echo "Count: ${#values[@]}"
+echo "Sum:   $(fmt_size $sum)"
+echo "Avg:   $(fmt_size $avg)"
+echo "Min:   $(fmt_size $min)"
+echo "Max:   $(fmt_size $max)"
