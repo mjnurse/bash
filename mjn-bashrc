@@ -58,14 +58,18 @@ trash() {
         echo -e "\e[92mOptions:\e[39m"
         echo "-f|--force (force delete without confirmation)"
         echo "-i|--interactive (prompt before deleting each file)"
-        echo "-p|--purge <filename> (delete file from trash)"
+        echo "-p|--purge <filename (or leading characters)> (delete file from trash)"
     fi
     force_yn=n
 
     # Parse -p option
     if [[ "$1" == "-p" || "$1" == "--purge" ]]; then
         shift
-        \rm "/home/martin/.trash/$1"
+        ls -alh "/home/martin/.trash/$1"* 2>/dev/null
+        [[ $? -ne 0 ]] && { echo "No matching files found in trash for $1*"; return; }
+        read -p "Purge these files? [yN] " answer
+        [[ "${answer^^}" == "Y" ]] || { echo "Purge cancelled"; return; }
+        \rm "/home/martin/.trash/$1"*
         return 1
     fi
 
@@ -135,11 +139,24 @@ f() {
 
 c() {
     if [[ "$1" == "" ]]; then
-        echo "Usage: c \"<question for Claude>\""
-        return 1
+        echo "Note - can use: c \"<question for Claude>\""
+        echo
+        echo "Select model:"
+        echo "h - Haiku (fast)"
+        echo "s - Sonnet (general)"
+        echo "o - Opus (coding)"
+        echo
+        read -p "> " m
+        case $m in
+            h)  claude --model haiku ;;
+            s)  claude --model sonnet ;;
+            o)  claude --model opus ;;
+            *)  [[ "$m" != "" ]] && echo "Invalid selection: $m" ;;
+        esac
+        return
     fi
     question="$*"
-    claude --print "$question"
+    claude --model sonnet --print "$question"
 }
 
 # Silence the bell

@@ -10,6 +10,12 @@ OPTIONS
     -h|--help
         Show help text.
 
+    -u [<unit>]
+        Display values with size units.  Without a value, auto-selects the
+        best unit.  With a value (b, kb, mb, gb, tb), displays all values
+        in that unit.  Units are also shown automatically when any input
+        value includes a unit suffix.
+
 DESCRIPTION
     Calculates sum, average, min and max for a list of numeric values.
     Values can include size units: b, kb, mb, gb, tb (e.g. 2.5gb, 300kb).
@@ -27,11 +33,21 @@ web_desc_line="Sum, average, min, max calculator with size unit support"
 tmp="${help_text##*USAGE}"
 usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
 
+show_units=false
+forced_unit=""
+
 while [[ "$1" != "" ]]; do
     case $1 in
         -h|--help)
             echo "$help_text"
             exit
+            ;;
+        -u)
+            show_units=true
+            if [[ -n "$2" && "$2" =~ ^(b|kb|mb|gb|tb)$ ]]; then
+                forced_unit="$2"
+                shift
+            fi
             ;;
         *)
             break
@@ -39,6 +55,8 @@ while [[ "$1" != "" ]]; do
     esac
     shift
 done
+
+has_unit_input=false
 
 parse_token() {
   local token=$1
@@ -52,11 +70,11 @@ parse_token() {
 
   local bytes
   case "$unit" in
-    b)  bytes=$(echo "$val" | awk '{printf "%.0f", $1}') ;;
-    kb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024}') ;;
-    mb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024 * 1024}') ;;
-    gb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024 * 1024 * 1024}') ;;
-    tb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024 * 1024 * 1024 * 1024}') ;;
+    b)  bytes=$(echo "$val" | awk '{printf "%.0f", $1}'); has_unit_input=true ;;
+    kb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024}'); has_unit_input=true ;;
+    mb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024 * 1024}'); has_unit_input=true ;;
+    gb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024 * 1024 * 1024}'); has_unit_input=true ;;
+    tb) bytes=$(echo "$val" | awk '{printf "%.0f", $1 * 1024 * 1024 * 1024 * 1024}'); has_unit_input=true ;;
     "") bytes=$(echo "$val" | awk '{printf "%.0f", $1}') ;;
     *)  echo "Unknown unit '$unit' in: $token" >&2; return ;;
   esac
@@ -84,16 +102,33 @@ if [[ ${#values[@]} -eq 0 ]]; then
   exit 1
 fi
 
-fmt_size() {
-  local commas=$(printf "%0.f" "$1" | sed ':a;s/\B[0-9]\{3\}\>/,&/;ta')
-  local human=$(awk -v b="$1" 'BEGIN {
-    if (b >= 1024^4)      printf "%.2f tb", b / 1024^4
-    else if (b >= 1024^3) printf "%.2f gb", b / 1024^3
-    else if (b >= 1024^2) printf "%.2f mb", b / 1024^2
-    else if (b >= 1024)   printf "%.2f kb", b / 1024
-    else                  printf "%.0f b", b
-  }')
-  echo "$commas ($human)"
+fmt_val() {
+  local v=$1
+  local commas=$(printf "%0.f" "$v" | sed ':a;s/\B[0-9]\{3\}\>/,&/;ta')
+
+  if [[ "$show_units" == true || "$has_unit_input" == true ]]; then
+    local human
+    if [[ -n "$forced_unit" ]]; then
+      case "$forced_unit" in
+        b)  human=$(awk -v b="$v" 'BEGIN { printf "%.0f b", b }') ;;
+        kb) human=$(awk -v b="$v" 'BEGIN { printf "%.2f kb", b / 1024 }') ;;
+        mb) human=$(awk -v b="$v" 'BEGIN { printf "%.2f mb", b / 1024^2 }') ;;
+        gb) human=$(awk -v b="$v" 'BEGIN { printf "%.2f gb", b / 1024^3 }') ;;
+        tb) human=$(awk -v b="$v" 'BEGIN { printf "%.2f tb", b / 1024^4 }') ;;
+      esac
+    else
+      human=$(awk -v b="$v" 'BEGIN {
+        if (b >= 1024^4)      printf "%.2f tb", b / 1024^4
+        else if (b >= 1024^3) printf "%.2f gb", b / 1024^3
+        else if (b >= 1024^2) printf "%.2f mb", b / 1024^2
+        else if (b >= 1024)   printf "%.2f kb", b / 1024
+        else                  printf "%.0f b", b
+      }')
+    fi
+    echo "$commas ($human)"
+  else
+    echo "$commas"
+  fi
 }
 
 sum=0
@@ -110,7 +145,7 @@ avg=$(echo "scale=0; $sum / ${#values[@]}" | bc)
 
 echo ""
 echo "Count: ${#values[@]}"
-echo "Sum:   $(fmt_size $sum)"
-echo "Avg:   $(fmt_size $avg)"
-echo "Min:   $(fmt_size $min)"
-echo "Max:   $(fmt_size $max)"
+echo "Sum:   $(fmt_val $sum)"
+echo "Avg:   $(fmt_val $avg)"
+echo "Min:   $(fmt_val $min)"
+echo "Max:   $(fmt_val $max)"
