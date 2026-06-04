@@ -104,7 +104,7 @@ trash() {
             tar -czf "$dest.tar.gz" "$dest" > /tmp/trash.log 2>&1
             \rm -rf "$dest"
         else
-	         gzip "$dest" > /tmp/trash.log 2>&1
+	        gzip "$dest" > /tmp/trash.log 2>&1
         fi
     done
 }
