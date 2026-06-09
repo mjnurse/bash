@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    wincolor - Change terminal background and text colors.
+
+USAGE
+    wincolor <background> <text>
+
+OPTIONS
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Each argument can be a color name or a hex value (#rrggbb)
+
+    wincolor darkblue white
+    wincolor #1e1e1e #00ff00
+    wincolor black cyan
+
+    wincolor reset          - restore defaults
+    wincolor list           - show available color names
+
+AUTHOR
+    mjnurse.github.io - 2026
+"
+help_line="Change terminal background and text colors"
+web_desc_line="Change terminal background and text colors"
+
+declare -A COLORS=(
+  [black]="#000000"
+  [white]="#ffffff"
+  [red]="#ff0000"
+  [green]="#00ff00"
+  [blue]="#0000ff"
+  [yellow]="#ffff00"
+  [cyan]="#00ffff"
+  [magenta]="#ff00ff"
+  [orange]="#ff8c00"
+  [pink]="#ff69b4"
+  [purple]="#800080"
+  [grey]="#808080"
+  [gray]="#808080"
+  [darkblue]="#1a1a2e"
+  [darkgrey]="#1e1e1e"
+  [darkgray]="#1e1e1e"
+  [solarized]="#002b36"
+  [navy]="#000080"
+  [teal]="#008080"
+  [lime]="#32cd32"
+  [silver]="#c0c0c0"
+)
+
+resolve_color() {
+  local input="${1,,}"
+  if [[ -n "${COLORS[$input]}" ]]; then
+    echo "${COLORS[$input]}"
+  elif [[ "$input" =~ ^#?[0-9a-f]{6}$ ]]; then
+    [[ "$input" == \#* ]] && echo "$input" || echo "#$input"
+  else
+    return 1
+  fi
+}
+
+usage() {
+  echo "Usage: wincolor <background> <text>"
+  echo ""
+  echo "  Each argument can be a color name or a hex value (#rrggbb)"
+  echo ""
+  echo "  wincolor darkblue white"
+  echo "  wincolor #1e1e1e #00ff00"
+  echo "  wincolor black cyan"
+  echo ""
+  echo "  wincolor reset          - restore defaults"
+  echo "  wincolor list           - show available color names"
+}
+
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+  echo "$help_text"
+  exit 0
+fi
+
+if [[ "$1" == "reset" ]]; then
+  echo -ne '\e]110\a'
+  echo -ne '\e]111\a'
+  echo "Colors reset to defaults."
+  exit 0
+fi
+
+if [[ "$1" == "list" ]]; then
+  for name in $(echo "${!COLORS[@]}" | tr ' ' '\n' | sort); do
+    printf "  %-12s %s\n" "$name" "${COLORS[$name]}"
+  done
+  exit 0
+fi
+
+if [[ $# -ne 2 ]]; then
+  usage
+  exit 1
+fi
+
+bg=$(resolve_color "$1")
+if [[ $? -ne 0 ]]; then
+  echo "Unknown background color: $1"
+  echo "Use 'wincolor list' to see available names, or pass a hex like #1a1a2e"
+  exit 1
+fi
+
+fg=$(resolve_color "$2")
+if [[ $? -ne 0 ]]; then
+  echo "Unknown text color: $2"
+  echo "Use 'wincolor list' to see available names, or pass a hex like #ffffff"
+  exit 1
+fi
+
+echo -ne "\e]11;${bg}\a"
+echo -ne "\e]10;${fg}\a"
+echo "Background: ${bg}  Text: ${fg}"

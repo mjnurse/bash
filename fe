@@ -76,22 +76,13 @@ if [[ $run_grep == y ]]; then
   echo "--------------------------------------------------------------------------------" >> $tmp
 fi
 
-echo "Searching ./* ..."
-find . -iname "$name" -type f \
-    -not -path '*/.*' -not -name '.*' \
-    -exec realpath {} \; >> $tmp 2>/dev/null
-echo "Searching MJN/* ..."
-find "$MJNWINROOT/MJN" -iname "$name" -type f \
-    -not -path '*/.*' -not -name '.*' \
-    -exec realpath {} \; >> $tmp 2>/dev/null
-echo "Searching Documents/* ..."
-find "$MJNWINROOT/Documents" -iname "$name" -type f \
-    -not -path '*/.*' -not -name '.*' \
-    -exec realpath {} \; >> $tmp 2>/dev/null
-echo "Searching ~/mjnurse"
-find ~/mjnurse -iname "$name" -type f \
-    -not -path '*/.*' -not -name '.*' \
-    -exec realpath {} \; >> $tmp 2>/dev/null
+for loc in . "$MJNWINROOT/MJN" "$MJNWINROOT/Documents" ~/mjnurse ~/bin; do
+    echo "Searching $loc"
+    find "$loc" -iname "$name" -type f \
+        -not -path '*/.*' -not -name '.*' \
+        -exec realpath {} \; >> $tmp 2>/dev/null
+done
+
 sort -u $tmp | sed "/mjnurse\.github\.io/d" > $tmp2
 mv -f $tmp2 $tmp
 

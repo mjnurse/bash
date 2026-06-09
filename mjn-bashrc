@@ -138,6 +138,7 @@ f() {
 }
 
 c() {
+    model=sonnet
     if [[ "$1" == "" ]]; then
         echo "Note - can use: c \"<question for Claude>\""
         echo
@@ -147,16 +148,27 @@ c() {
         echo "o - Opus (coding)"
         echo
         read -p "> " m
-        case $m in
-            h)  claude --model haiku ;;
-            s)  claude --model sonnet ;;
-            o)  claude --model opus ;;
-            *)  [[ "$m" != "" ]] && echo "Invalid selection: $m" ;;
-        esac
-        return
     fi
+    if [[ "$*" == "h" || "$*" == "s" || "$*" == "o" ]]; then
+        m="$*"
+        shift
+    fi
+    case $m in
+        h)  model=haiku ;;
+        s)  model=sonnet ;;
+        o)  model=opus ;;
+        *)  [[ "$m" != "" ]] && echo "Invalid selection: $m"; return ;;
+    esac
     question="$*"
-    claude --model sonnet --print "$question"
+    if [[ "$question" == "" ]]; then
+        claude --model $model
+    else
+        claude --model $model --print "$question"
+    fi
+}
+
+beep() {
+    powershell.exe -Command '[Console]::Beep()'
 }
 
 # Silence the bell

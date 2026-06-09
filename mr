@@ -51,6 +51,15 @@ usage() {
     exit 1
 }
 
+all_files=true
+for arg in "$@"; do
+    [ -e "$arg" ] || { all_files=false; break; }
+done
+
+if $all_files && [ "$#" -gt 1 ]; then
+    echo "Warning: did you pass and mean to pass '*'? Quote it to avoid glob expansion."
+fi
+
 # Split combined short arguments (eg -abc) into individual arguments (-a -b -c). Remove = symbols.
 new_args=()
 while [[ "$1" != "" ]]; do
@@ -75,6 +84,7 @@ if $debug; then
     printf "args: "; printf '%s ' "${new_args[@]}"; echo
     # set -x
 fi
+
 
 # Process the arguments
 set -- "${new_args[@]}"
@@ -112,6 +122,12 @@ if [[ $# -lt 1 ]]; then
   usage
   exit 2
 fi
+if [[ $# -gt 1 ]]; then
+  echo "Error: please pass in a single pattern." >&2
+  echo
+  usage
+  exit 2
+fi
 PATTERN="$1"
 
 # Choose find name flag based on case sensitivity
@@ -128,7 +144,7 @@ trap 'rm -f "$tmpfile"' EXIT
 while IFS= read -r -d '' f; do
   # If file was deleted between find and stat, skip errors
   if out=$(stat -c "%y" "$f" 2>/dev/null); then
-    mtime=${out:2:14} # "YYYY-MM-DD HH:MM:SS"
+    mtime=${out} # "YYYY-MM-DD HH:MM:SS"
     echo "${mtime// /-} $f"
   fi
 done < <(find . -type d -name .git -prune -o -type f $NAMEFLAG "$PATTERN" -print0) > "$tmpfile"
