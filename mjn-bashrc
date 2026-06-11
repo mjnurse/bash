@@ -211,5 +211,16 @@ alias svg='chafa --scale=20 --size=80x80'
 alias img='catimg'
 alias web='/mnt/c/Windows/System32/cmd.exe /c start'
 
+# Append history instead of overwrite
+shopt -s histappend
+
+# Write to history after every command
+PROMPT_COMMAND='history -a'
+
+# Increase history size, add time stamps
+HISTSIZE=10000
+HISTFILESIZE=20000
+HISTTIMEFORMAT="%F %T  "
+
 # Display trash size and item count if ~/.trash exists
 [ -d ~/.trash ] && echo -e "\nTrash Size: $(du ~/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls ~/.trash | wc -l) Items"

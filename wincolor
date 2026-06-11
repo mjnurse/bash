@@ -115,4 +115,4 @@ fi
 
 echo -ne "\e]11;${bg}\a"
 echo -ne "\e]10;${fg}\a"
-echo "Background: ${bg}  Text: ${fg}"
+echo "Background: ${bg} Text: ${fg}"
