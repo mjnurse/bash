@@ -210,6 +210,8 @@ alias bw='build-website'
 alias svg='chafa --scale=20 --size=80x80'
 alias img='catimg'
 alias web='/mnt/c/Windows/System32/cmd.exe /c start'
+alias vf='vi "$(fzf)"'
+alias cf='code "$(fzf)"'
 
 # Append history instead of overwrite
 shopt -s histappend
