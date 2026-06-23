@@ -212,6 +212,7 @@ alias img='catimg'
 alias web='/mnt/c/Windows/System32/cmd.exe /c start'
 alias vf='vi "$(fzf)"'
 alias cf='code "$(fzf)"'
+alias clip="xclip -selection clipboard"
 
 # Append history instead of overwrite
 shopt -s histappend
