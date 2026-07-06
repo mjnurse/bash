@@ -9,15 +9,18 @@ USAGE
 OPTIONS
     -h|--help
         Show help text.
-    
+
+    -c|--clipboard
+        Read text from clipboard, improve it, put result on clipboard, and exit.
+
     -f|--file <file>
         Use the content of the specified file as input text.
-    
+
     -s|--silent
         Suppress all output except the improved text.
-    
+
     -u|--update
-        If a file is provided as input, append the improved text to the file 
+        If a file is provided as input, append the improved text to the file
         instead of printing to console.
 
 DESCRIPTION
@@ -46,6 +49,7 @@ clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
 clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
 
 silent_yn=n
+clipboard_yn=n
 
 function cecho {
     if [[ "$silent_yn" == "y" ]]; then
@@ -82,6 +86,9 @@ while [[ "$1" != "" ]]; do
             echo "$help_text"
             exit
             ;;
+        -c|--clipboard)
+            clipboard_yn=y
+            ;;
         -f|--file)
             shift
             if [[ -f "$1" ]]; then
@@ -110,7 +117,7 @@ function improve() {
     local text="$(sed 's/(/\\(/g; s/)/\\)/g' <<<"$1")"
     local instruction="You are a concise senior technical editor. Improve clarity, tone, grammar, and flow; preserve meaning; Improve the following text and return only the improved text"
 
-    claude --print "${instruction}: ${text}"
+    /home/martin/.local/bin/claude --print "${instruction}: ${text}"
 }
 
 if [[ "$1" != "" && -f "$1" ]]; then
@@ -127,6 +134,14 @@ fi
 
 if [[ "$request" == "" ]]; then
     request="$*"
+fi
+
+if [[ "$clipboard_yn" == "y" ]]; then
+    request="$(powershell.exe -NoProfile -Command Get-Clipboard)"
+    if [[ "$request" == "" ]]; then
+        cecho cred "Clipboard is empty."
+        exit 1
+    fi
 fi
 
 while [[ 1 ]]; do

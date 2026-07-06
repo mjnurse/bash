@@ -213,6 +213,7 @@ alias web='/mnt/c/Windows/System32/cmd.exe /c start'
 alias vf='vi "$(fzf)"'
 alias cf='code "$(fzf)"'
 alias clip="xclip -selection clipboard"
+alias book="dne -a"
 
 # Append history instead of overwrite
 shopt -s histappend

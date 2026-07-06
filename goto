@@ -10,6 +10,7 @@ OPTIONS
     -a|--add <directory-name-details>
         Add directory(s) to the list of saved directories. All directories which have a name which starts
         with the provided details will be added.
+
     -e|--edit
         Edit the list of save directories.
 
@@ -83,6 +84,10 @@ while [[ "$1" != "" ]]; do
     case $1 in
         -a|--add)
             shift
+            if [[ "${1: -1}" == "/" ]]; then
+                echo "Directory name details must not end with a /"
+                exit 1
+            fi
             ls -d "$1"* 2>/dev/null | sed 's/\(^.*\/\)\(.*\)/\2, \1\2/' >> $0.dat
                 cat $0.dat | sed '/^ *$/d;
                               s/,/                                            /; 
