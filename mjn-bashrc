@@ -214,6 +214,7 @@ alias vf='vi "$(fzf)"'
 alias cf='code "$(fzf)"'
 alias clip="xclip -selection clipboard"
 alias book="dne -a"
+alias c+="chmod u+x"
 
 # Append history instead of overwrite
 shopt -s histappend
