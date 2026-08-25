@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    imp - Improve text using Claude AI.
+
+USAGE
+    imp [options] [text string or filename]
+
+OPTIONS
+    -h|--help
+        Show help text.
+
+    -c|--clipboard
+        Read text from clipboard, improve it, put result on clipboard, and exit.
+
+    -f|--file <file>
+        Use the content of the specified file as input text.
+
+    -s|--silent
+        Suppress all output except the improved text.
+
+    -u|--update
+        If a file is provided as input, append the improved text to the file
+        instead of printing to console.
+
+DESCRIPTION
+    A text improvement tool that uses Claude AI to enhance clarity, tone,
+    grammar, and flow while preserving the original meaning. 
+
+    If text is provided as an argument, it will be improved and the result
+    copied to the clipboard, then the script exits.
+
+    If no text is provided, the script enters interactive mode, repeatedly
+    prompting for text to improve until an empty input is given.
+
+AUTHOR
+    mjnurse.github.io - 2025
+"
+
+help_line="Improve text using Claude AI"
+web_desc_line="Improve text using Claude AI"
+
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
+cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
+clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+silent_yn=n
+clipboard_yn=n
+
+function cecho {
+    if [[ "$silent_yn" == "y" ]]; then
+        return
+    fi
+    if [[ "$1" == "" ]]; then
+        echo
+        return
+    fi
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
+function cpf {
+    if [[ "$silent_yn" == "y" ]]; then
+        return
+    fi
+    color=c$1; shift
+    printf "${!color}$*${cdef}"
+}
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+input_file_yn=n
+update_file_yn=n
+
+echo -ne "\033]0;✨ Text Improver\007"
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -c|--clipboard)
+            clipboard_yn=y
+            ;;
+        -f|--file)
+            shift
+            if [[ -f "$1" ]]; then
+                file_name="$1"
+                request="$(cat "$1")"
+                input_file_yn=y
+            else
+                cecho cred "File not found: $1"
+                exit 1
+            fi
+            ;;
+        -s|--silent)
+            silent_yn=y
+            ;;
+        -u|--update)
+            update_file_yn=y
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+function improve() {
+    local text="$(sed 's/(/\\(/g; s/)/\\)/g' <<<"$1")"
+    local instruction="You are a concise senior technical editor. Improve clarity, tone, grammar, and flow; preserve meaning; Improve the following text and return only the improved text"
+
+    /home/martin/.local/bin/claude --print "${instruction}: ${text}"
+}
+
+if [[ "$1" != "" && -f "$1" ]]; then
+    file_name="$1"
+    request="$(cat "$file_name")"
+    input_file_yn=y
+    echo
+    cecho lcya "$1 is a file, using its content as input."
+    if [[ $update_file_yn == "n" ]]; then
+        echo
+        cecho lmag "Note: To update the file with the improved text, use the -u or --update option."
+    fi
+fi
+
+if [[ "$request" == "" ]]; then
+    request="$*"
+fi
+
+if [[ "$clipboard_yn" == "y" ]]; then
+    request="$(powershell.exe -NoProfile -Command Get-Clipboard)"
+    if [[ "$request" == "" ]]; then
+        cecho cred "Clipboard is empty."
+        exit 1
+    fi
+fi
+
+while [[ 1 ]]; do
+
+    if [[ "$request" == "" ]]; then
+        cpf lcya "Text to improve (CTRL-D to end input): "
+        tmp="$(cat)"
+        input_text="$(echo "$tmp" | tr -d "\r")"
+    else
+        input_text="$request"
+        echo 
+    fi
+
+    if [[ "$input_text" == "" ]]; then
+        input_text="$(powershell.exe -NoProfile -Command Get-Clipboard)"
+        if [[ "$input_text" != "" ]]; then
+            cecho lcya "Using clipboard content as input:"
+            cecho def "$input_text"
+        else
+            cecho def "Exiting."
+            exit 0
+        fi
+    fi
+
+    cecho
+    cecho lcya "Generating improved text..."
+
+    response="$(improve "${input_text}")"
+
+    cecho
+    cecho lcya "Response (copied to clipboard):"
+    echo
+    if [[ "$update_file_yn" == "y" && "$input_file_yn" == "y" ]]; then
+        echo >> "$file_name"
+        echo "$response" >> "$file_name"
+        cecho lcya "Improved text appended to $file_name"
+    else
+        echo "$response"
+    fi
+    cecho
+    cecho def -------------------
+
+    echo "$response" | clip.exe
+
+    if [[ "$request" != "" ]]; then
+        exit 0
+    fi
+done

@@ -1,0 +1,144 @@
+" DESCRIPTION
+"     My portable .vimrc file.
+"
+" AUTHOR
+"     mjnurse.github.io - 2026
+
+source $VIMRUNTIME/mswin.vim
+behave mswin
+
+let $LANG = 'en'
+set langmenu=en_US.UTF-8  
+
+set guifont=Consolas:h12:cANSI
+
+syntax on
+
+set hlsearch
+set incsearch
+set ic
+
+" Lets put all the filename~ backup and swp / un file in the temp folder.
+if has("win32") || has("win64")
+   set backupdir=c:\Temp
+   set directory=c:\Temp
+   set undodir=c:\Temp
+elseif has("unix")
+   set backupdir=/tmp
+   set directory=/tmp
+   set undodir=/tmp
+endif
+
+set fileformat=unix
+set fileformats=unix,dos
+"set nobinary
+
+" 4 Character tab and convert these to spaces.
+set tabstop=4 softtabstop=0 expandtab shiftwidth=4
+let b:did_indent = 1
+
+" Map F2 to auto complete words in inset mode and to clear the last search otherwise.
+map! <F2> <C-N>
+map  <F2> :noh<CR>
+
+" Enable spell check.
+set spell spelllang=en_gb
+if has("win32") || has("win64")
+   set spellfile=c:\Users\MartinNurse\vimspellfile.add
+elseif has("unix")
+   set spellfile=/home/martin/mjnurse/bash/vimspellfile.add
+endif
+set spellcapcheck=""
+
+map <C-n> ]s
+map <C-p> [s
+map <C-l> z=
+map <C-k> zg
+map <C-o> :set nospell<CR>
+
+" Stop the bloody ping on error and flash the screen instead.
+set vb
+
+if has("win32") || has("win64")
+   set columns=100
+   set lines=60
+endif
+
+" Disable filetype-based indentation settings
+filetype indent off
+
+" set foldmethod=indent
+" map <C-F> zc
+" map <A-left> zc
+
+if has("gui_running")
+   colorscheme evening
+endif
+
+if has("win32")
+    set shell=C:\Windows\Sysnative\wsl.exe
+    set shellpipe=|
+    set shellredir=>
+    set shellcmdflag=
+endif
+
+set t_vb=
+set visualbell
+
+" Disable auto wrap
+set formatoptions-=t
+
+" Map Alt-Up to move the current line up
+noremap <A-Up> :m .-2<CR>==
+" inoremap <A-Up> <Esc>:m .-2<CR>==gi
+vnoremap <A-Up> :m '<-2<CR>gv=gv
+
+" Map Alt-Down to move the current line down
+noremap <A-Down> :m .+1<CR>==
+" inoremap <A-Down> <Esc>:m .+1<CR>==gi
+vnoremap <A-Down> :m '>+1<CR>gv=gv
+
+" Map Alt-Shift-Up to copy the current line up
+noremap <A-S-Up> :t-1<CR>
+" inoremap <A-S-Up> <Esc>:t-1<CR>gi
+vnoremap <A-S-Up> :t'<-2<CR>gv
+
+" Map Alt-Shift-Down to copy the current line down
+noremap <A-S-Down> :t.<CR>
+" inoremap <A-S-Down> <Esc>:t.<CR>gi
+vnoremap <A-S-Down> :t'>+1<CR>gv
+
+augroup markdownHighlight
+    autocmd!
+    autocmd BufRead,BufNewFile *.md call MarkdownHighlight()
+augroup END
+
+
+function! MarkdownHighlight()
+    syntax match heading /^##* .*$/ contains=@Spell
+    highlight heading ctermfg=magenta guifg=magenta
+    syntax match action /^! .*$/ contains=@Spell
+    highlight action ctermfg=yellow guifg=yellow
+    syntax match question /^? .*$/ contains=@Spell
+    highlight question ctermfg=cyan guifg=cyan
+    syntax match note /^- .*$/ contains=@Spell
+    highlight note ctermfg=green guifg=green
+    syntax match done /^.x .*$/ contains=@Spell
+    highlight done ctermfg=grey guifg=#d3d3d3
+    syntax match uscore /_/ 
+    highlight uscore ctermbg=black guifg=#000000
+endfunction
+
+function! FormatMd()
+   set noautoread
+   silent write
+   silent execute '!python mdformat.py %'
+   silent! edit
+   set autoread
+   redraw!
+endfunction
+
+augroup markdownFileType
+    autocmd!
+    autocmd FileType markdown nnoremap <buffer> <C-F> :call FormatMd()<CR>
+augroup END

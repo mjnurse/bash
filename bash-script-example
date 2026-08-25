@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    bash-func - One line description.
+
+USAGE
+    bash-func [options] <parameters>
+
+OPTIONS
+    -x
+        Description...
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Description description description description.
+
+AUTHOR
+    mjnurse.github.io - 2026
+"
+help_line="Example Bash Script"
+web_desc_line="Example Bash Script"
+
+tmpfile=$(mktemp)
+trap 'rm -f "$tmpfile"' EXIT
+
+# set -x # for debugging
+
+# Terminal Colours
+cdef="\x1b[39m" # default colour
+cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
+cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
+clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
+
+function cecho {
+    if [[ "$1" == "-u" ]]; then ul=true; shift; else ul=false; fi
+    color=c$1; shift; echo -e "${!color}$*${cdef}"
+    if $ul; then echo -e "${!color}${*//?/-}${cdef}"; fi
+}
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+# if [[ "$1" == "" ]]; then
+#     echo "${usage}"
+#     echo "${try}"
+#     exit 1
+# fi
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+cat $0

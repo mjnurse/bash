@@ -1,0 +1,682 @@
+#!/usr/bin/env python3
+import sys
+import argparse
+import re
+import csv
+import json
+import tempfile
+import subprocess
+import os
+from collections import defaultdict
+from typing import List, Dict, Set
+
+
+def parse_numeric(value: str) -> tuple[float, str]:
+    """Parse numeric values with KB, MB, GB, TB, PB, or % suffixes.
+
+    Returns (numeric_value, format_type) where format_type is 'size', 'percent', or 'number'
+    """
+    if isinstance(value, (int, float)):
+        return float(value), 'number'
+
+    value_str = str(value).strip()
+
+    # Check for percentage
+    if value_str.endswith('%'):
+        try:
+            num = float(value_str[:-1])
+            return num, 'percent'
+        except ValueError:
+            return 0.0, 'number'
+
+    value_upper = value_str.upper()
+
+    # Check for size units
+    units = {
+        'B': 1,
+        'KB': 1024,
+        'MB': 1024 ** 2,
+        'GB': 1024 ** 3,
+        'TB': 1024 ** 4,
+        'PB': 1024 ** 5,
+        'K': 1024,
+        'M': 1024 ** 2,
+        'G': 1024 ** 3,
+        'T': 1024 ** 4,
+        'P': 1024 ** 5,
+    }
+
+    match = re.match(r'^([\d.]+)\s*([KMGTP]?B?)$', value_upper)
+    if match:
+        num, unit = match.groups()
+        # Only treat as size if there's actually a unit suffix
+        if unit and unit in units:
+            return float(num) * units.get(unit, 1), 'size'
+
+    # Plain number
+    try:
+        return float(value_str), 'number'
+    except ValueError:
+        return 0.0, 'number'
+
+
+def format_size(bytes_val: float) -> str:
+    """Format bytes back to human-readable size."""
+    if bytes_val == 0:
+        return "0B"
+
+    units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    unit_idx = 0
+    size = float(bytes_val)
+
+    while size >= 1024 and unit_idx < len(units) - 1:
+        size /= 1024
+        unit_idx += 1
+
+    if size == int(size):
+        return f"{int(size)}{units[unit_idx]}"
+    else:
+        return f"{size:.2f}{units[unit_idx]}"
+
+
+def format_value(value: float, format_type: str) -> str:
+    """Format value based on its type."""
+    if format_type == 'size':
+        return format_size(value)
+    elif format_type == 'percent':
+        if value == int(value):
+            return f"{int(value)}%"
+        else:
+            return f"{value:.2f}%"
+    else:
+        if value == int(value):
+            return str(int(value))
+        else:
+            return f"{value:.2f}"
+
+
+def parse_table(lines: List[str]) -> tuple[List[str], List[Dict[str, str]]]:
+    """Parse table from stdin, return headers and rows."""
+    if not lines:
+        return [], []
+
+    header_line = lines[0]
+    headers = header_line.split()
+
+    rows = []
+    for line in lines[1:]:
+        if not line.strip():
+            continue
+        parts = line.split()
+        # Include all rows, even with missing values
+        row = {}
+        for i in range(len(headers)):
+            row[headers[i]] = parts[i] if i < len(parts) else ''
+        rows.append(row)
+
+    return headers, rows
+
+
+def apply_filters(rows: List[Dict[str, str]], filters: List[str]) -> List[Dict[str, str]]:
+    """Apply filters with operators: =, !=, <>, >, >=, <, <=. Supports wildcards with * for = and !=."""
+    if not filters:
+        return rows
+
+    filtered = rows
+    for f in filters:
+        # Parse operator (check longer operators first)
+        operator = None
+        col = None
+        value = None
+
+        for op in ['!=', '<>', '>=', '<=', '=', '>', '<']:
+            if op in f:
+                parts = f.split(op, 1)
+                if len(parts) == 2:
+                    col, value = parts[0].strip(), parts[1].strip()
+                    operator = op
+                    break
+
+        if not operator:
+            print(f"Warning: Invalid filter format '{f}', expected col<op>value where <op> is =, !=, <>, >, >=, <, <=", file=sys.stderr)
+            continue
+
+        if operator == '=':
+            if '*' in value:
+                # Convert wildcard pattern to regex
+                pattern = re.escape(value).replace(r'\*', '.*')
+                pattern = f'^{pattern}$'
+                filtered = [row for row in filtered if row.get(col) and re.match(pattern, row.get(col))]
+            else:
+                # Exact match
+                filtered = [row for row in filtered if row.get(col) == value]
+
+        elif operator in ['!=', '<>']:
+            if '*' in value:
+                # Convert wildcard pattern to regex
+                pattern = re.escape(value).replace(r'\*', '.*')
+                pattern = f'^{pattern}$'
+                filtered = [row for row in filtered if row.get(col) and not re.match(pattern, row.get(col))]
+            else:
+                # Not equal
+                filtered = [row for row in filtered if row.get(col) != value]
+
+        elif operator in ['>', '>=', '<', '<=']:
+            # Numeric comparison
+            new_filtered = []
+            for row in filtered:
+                row_value = row.get(col)
+                if not row_value:
+                    continue
+
+                # Parse both values as numeric
+                row_num, _ = parse_numeric(row_value)
+                filter_num, _ = parse_numeric(value)
+
+                if operator == '>':
+                    if row_num > filter_num:
+                        new_filtered.append(row)
+                elif operator == '>=':
+                    if row_num >= filter_num:
+                        new_filtered.append(row)
+                elif operator == '<':
+                    if row_num < filter_num:
+                        new_filtered.append(row)
+                elif operator == '<=':
+                    if row_num <= filter_num:
+                        new_filtered.append(row)
+
+            filtered = new_filtered
+
+    return filtered
+
+
+def group_and_aggregate(rows: List[Dict[str, str]], group_cols: List[str],
+                        agg_specs: Dict[str, List[str]]) -> List[Dict[str, any]]:
+    """Group rows and calculate aggregations.
+
+    agg_specs is a dict like {'sum': ['col1', 'col2'], 'count': ['col3'], ...}
+    """
+    if not group_cols:
+        if any(agg_specs.values()):
+            result = {}
+
+            for col in agg_specs.get('sum', []):
+                values_types = [parse_numeric(row.get(col, 0)) for row in rows]
+                total = sum(v for v, _ in values_types)
+                format_type = values_types[0][1] if values_types else 'number'
+                result[f"sum_{col}"] = format_value(total, format_type)
+
+            for col in agg_specs.get('count', []):
+                result[f"count_{col}"] = len([r for r in rows if r.get(col)])
+
+            for col in agg_specs.get('max', []):
+                values_types = [parse_numeric(row.get(col, 0)) for row in rows if row.get(col)]
+                if values_types:
+                    values = [v for v, _ in values_types]
+                    format_type = values_types[0][1]
+                    result[f"max_{col}"] = format_value(max(values), format_type)
+
+            for col in agg_specs.get('min', []):
+                values_types = [parse_numeric(row.get(col, 0)) for row in rows if row.get(col)]
+                if values_types:
+                    values = [v for v, _ in values_types]
+                    format_type = values_types[0][1]
+                    result[f"min_{col}"] = format_value(min(values), format_type)
+
+            for col in agg_specs.get('avg', []):
+                values_types = [parse_numeric(row.get(col, 0)) for row in rows if row.get(col)]
+                if values_types:
+                    values = [v for v, _ in values_types]
+                    format_type = values_types[0][1]
+                    result[f"avg_{col}"] = format_value(sum(values) / len(values), format_type)
+
+            return [result] if result else rows
+        return rows
+
+    groups = defaultdict(lambda: defaultdict(list))
+    format_types = defaultdict(str)
+
+    for row in rows:
+        key = tuple(row.get(col, '') for col in group_cols)
+
+        for agg_type, cols in agg_specs.items():
+            for col in cols:
+                val = row.get(col)
+                if val:
+                    if agg_type == 'count':
+                        groups[key][f'count_{col}'].append(1)
+                    else:
+                        try:
+                            numeric_val, fmt_type = parse_numeric(val)
+                            agg_key = f'{agg_type}_{col}'
+                            groups[key][agg_key].append(numeric_val)
+                            if not format_types[agg_key]:
+                                format_types[agg_key] = fmt_type
+                        except (ValueError, TypeError):
+                            pass
+
+    result = []
+    for key, agg_data in groups.items():
+        row_data = {}
+        for i, col in enumerate(group_cols):
+            row_data[col] = key[i]
+
+        for agg_key, values in agg_data.items():
+            if not values:
+                continue
+
+            if agg_key.startswith('count_'):
+                row_data[agg_key] = len(values)
+            elif agg_key.startswith('sum_'):
+                row_data[agg_key] = format_value(sum(values), format_types.get(agg_key, 'number'))
+            elif agg_key.startswith('max_'):
+                row_data[agg_key] = format_value(max(values), format_types.get(agg_key, 'number'))
+            elif agg_key.startswith('min_'):
+                row_data[agg_key] = format_value(min(values), format_types.get(agg_key, 'number'))
+            elif agg_key.startswith('avg_'):
+                row_data[agg_key] = format_value(sum(values) / len(values), format_types.get(agg_key, 'number'))
+
+        result.append(row_data)
+
+    return result
+
+
+def select_columns(rows: List[Dict[str, any]], show_cols: List[str],
+                   all_headers: List[str]) -> tuple[List[str], List[Dict[str, any]]]:
+    """Select specific columns to display."""
+    if not show_cols:
+        return all_headers, rows
+
+    # Expand to include aggregation prefixed columns
+    expanded_cols = []
+    agg_prefixes = ['sum_', 'count_', 'max_', 'min_', 'avg_']
+
+    for col in show_cols:
+        expanded_cols.append(col)
+        for prefix in agg_prefixes:
+            agg_col = f"{prefix}{col}"
+            if any(agg_col in row for row in rows):
+                expanded_cols.append(agg_col)
+
+    # Remove duplicates while preserving order
+    seen = set()
+    final_cols = []
+    for col in expanded_cols:
+        if col not in seen:
+            seen.add(col)
+            final_cols.append(col)
+
+    return final_cols, rows
+
+
+def calculate_totals(rows: List[Dict[str, any]], headers: List[str]) -> Dict[str, any]:
+    """Calculate totals row: sum of sums, max of maxs, min of mins, avg of avgs, sum of counts."""
+    totals = {}
+    agg_prefixes = ['sum_', 'count_', 'max_', 'min_', 'avg_']
+
+    for header in headers:
+        if not any(header.startswith(prefix) for prefix in agg_prefixes):
+            # Non-aggregated column, leave empty or put "TOTAL"
+            if header == headers[0]:
+                totals[header] = 'TOTAL'
+            else:
+                totals[header] = ''
+            continue
+
+        # Collect all values for this aggregated column
+        values = []
+        for row in rows:
+            val = row.get(header)
+            if val:
+                numeric_val, _ = parse_numeric(str(val))
+                values.append(numeric_val)
+
+        if not values:
+            totals[header] = ''
+            continue
+
+        # Determine format type from first non-empty value
+        format_type = 'number'
+        for row in rows:
+            val = row.get(header)
+            if val:
+                _, format_type = parse_numeric(str(val))
+                break
+
+        # Apply appropriate aggregation based on prefix
+        if header.startswith('sum_'):
+            totals[header] = format_value(sum(values), format_type)
+        elif header.startswith('count_'):
+            totals[header] = format_value(sum(values), 'number')
+        elif header.startswith('max_'):
+            totals[header] = format_value(max(values), format_type)
+        elif header.startswith('min_'):
+            totals[header] = format_value(min(values), format_type)
+        elif header.startswith('avg_'):
+            totals[header] = format_value(sum(values) / len(values), format_type)
+
+    return totals
+
+
+def print_table(headers: List[str], rows: List[Dict[str, any]], show_totals: bool = False):
+    """Print formatted table."""
+    if not rows:
+        print("No results")
+        return
+
+    # Calculate totals if requested
+    totals_row = None
+    if show_totals:
+        totals_row = calculate_totals(rows, headers)
+
+    # Calculate column widths (including totals row if present)
+    col_widths = {h: len(h) for h in headers}
+    for row in rows:
+        for h in headers:
+            val = str(row.get(h, ''))
+            col_widths[h] = max(col_widths[h], len(val))
+
+    if totals_row:
+        for h in headers:
+            val = str(totals_row.get(h, ''))
+            col_widths[h] = max(col_widths[h], len(val))
+
+    header_parts = [h.ljust(col_widths[h]) for h in headers]
+    print('  '.join(header_parts))
+
+    for row in rows:
+        row_parts = [str(row.get(h, '')).ljust(col_widths[h]) for h in headers]
+        print('  '.join(row_parts))
+
+    # Print totals row if requested
+    if totals_row:
+        # Print separator line
+        separator = '  '.join(['-' * col_widths[h] for h in headers])
+        print(separator)
+        totals_parts = [str(totals_row.get(h, '')).ljust(col_widths[h]) for h in headers]
+        print('  '.join(totals_parts))
+
+
+def print_csv(headers: List[str], rows: List[Dict[str, any]], show_totals: bool = False):
+    """Print CSV format."""
+    if not rows:
+        return
+
+    # Calculate totals if requested
+    totals_row = None
+    if show_totals:
+        totals_row = calculate_totals(rows, headers)
+
+    writer = csv.DictWriter(sys.stdout, fieldnames=headers, extrasaction='ignore')
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(row)
+
+    if totals_row:
+        writer.writerow(totals_row)
+
+
+def print_json(headers: List[str], rows: List[Dict[str, any]], show_totals: bool = False):
+    """Print JSON format."""
+    if not rows:
+        print("[]")
+        return
+
+    # Calculate totals if requested
+    output = {"data": rows}
+
+    if show_totals:
+        totals_row = calculate_totals(rows, headers)
+        output["totals"] = totals_row
+
+    # Filter rows to only include headers we're showing
+    filtered_rows = []
+    for row in rows:
+        filtered_row = {h: row.get(h, '') for h in headers}
+        filtered_rows.append(filtered_row)
+
+    if show_totals:
+        filtered_totals = {h: totals_row.get(h, '') for h in headers}
+        print(json.dumps({"data": filtered_rows, "totals": filtered_totals}, indent=2))
+    else:
+        print(json.dumps(filtered_rows, indent=2))
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Filter, group, and aggregate tabular data',
+        epilog='''Examples:
+  command | %(prog)s col1=bbbb col3=y --group col1 --sum col4 --show col1,sum_col4
+  command | %(prog)s col1!=foo "size>1GB" count>=10 --order -size
+Filters support: =, !=, <>, >, >=, <, <= (wildcards * allowed with = and !=)'''
+    )
+    parser.add_argument('--group', help='Comma-separated columns to group by')
+    parser.add_argument('--sum', help='Comma-separated columns to sum')
+    parser.add_argument('--count', help='Comma-separated columns to count')
+    parser.add_argument('--max', help='Comma-separated columns to find maximum')
+    parser.add_argument('--min', help='Comma-separated columns to find minimum')
+    parser.add_argument('--avg', help='Comma-separated columns to average')
+    parser.add_argument('--show', help='Comma-separated columns to display')
+    parser.add_argument('--order', help='Comma-separated columns to order by (prefix with - for descending)')
+    parser.add_argument('--totals', action='store_true', help='Add a totals row (sum of sums, max of maxs, min of mins, avg of avgs, sum of counts)')
+    parser.add_argument('--output', choices=['table', 'csv', 'json'], default='table', help='Output format: table (default), csv, or json')
+    parser.add_argument('--sqlite', metavar='DATABASE', help='Load data into SQLite database file in table "t" (e.g., --sqlite data.db)')
+
+    args, unknown = parser.parse_known_args()
+
+    # Validate unknown arguments - they should only be filters (contain comparison operators)
+    # Anything that starts with -- or - and isn't a filter is an invalid option
+    for arg in unknown:
+        has_operator = any(op in arg for op in ['!=', '<>', '>=', '<=', '=', '>', '<'])
+        if arg.startswith('-') and not has_operator:
+            print(f"Error: Unrecognized option '{arg}'", file=sys.stderr)
+            print(f"Valid options are: --group, --sum, --count, --max, --min, --avg, --show, --order", file=sys.stderr)
+            sys.exit(1)
+
+    lines = [line.rstrip('\n') for line in sys.stdin]
+    headers, rows = parse_table(lines)
+
+    if not rows:
+        print("No data to process", file=sys.stderr)
+        sys.exit(1)
+
+    # Collect filters from unknown arguments (anything with comparison operators)
+    filters = [arg for arg in unknown if any(op in arg for op in ['!=', '<>', '>=', '<=', '=', '>', '<'])]
+
+    # Validate filter column names
+    for f in filters:
+        # Extract column name from filter
+        col = None
+        for op in ['!=', '<>', '>=', '<=', '=', '>', '<']:
+            if op in f:
+                col = f.split(op, 1)[0].strip()
+                break
+
+        if col and col not in headers:
+            print(f"Error: Filter column '{col}' does not exist. Available columns: {', '.join(headers)}", file=sys.stderr)
+            sys.exit(1)
+
+    # Apply filters
+    filtered = apply_filters(rows, filters)
+
+    # Parse grouping and aggregation columns
+    group_cols = [c.strip() for c in args.group.split(',')] if args.group else []
+
+    # Validate group columns
+    for col in group_cols:
+        if col and col not in headers:
+            print(f"Error: Group column '{col}' does not exist. Available columns: {', '.join(headers)}", file=sys.stderr)
+            sys.exit(1)
+
+    agg_specs = {}
+    if args.sum:
+        agg_specs['sum'] = [c.strip() for c in args.sum.split(',')]
+    if args.count:
+        agg_specs['count'] = [c.strip() for c in args.count.split(',')]
+    if args.max:
+        agg_specs['max'] = [c.strip() for c in args.max.split(',')]
+    if args.min:
+        agg_specs['min'] = [c.strip() for c in args.min.split(',')]
+    if args.avg:
+        agg_specs['avg'] = [c.strip() for c in args.avg.split(',')]
+
+    # Validate aggregation columns
+    for agg_type, cols in agg_specs.items():
+        for col in cols:
+            if col and col not in headers:
+                print(f"Error: Aggregation column '{col}' (--{agg_type}) does not exist. Available columns: {', '.join(headers)}", file=sys.stderr)
+                sys.exit(1)
+
+    # Group and aggregate
+    result = group_and_aggregate(filtered, group_cols, agg_specs)
+
+    # Apply ordering
+    if args.order:
+        order_cols = [c.strip() for c in args.order.split(',')]
+        order_keys = []
+
+        # Build list of all possible columns (original + aggregated)
+        agg_prefixes = ('sum_', 'count_', 'max_', 'min_', 'avg_')
+        all_possible_cols = set(headers)
+        for agg_type, cols in agg_specs.items():
+            for col in cols:
+                all_possible_cols.add(f"{agg_type}_{col}")
+
+        for col in order_cols:
+            if col.startswith('-'):
+                # Descending order
+                actual_col = col[1:]
+                reverse = True
+            else:
+                # Ascending order
+                actual_col = col
+                reverse = False
+
+            # Validate order column
+            if actual_col not in all_possible_cols:
+                print(f"Error: Order column '{actual_col}' does not exist. Available columns: {', '.join(sorted(all_possible_cols))}", file=sys.stderr)
+                sys.exit(1)
+
+            order_keys.append((actual_col, reverse))
+
+        # Sort by multiple columns
+        def sort_key(row, col):
+            val = str(row.get(col, ''))
+            numeric_val, format_type = parse_numeric(val)
+            # If it parsed as a number/size/percent, use numeric value
+            # Otherwise use the original string for text sorting
+            if format_type != 'number' or numeric_val != 0.0 or val in ('0', '0.0', '0B', '0%'):
+                return (0, numeric_val, '')
+            else:
+                # It's text, sort as string (case-insensitive)
+                return (1, 0, val.lower())
+
+        for actual_col, reverse in reversed(order_keys):
+            result.sort(key=lambda row: sort_key(row, actual_col), reverse=reverse)
+
+    # Determine output columns
+    if args.show:
+        show_cols = [c.strip() for c in args.show.split(',')]
+    else:
+        show_cols = group_cols.copy()
+        for agg_type, cols in agg_specs.items():
+            show_cols.extend([f"{agg_type}_{col}" for col in cols])
+        if not show_cols:
+            show_cols = headers
+
+    # Build list of all possible columns (original + aggregated)
+    agg_prefixes = ('sum_', 'count_', 'max_', 'min_', 'avg_')
+    all_possible_cols = set(headers)
+    for agg_type, cols in agg_specs.items():
+        for col in cols:
+            all_possible_cols.add(f"{agg_type}_{col}")
+
+    # Validate show columns
+    for col in show_cols:
+        if col and col not in all_possible_cols:
+            print(f"Error: Show column '{col}' does not exist. Available columns: {', '.join(sorted(all_possible_cols))}", file=sys.stderr)
+            sys.exit(1)
+
+    # Filter to only show requested columns
+    output_headers = []
+    for col in show_cols:
+        if col in headers or any(col.startswith(prefix) for prefix in agg_prefixes):
+            output_headers.append(col)
+
+    if not output_headers:
+        output_headers = headers
+
+    # Output based on format
+    if args.sqlite:
+        # Create temporary CSV file with numeric values (strip units)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            csv_path = f.name
+            writer = csv.DictWriter(f, fieldnames=output_headers, extrasaction='ignore')
+            writer.writeheader()
+
+            # Convert formatted values to pure numbers for SQLite
+            for row in result:
+                numeric_row = {}
+                for header in output_headers:
+                    val = row.get(header, '')
+                    if val:
+                        # Try to parse as numeric (strips GB, MB, %, etc)
+                        numeric_val, _ = parse_numeric(str(val))
+                        # If it parsed to a non-zero number OR the original was '0', use numeric value
+                        if numeric_val != 0.0 or str(val) in ('0', '0.0', '0B', '0%', '0KB', '0MB', '0GB'):
+                            numeric_row[header] = numeric_val
+                        else:
+                            # It's text, keep as-is
+                            numeric_row[header] = val
+                    else:
+                        numeric_row[header] = val
+                writer.writerow(numeric_row)
+
+            if args.totals:
+                totals_row = calculate_totals(result, output_headers)
+                numeric_totals = {}
+                for header in output_headers:
+                    val = totals_row.get(header, '')
+                    if val and val != 'TOTAL':
+                        numeric_val, _ = parse_numeric(str(val))
+                        if numeric_val != 0.0 or str(val) in ('0', '0.0', '0B', '0%', '0KB', '0MB', '0GB'):
+                            numeric_totals[header] = numeric_val
+                        else:
+                            numeric_totals[header] = val
+                    else:
+                        numeric_totals[header] = val
+                writer.writerow(numeric_totals)
+
+        # Create SQLite database and import
+        db_path = args.sqlite
+        try:
+            # Drop table if it exists and import CSV
+            import_cmd = f"""
+.mode csv
+DROP TABLE IF EXISTS t;
+.import {csv_path} t
+"""
+            proc = subprocess.Popen(['sqlite3', db_path], stdin=subprocess.PIPE, text=True)
+            proc.communicate(import_cmd)
+
+            if proc.returncode == 0:
+                print(f"Data loaded into table 't' in database: {db_path}", file=sys.stderr)
+                print(f"To query: sqlite3 {db_path}", file=sys.stderr)
+            else:
+                print(f"Error creating SQLite database", file=sys.stderr)
+                sys.exit(1)
+        finally:
+            # Cleanup CSV
+            if os.path.exists(csv_path):
+                os.unlink(csv_path)
+    elif args.output == 'csv':
+        print_csv(output_headers, result, args.totals)
+    elif args.output == 'json':
+        print_json(output_headers, result, args.totals)
+    else:
+        print_table(output_headers, result, args.totals)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    gen-bash-func - Generates code and header of a bash function
+
+USAGE
+    gen-bash-func [options] <function_name> <options_and_parameters>
+
+OPTIONS
+    -h|--help
+        Show help text.
+
+    -o|--optional
+        All parameters declared after this are marked as optional.
+
+DESCRIPTION
+    The script generates a function header and function code shell for a specified function
+    name and a list of parameters.
+
+EXAMPLES
+    gen-bash-func my_function param1 param2 -o param3
+
+AUTHOR
+    mjnurse.github.io - 2023
+"
+help_line="Generates code and header of a bash function"
+web_desc_line="Generates code and header of a bash function"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+# This function runs through a set of parameters and generates a function description header.
+# In other words generate this header.
+function desc() {
+    optional_yn=n
+    echo "# $1: DESC"
+    echo "#"
+    echo "# Arguments:"
+    shift
+    i=1
+    while [[ "$1" ]]; do
+        case $1 in
+            -o|--optional)
+                optional_yn=y
+                ;;
+            ?*)
+                if [[ ${optional_yn} == n ]]; then
+                    echo "#   $""$i <$1> - DESC"
+                else
+                    echo "#   $""$i <$1> (optional) - DESC"
+                fi
+                let i=i+1
+                ;;
+        esac
+        shift
+    done
+}
+
+function func() {
+    optional_yn=n
+    param_pos=1
+    function_name="$1"
+    body=""
+    paramlist=""
+    function b() {
+        body="$body$1\n"
+    }
+    function p() {
+        paramlist="$paramlist\n$1"
+    }
+    shift
+    if [[ $1 =~ -.* ]]; then
+        b "  while [[ \"\$1 ]]; do"
+        b "    case \$1 in"
+    fi
+    while [[ "$1" ]]; do
+    case $1 in
+        -o|--optional)
+            optional_yn=y
+            ;;
+        ?*)
+            if [[ ${optional_yn} == n ]]; then
+                b "    local ${1}=\"\$${param_pos}\""
+                b "    if [[ \"\$$1\" == \"\" ]]; then"
+                b "        echo \"Error: Function: $function_name.  Mandatory parameter <$1> not set\""
+                b "        exit 1"
+                b "    fi"
+            else
+                b "    local ${1}=\"\$${param_pos}\" # Optional parameter"
+            fi
+            let param_pos=param_pos+1
+            ;;
+        esac
+        shift
+    done
+
+    echo "function ${function_name} () {"
+    echo -e "$paramlist"
+    echo -e "$body"
+    echo "}"
+}
+
+if [[ "$1" == "" ]]; then
+    echo "${usage}"
+    echo "${try}"
+    exit 1
+fi
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+desc $*
+func $*

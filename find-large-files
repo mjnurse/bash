@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    find-large-files - One line description.
+
+USAGE
+    find-large-files [options] <parameters>
+
+OPTIONS
+    -a|--all
+        Show all large files found.
+
+    -f|--files
+        Files only
+
+    -h|--help
+        Show help text.
+    
+    -n|--num <number>
+        Show top <number> of large files. Default is 50.
+
+DESCRIPTION
+    Description description description description.
+
+AUTHOR
+    mjnurse.github.io - 2025
+"
+
+help_line="tbc"
+web_desc_line="tbc"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+# set -x
+
+if [[ "$1" == "" ]]; then
+  echo "${usage}"
+  echo "${try}"
+  exit 1
+fi
+
+FILES_ONLY_YN=n
+TOP_N=50
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -a|--all)
+            TOP_N=9999999999
+            ;;
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -f|--files)
+            FILES_ONLY_YN=y
+            ;;
+        -n|--num=)
+            shift
+            TOP_N="$1"
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift
+done
+
+
+REUSE_YN=n
+if [[ "$(ls /tmp/find-large-files:* 2> /dev/null | wc -l )" == "1" ]]; then
+  file="$(ls /tmp/find-large-files:*)"
+  echo "Scan last run: ${file##*:}"
+  echo "Path scanned: $(head -1 $file)"
+  read -p "Reuse this scan [yN]: " REUSE_YN
+fi
+
+if [[ "${REUSE_YN^}" != "Y" ]]; then
+  rm -f /tmp/find-large-files:*
+  file="/tmp/find-large-files:$(date +'%y%m%d-%H%M')"
+  echo "Running Scan - this may take a while"
+  echo "Path scanned: $(readlink -f $1)" > $file
+  sudo du -a -t 1048576 -B M $1 | sort -n >> $file
+fi
+
+if [[ $FILES_ONLY_YN == n ]]; then
+    cat $file | tail -$TOP_N
+    exit
+fi
+
+tmp=/tmp/find-large-files.tmp
+sed -i "s/\t/ /g" "$file"
+while read line; do
+    if [ -f "${line//* /}" ]; then
+        echo $line >> $tmp
+    fi
+done < $file 
+
+cat $tmp | tail -$TOP_N
+rm -f $tmp

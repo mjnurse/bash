@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    backup - Create a dated zip archive of files and directories.
+
+USAGE
+    backup [options] <backup_name> <file_or_directory> [<file_or_directory> ...]
+
+OPTIONS
+    -h|--help
+        Show help text.
+    
+    -f|--force
+        Force the backup without prompting.
+
+DESCRIPTION
+    Creates a zip archive with the format <backup_name>_YYMMDD.zip containing
+    the specified files and directories, then copies it to \$BACKUP_DIR.
+  
+    Requires the BACKUP_DIR environment variable to be set.
+
+    If no parameters are passed in, then the contents of the \$BACKUP_DIR are
+    shown.
+
+    If a single parameter <backup_name> is passed, then all backups in the
+    \$BACKUP_DIR which match the backup_name are shown.  Wildcards can be
+    used but must be passed inside quotes.
+
+AUTHOR
+    Martin N 2025  
+"
+help_line="Create a dated zip archive of files and directories"
+web_desc_line="Creates dated zip backups and copies them to BACKUP_DIR"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "
+" | sed "s/  */ /g")
+
+# Terminal Colours
+cdef="\e[39m" # default colour
+cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
+cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m"; cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
+clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"; clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+
+function cecho {
+    color=c$1; shift
+    echo -e "${!color}$*${cdef}"
+}
+
+FORCE_YN=n
+DOTFILES_YN=n
+
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -d|--dotfiles)
+            DOTFILES_YN=y
+            ;;
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -f|--force)
+            FORCE_YN=y
+            ;;    
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+set -e
+
+# Ensure BACKUP_DIR is set
+if [ -z "$BACKUP_DIR" ]; then
+    echo "Error: BACKUP_DIR environment variable is not set."
+    exit 1
+fi
+
+if [ $# = 0 ]; then
+    cecho lcya "BACKUP_DIR Contents:"
+    ls -ltrh "$BACKUP_DIR"
+    exit 
+fi
+
+if [ $# = 1 ]; then
+    cecho lcya "Looking for $1 in BACKUP_DIR:"
+    cd "$BACKUP_DIR"
+    ls -ltrh $1*.zip | grep --color -i " $1" 
+    exit
+fi
+
+NAME=$1
+shift
+DATE=$(date +%y%m%d)
+ZIPFILE="${NAME}_${DATE}.zip"
+
+# Ensure BACKUP_DIR exists
+mkdir -p "$BACKUP_DIR"
+
+# Confirm request
+if [[ $FORCE_YN == n ]]; then
+    if [[ -f "$BACKUP_DIR/$ZIPFILE" ]]; then
+        read -p "Backup dated today already exists, overwrite [yN]: " CONFIRM
+        if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+            echo "Backup cancelled."
+            exit 0
+        fi
+    fi
+    echo "Creating backup: $ZIPFILE"
+    echo "Including files/directories: $*"
+    ls $*
+    read -p "Proceed? [yN]: " CONFIRM
+    if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+        echo "Backup cancelled."
+        exit 0
+    fi
+fi
+
+# Create the zip archive
+if [[ $DOTFILES_YN == y ]]; then
+    zip -r "$ZIPFILE" "$@" -x "__pycache__/*" -x "venv/*" -x ".git/*" > /dev/null
+else
+    zip -r "$ZIPFILE" "$@" -x "*/.*" -x "__pycache__/*" -x "venv/*" -x ".git/*" > /dev/null
+fi
+
+# Move to BACKUP_DIR
+mv "$ZIPFILE" "$BACKUP_DIR/"
+
+echo "Backup complete: $(du -h "$BACKUP_DIR/$ZIPFILE")"

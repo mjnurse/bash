@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  parameters-function
+
+USAGE
+  print_parameters
+
+DESCRIPTION
+  A function to parse and print details about script parameters.
+
+AUTHOR
+  mjnurse.github.io - 2022
+"
+help_line="Contains a function to parse and print details about script parameters"
+web_desc_line="Contains a function to parse and print details about script parameters"
+
+# Parses and prints script parameter details between two comments: 
+# "# Start Parse Script Parameters" and "# End Parse Script Parameters".
+# Within the parameter parse case statement, parameters should be commented
+# as follows:
+#
+# case $1 in
+#   -p|--param # <list> <parameters> <as a comment>
+#     # Desc: Describe the parameter in a comment starting "# Desc:"
+#     # Desc: For multiple lines, all must start with "# Desc:"
+#     ...
+# esac
+function print_parameters() {
+
+  echo "PARAMETERS"
+
+  echo -e "$(cat $0 | sed -n '/^ *# Start Parse Script Parameters/,$p' \
+	            | sed -n '/^ *# End Parse Script Parameters/q;p' \
+	            | sed -n '/^ *-.*).*$/p; /^ *# Desc:/p' \
+                    | sed 's/^ */    /; s/# Desc: */    /; s/\(^  *-.*\)) *$/\1/' \
+                    | sed 's/\(^  *-.*\)) *# *\(.*\)/\n\\e[1m\1 \2\\e[0m/' \
+                    | sed 's/\(^ *-.*\)/\n\\e[1m\1\\e[0m/') "
+}
+
+# Start Parse Script Parameters
+
+while [[ "$1" ]]; do
+  case $1 in
+    -h|--help)
+      # Desc: To show this help message.
+      echo "$help_text"
+      print_parameters
+      exit
+      ;;
+    -e|--example) # <example-value>
+      # Desc: An example parameter.
+      shift
+      username="$1"
+      ;;
+    *)
+      echo "Error: Incorrect Parameter: $1"
+      errorYN=y
+      ;;
+  esac
+  shift
+done
+
+# End Parse Script Parameters

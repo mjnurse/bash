@@ -1,0 +1,578 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  gen-bookmark-page - generates bookmark web pages from bookmarks JSON files.
+
+USAGE
+  gen-bookmark-page [options] [filename]
+  gen-bookmark-page -a|--add <page> <section> <title> <url>
+  gen-bookmark-page -e|--edit <page>
+
+ARGUMENTS
+  filename
+    Optional JSON file to process. If not provided, processes all bookmarks-*.json files.
+
+OPTIONS
+  -a|--add <page> <section> <title> <url>
+    Add a new bookmark to the specified page. <page> is the page name after 'bookmarks-'
+    in bookmarks-<page>.json (e.g., 'mjn' for bookmarks-mjn.json, or leave
+    empty for bookmarks.json).
+
+  -e|--edit <page>
+    Open bookmarks-<page>.json in vi for editing. After saving, automatically
+    regenerates the HTML page.
+
+  -h|--help
+    Show help text.
+
+DESCRIPTION
+  Generates HTML bookmark pages from JSON bookmark files. Output files have the same
+  base name as the input (e.g., bookmarks-mjn.json -> bookmarks-mjn.html).
+  If no filename is provided, processes bookmarks.json and all bookmarks-*.json files
+  in the script directory.
+
+AUTHOR
+  mjnurse.github.io - 2026
+"
+help_line="Generates bookmark web pages from bookmarks JSON files"
+web_desc_line="Generates bookmark web pages from bookmarks JSON files"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage="$(echo Usage: ${tmp%%ARGUMENTS*})"
+
+input_file=""
+add_mode=false
+edit_mode=false
+interactive_mode=false
+add_page=""
+add_section=""
+add_title=""
+add_url=""
+
+while [[ "$1" != "" ]]; do
+  case $1 in
+    -h|--help)
+      echo "$help_text"
+      exit
+      ;;
+    -a|--add)
+      add_mode=true
+      shift
+      if [[ $# -lt 4 ]]; then
+        # Interactive mode - prompt for page, section, title, and url
+        interactive_mode=true
+      else
+        add_page="$1"
+        add_section="$2"
+        add_title="$3"
+        add_url="$4"
+        shift 3
+      fi
+      ;;
+    -e|--edit)
+      edit_mode=true
+      shift
+      if [[ $# -lt 1 ]]; then
+        echo "Error: -e|--edit requires 1 argument: <page>"
+        echo "${try}"
+        exit 1
+      fi
+      add_page="$1"
+      ;;
+    *)
+      if [[ -z "$input_file" ]]; then
+        input_file="$1"
+      else
+        echo "${usage}"
+        echo "${try}"
+        exit 1
+      fi
+      ;;
+  esac
+  shift
+done
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+winroot="$(echo $MJNWINROOT | sed 's/\//\\/g; s/\\c/C:/')"
+
+tidy() {
+  local bm_file="$1"
+  local tmp_file=$(mktemp)
+  # Sort sections and links alphabetically (case-insensitive), then apply standard formatting
+  jq -S '
+    .sections |= (sort_by(.heading | ascii_downcase) |
+      map(.links |= sort_by(.title | ascii_downcase)))
+  ' "$bm_file" > "$tmp_file" && mv "$tmp_file" "$bm_file"
+  # Compress JSON formatting to make file more concise to read.
+  sed -i '
+    /{$/{N;s/\n */ /};
+    :a; N; s/\n *\(}[,]*$\)/ \1/; ta; P; D;
+  ' "$bm_file"
+  sed -i '
+    s/\("url":\)/\1  /;
+  ' "$bm_file"
+}
+
+# Function to process a single bookmark file
+process_bookmark_file() {
+  local bm_file="$1"
+
+  # Get the "page" field from JSON (mandatory)
+  local bm_page=$(jq -r '.page // empty' "$bm_file")
+
+  if [[ -z "$bm_page" ]]; then
+    echo "Error: Missing required 'page' field in $bm_file"
+    return 1
+  fi
+
+  echo "Processing: $bm_file -> $bm_page"
+  tmp1="${bm_file/.json/}"
+  tmp2="${tmp1/bookmarks-}"
+  title="${tmp2##*/}"
+
+  echo '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<head>
+<meta http-equiv="refresh" content="60">
+<TITLE>Bookmarks</TITLE>
+
+<link rel="icon" type="image/x-icon" href="'"$winroot"'\Pictures\Star.png">
+
+<style>
+  h1, h3, p {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  p {
+    font-size: 10pt;
+    margin: 10px 0px 10px 0px;
+  }
+  a {
+    color: #155799;
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  h1 {
+    font-size: 30pt;
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+  }
+  h3 {
+    font-size: 18pt;
+  }
+  .sections-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .section {
+    min-width: 250px;
+    vertical-align: top;
+    margin: 10px;
+  }
+  .input {
+    width: 300px;
+    margin: 0 auto;
+  }
+  input {
+    font-size: 11pt;
+    margin: 10px;
+    width: 100%;
+  }
+</style>
+</head>
+
+<body scroll="no" style="overflow: hidden">
+
+<div>
+<h1>'$title'</h1>
+<div class="input">
+  <input type="text" id="search" onkeyup="search()" style="visibility: hidden">
+</div>
+
+<div class="sections-container">
+' > "$bm_page"
+
+  # Build all sections with continuous numbering
+  # Use process substitution to avoid subshell and maintain pos counter
+  pos=1
+  while IFS= read -r section; do
+    # Decode section
+    section_data=$(echo "$section" | base64 -d)
+
+    # Get heading
+    heading=$(echo "$section_data" | jq -r '.heading')
+
+    # Start new section div
+    echo '<div class="section">' >> "$bm_page"
+    echo "<h3>$heading</h3>" >> "$bm_page"
+
+    # Add links, sorted alphabetically by title (case-insensitive)
+    while IFS=$'\t' read -r link_title link_url; do
+      echo "<p><a id=\"item$pos\" href=\"$link_url\" target=\"_blank\">$link_title ($pos)</a></p>" >> "$bm_page"
+      ((pos++))
+    done < <(echo "$section_data" | jq -r '.links | sort_by(.title | ascii_downcase) | .[] | [.title, .url] | @tsv')
+
+    # Close section div
+    echo '</div>' >> "$bm_page"
+  done < <(jq -r '.sections | sort_by(.heading | ascii_downcase) | .[] | @base64' "$bm_file")
+
+  echo '</div>
+
+<p style="text-align: center; color: #BBBBBB; font-size: 12px">Last Updated: '$(date)'</p>
+
+</div>
+<script>
+  const maxNum = document.querySelectorAll("[id^=\"item\"]").length;
+
+  let numTyped = "";
+  let lastKeyPress = Date.now();
+
+  function highlightListItems() {
+    try {
+      document.getElementById("item"+numTyped).style.background = "lightgrey";
+    } catch { }
+    try {
+      for (i=1; i<100; i++) {
+        if (i != numTyped ) {
+          document.getElementById("item"+i).style.background = "transparent";
+          document.getElementById("item"+i).style.visibility = "visible";
+        }
+      }
+    } catch { }
+  }
+
+  function addKeyListener() {
+    document.addEventListener("keyup", function() {
+      if (event.code == "Escape") {
+        document.getElementById("search").blur();
+        document.getElementById("search").value = "";
+        document.getElementById("search").style.visibility = "hidden";
+        for (let i = 1; i <= maxNum; i++) {
+          const item = document.getElementById("item"+i);
+          item.style.background = "transparent";
+          item.style.color = "#155799";
+        }
+      }
+      if (document.activeElement.tagName == "INPUT" ||
+          document.activeElement.tagName == "TEXTAREA") {
+        return;
+      }
+
+      if (event.ctrlKey) {
+        return;
+      }
+      switch (event.code) {
+        case "Slash":
+          document.getElementById("search").style.visibility = "visible";
+          document.getElementById("search").focus();
+          document.getElementById("search").value = "";
+          break;
+        case "Backspace":
+        case "Delete":
+          numTyped = numTyped.slice(0, -1);
+          highlightListItems();
+          break;
+        case "Escape":
+          document.getElementById("search").blur();
+          document.getElementById("search").style.visibility = "hidden";
+          numTyped = "";
+          highlightListItems();
+          break;
+        case "Enter":
+          if (numTyped != "") {
+            window.open( document.getElementById("item"+numTyped).href, "_blank").focus();
+          }
+          break;
+        case "ArrowDown":
+          if (numTyped == "") {
+            numTyped = "1";
+          } else {
+            if (parseInt(numTyped) < maxNum) {
+              const tmpNum = parseInt(numTyped) + 1;
+              numTyped = tmpNum.toString();
+            }
+          }
+          highlightListItems();
+          break;
+        case "ArrowUp":
+          if (numTyped != "" && numTyped != "1") {
+            const tmpNum = parseInt(numTyped) - 1;
+            numTyped = tmpNum.toString();
+          }
+          if (numTyped == "0") {
+            numTyped = "";
+          }
+          highlightListItems();
+          break;
+      }
+
+      if (event.key >= "0" && event.key <= "9") {
+        if ( (Date.now() - lastKeyPress) > 500 ) {
+          numTyped = event.key;
+        } else {
+          numTyped += event.key;
+        }
+        if (numTyped == "0") {
+          numTyped = "";
+        }
+        lastKeyPress = Date.now();
+        highlightListItems();
+      }
+    });
+  }
+
+  function search() {
+    const searchVal = document.getElementById("search").value.toUpperCase();
+    const go = event.code == "Enter";
+    let firstMatchHref = null;
+
+    for (let i = 1; i <= maxNum; i++) {
+      const item = document.getElementById("item"+i);
+      const itemVal = item.innerHTML;
+      if (itemVal.toUpperCase().indexOf(searchVal) > -1) {
+        item.style.color = "#155799";
+        if (!firstMatchHref) {
+          firstMatchHref = item.href;
+        }
+      } else {
+        item.style.color = "#DDDDDD";
+      }
+    }
+
+    if (go && firstMatchHref) {
+      // Reset all colors
+      for (let i = 1; i <= maxNum; i++) {
+        const item = document.getElementById("item"+i);
+        item.style.background = "transparent";
+        item.style.color = "#155799";
+      }
+      document.getElementById("search").blur();
+      document.getElementById("search").value = "";
+      document.getElementById("search").style.visibility = "hidden";
+      window.open(firstMatchHref, "_blank").focus();
+    }
+  }
+  addKeyListener();
+
+</script>
+</body>' >> "$bm_page"
+}
+
+# Interactive prompting for add mode
+if [[ "$interactive_mode" == true ]]; then
+  # List available pages
+  echo "Available pages:"
+  pages=()
+  page_num=1
+  for bm_file in "$script_dir"/bookmarks-*.json; do
+    if [[ -f "$bm_file" ]]; then
+      page_name=$(basename "$bm_file" .json)
+      page_name="${page_name#bookmarks-}"
+      echo "  $page_num) $page_name"
+      pages+=("$page_name")
+      ((page_num++))
+    fi
+  done
+
+  # Prompt for page
+  read -p "Select page (number or name): " page_input
+
+  # Check if input is a number
+  if [[ "$page_input" =~ ^[0-9]+$ ]]; then
+    page_idx=$((page_input - 1))
+    if [[ $page_idx -ge 0 && $page_idx -lt ${#pages[@]} ]]; then
+      add_page="${pages[$page_idx]}"
+    else
+      echo "Error: Invalid page number"
+      exit 1
+    fi
+  else
+    add_page="$page_input"
+  fi
+
+  bm_file="$script_dir/bookmarks-${add_page}.json"
+
+  if [[ ! -f "$bm_file" ]]; then
+    echo "Error: File not found: $bm_file"
+    exit 1
+  fi
+
+  # List available sections
+  echo ""
+  echo "Available sections:"
+  sections=()
+  section_num=1
+  while IFS= read -r section; do
+    echo "  $section_num) $section"
+    sections+=("$section")
+    ((section_num++))
+  done < <(jq -r '.sections[] | .heading' "$bm_file" | sort)
+
+  # Prompt for section
+  read -p "Select section (number or name): " section_input
+
+  # Check if input is a number
+  if [[ "$section_input" =~ ^[0-9]+$ ]]; then
+    section_idx=$((section_input - 1))
+    if [[ $section_idx -ge 0 && $section_idx -lt ${#sections[@]} ]]; then
+      add_section="${sections[$section_idx]}"
+    else
+      echo "Error: Invalid section number"
+      exit 1
+    fi
+  else
+    add_section="$section_input"
+  fi
+
+  # Show existing titles in the selected section (alphabetically)
+  echo ""
+  echo "Existing titles in '$add_section':"
+  while IFS= read -r title; do
+    echo "  - $title"
+  done < <(jq -r --arg section "$add_section" \
+    '.sections[] | select(.heading == $section) | .links[] | .title' "$bm_file" | sort -f)
+
+  # Prompt for title
+  echo ""
+  read -p "Enter bookmark title (blank to exit): " add_title
+
+  if [[ -z "$add_title" ]]; then
+    echo "Exiting..."
+    exit 0
+  fi
+
+  # Prompt for URL
+  read -p "Enter bookmark URL (blank to exit): " add_url
+
+  if [[ -z "$add_url" ]]; then
+    echo "Exiting..."
+    exit 0
+  fi
+fi
+
+# Main logic: edit, add bookmark, or process files
+if [[ "$edit_mode" == true ]]; then
+  # Edit mode
+  if [[ -z "$add_page" ]]; then
+    echo "Error: -e|--edit requires a page name"
+    exit 1
+  fi
+
+  bm_file="$script_dir/bookmarks-${add_page}.json"
+
+  if [[ ! -f "$bm_file" ]]; then
+    echo "Error: File not found: $bm_file"
+    exit 1
+  fi
+
+  # Open in vi
+  vi "$bm_file"
+
+  # Regenerate the HTML page
+  echo "Regenerating HTML page..."
+  process_bookmark_file "$bm_file"
+  tidy "$bm_file"
+  echo "Done."
+
+elif [[ "$add_mode" == true ]]; then
+  # Add bookmark mode
+  if [[ -z "$add_page" ]]; then
+    bm_file="$script_dir/bookmarks.json"
+    bm_page="$MJNWINROOT/MJN/bookmarks.html"
+  else
+    bm_file="$script_dir/bookmarks-${add_page}.json"
+    bm_page="$MJNWINROOT/MJN/bookmarks-${add_page}.html"
+  fi
+
+  # Create file if it doesn't exist
+  if [[ ! -f "$bm_file" ]]; then
+    echo "Creating new bookmark file: $bm_file"
+    tmp_file=$(mktemp)
+    jq -n --arg page "$bm_page" \
+          --arg section "$add_section" \
+          --arg title "$add_title" \
+          --arg url "$add_url" \
+          '{
+            page: $page,
+            sections: [
+              {
+                heading: $section,
+                links: [
+                  {
+                    title: $title,
+                    url: $url
+                  }
+                ]
+              }
+            ]
+          }' > "$tmp_file"
+    mv "$tmp_file" "$bm_file"
+    echo "Added bookmark '$add_title' to new section '$add_section' in $bm_file"
+  else
+    # File exists, check if section exists
+    section_exists=$(jq --arg section "$add_section" '.sections[] | select(.heading == $section) | .heading' "$bm_file")
+
+    tmp_file=$(mktemp)
+    if [[ -z "$section_exists" ]]; then
+      # Section doesn't exist, create it with the bookmark
+      echo "Creating new section '$add_section' in $bm_file"
+      jq --arg section "$add_section" \
+         --arg title "$add_title" \
+         --arg url "$add_url" \
+         '.sections += [{"heading": $section, "links": [{"title": $title, "url": $url}]}]' \
+         "$bm_file" > "$tmp_file"
+    else
+      # Section exists, add bookmark to it
+      jq --arg section "$add_section" \
+         --arg title "$add_title" \
+         --arg url "$add_url" \
+         '(.sections[] | select(.heading == $section).links) += [{"title": $title, "url": $url}]' \
+         "$bm_file" > "$tmp_file"
+    fi
+
+    mv "$tmp_file" "$bm_file"
+    echo "Added bookmark '$add_title' to section '$add_section' in $bm_file"
+  fi
+
+  # Regenerate the HTML page
+  process_bookmark_file "$bm_file"
+
+elif [[ -n "$input_file" ]]; then
+  # Process single file
+  if [[ ! -f "$input_file" ]]; then
+    # Try with script directory prefix
+    input_file="$script_dir/$input_file"
+    if [[ ! -f "$input_file" ]]; then
+      echo "Error: File not found: $input_file"
+      exit 1
+    fi
+  fi
+  process_bookmark_file "$input_file"
+else
+  # Process bookmarks.json and all bookmarks-*.json files
+  found=0
+
+  # Check for bookmarks.json first
+  if [[ -f "$script_dir/bookmarks.json" ]]; then
+    process_bookmark_file "$script_dir/bookmarks.json"
+    found=1
+  fi
+
+  # Then process all bookmarks-*.json files
+  for bm_file in "$script_dir"/bookmarks-*.json; do
+    if [[ -f "$bm_file" ]]; then
+      process_bookmark_file "$bm_file"
+      tidy "$bm_file"
+      found=1
+    fi
+  done
+
+  if [[ $found -eq 0 ]]; then
+    echo "No bookmarks.json or bookmarks-*.json files found in $script_dir"
+    exit 1
+  fi
+fi

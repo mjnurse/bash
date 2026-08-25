@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  csvsql - Run a SQL query over a csv file
+
+USAGE
+  csvsql <csv_filename> [<sql_query (in quotes)>]
+
+OPTIONS
+  -h, --help
+    Show this help message and exit
+
+   -f, --file
+    Specify a file containing a SQL query to run over the csv file.
+
+DESCRIPTION
+  A script to run a SQL query over data in a csv file using sqlite3.
+
+  If no SQL query is provided, Sqlite3 will be run in interactive mode.
+
+  The table to query has the name 't'
+
+AUTHOR
+  mjnurse.github.io - 2022
+"
+
+help_line="Run a SQL query over a csv file"
+web_desc_line="Run a SQL query over a csv file"
+
+if [[ "$1" == "" ]]; then
+  echo "Usage: csvsql <csv_filename> [<sql_query (in quotes)>]"
+  echo "Try csvsql -h for more information"
+  exit
+fi
+
+silent=false
+sql_file=""
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -f|--file)
+            shift
+            sql_file="$1"
+            ;;
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -s|--silent)
+            silent=true
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+filter=""
+if [[ $silent == true ]]; then
+  filter="
+    /expected.*columns but found/d;
+  "
+fi
+if [[ "$sql_file" != "" ]]; then
+  # Run the SQL query from the file
+  sqlite3 :memory: -cmd ".mode csv" -cmd ".import $1 t" \
+          -cmd ".mode column" -header < "$sql_file" 2>&1 | sed -e "$filter"
+elif [[ "$2" == "" ]]; then
+  # Run sqlite3 in interactive mode
+  sqlite3 :memory: -cmd ".mode csv" -cmd ".import $1 t" \
+          -cmd ".mode column" -header 2>&1
+else
+  # Run the SQL query from the command line
+  sqlite3 :memory: -cmd ".mode csv" -cmd ".import $1 t" \
+          -cmd ".mode column" -header "$2" 2>&1 | sed -e "$filter"
+fi

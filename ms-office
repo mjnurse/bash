@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  ms-office - Launches the Microsoft Office application associated with the given file.
+
+USAGE
+  ms-office <path/url>
+
+OPTIONS
+  -h, --help
+    Show help text.
+
+DESCRIPTION
+  Launches the Microsoft Office application with the specified file.
+  Automatically converts WSL paths to Windows paths when needed.
+
+EXAMPLES
+  ms-office /mnt/c/Users/Documents/file.docx
+  ms-office ./file.xlsx
+  ms-office /mnt/c/Users/Documents/presentation.pptx
+
+AUTHOR
+  mjnurse.github.io - 2025
+"
+
+# Function to display help
+show_help() {
+    echo "$help_text"
+    exit 0
+}
+
+# Function to display error and exit
+error_exit() {
+    echo "Error: $1" >&2
+    echo "Try '${0##*/} --help' for more information." >&2
+    exit 1
+}
+
+# Check for help flag
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+fi
+
+target="$1"
+
+if [[ "$target" != "" ]]; then
+    # Convert to Windows path
+    if ! file_path=$(wslpath -w "$target" 2>/dev/null); then
+        error_exit "Failed to convert path '$target' to Windows format."
+    fi
+    
+    # Verify the file exists (for local files)
+    if [[ ! -e "$target" ]]; then
+        error_exit "File '$target' does not exist."
+    fi
+fi
+
+# Launch Application
+if ! cmd.exe /c start "" "$file_path"; then
+    error_exit "Failed to launch Microsoft $app. Ensure $app is installed and accessible."
+fi
+
+exit 0

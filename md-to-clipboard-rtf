@@ -1,0 +1,292 @@
+#!/usr/bin/env python3
+"""
+Convert a Markdown file to RTF and push it to the Windows clipboard from WSL.
+
+- Prefers Pandoc for Markdown -> RTF (if installed).
+- Falls back to a builtin converter (headings, **bold**, *italic*, `code`, simple bullets).
+- Uses powershell.exe -Command (inline) to read temp files and set Clipboard (RTF + Text),
+  avoiding script execution-policy blocks and command-length limits.
+
+Usage:
+    python3 md_to_win_clipboard_rtf.py /path/to/file.md
+    python3 md_to_win_clipboard_rtf.py /path/to/file.md --method builtin
+    python3 md_to_win_clipboard_rtf.py /path/to/file.md --method pandoc
+    python3 md_to_win_clipboard_rtf.py /path/to/file.md --no-pandoc
+"""
+
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+
+def have_pandoc() -> bool:
+    return shutil.which("pandoc") is not None
+
+
+def run(cmd, **kwargs) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+
+
+def convert_md_to_rtf_pandoc(md_path: Path) -> str:
+    # Pandoc writes RTF to stdout if no -o is provided
+    result = run(["pandoc", "--standalone", "--from=markdown", "--to=rtf", str(md_path)])
+    # RTF is 7-bit + ANSI; decode as UTF-8 is fine for ASCII. For extra safety we accept replacements.
+    rtf = result.stdout.decode("utf-8", errors="replace")
+    rtf = postprocess_pandoc_rtf(rtf)
+    return rtf
+
+
+def postprocess_pandoc_rtf(rtf: str) -> str:
+    """Post-process Pandoc RTF: fix colors, fonts (Aptos/Consolas), and sizes."""
+    # --- Fix colors (ensure black text) ---
+    rtf = ensure_black_text(rtf)
+
+    # --- Replace font table: f0 = Aptos, f1 = Consolas ---
+    start = rtf.find('{\\fonttbl')
+    if start >= 0:
+        # Find the matching closing brace (fonttbl has nested braces)
+        depth = 0
+        end = start
+        for i in range(start, len(rtf)):
+            if rtf[i] == '{':
+                depth += 1
+            elif rtf[i] == '}':
+                depth -= 1
+                if depth == 0:
+                    end = i
+                    break
+        rtf = rtf[:start] + '{\\fonttbl{\\f0 Aptos;}{\\f1 Consolas;}}' + rtf[end + 1:]
+
+    # --- Set default body font size to 16pt (24 half-pt) ---
+    # Replace Pandoc's default \f0 with \f0\fs24 in paragraph groups
+    rtf = rtf.replace('\\f0 \\sa', '\\f0\\fs24 \\sa')
+
+    # --- Set code spans (f1) to 14pt (28 half-pt) ---
+    rtf = rtf.replace('{\\f1 ', '{\\f1\\fs22 ')
+
+    # --- Set paragraph spacing: 6pt before (\sb120), 1.1 line spacing (\sl264\slmult1) ---
+    # ensure_black_text already turned \pard into \pard\cf1, so match that
+    rtf = rtf.replace('\\pard\\cf1', '\\pard\\cf1\\sb120\\sl264\\slmult1')
+
+    return rtf
+
+
+def ensure_black_text(rtf: str) -> str:
+    """Ensure RTF document uses black text by setting up a proper color table."""
+    BLACK_COLORTBL = '{\\colortbl;\\red0\\green0\\blue0;}'
+
+    # Step 1: Replace or inject a colortbl with black as \cf1
+    start = rtf.find('{\\colortbl')
+    if start >= 0:
+        end = rtf.find('}', start)
+        if end >= 0:
+            rtf = rtf[:start] + BLACK_COLORTBL + rtf[end + 1:]
+    else:
+        # No colortbl found; inject one after the first line
+        first_nl = rtf.find('\n')
+        if first_nl >= 0:
+            rtf = rtf[:first_nl + 1] + BLACK_COLORTBL + '\n' + rtf[first_nl + 1:]
+
+    # Step 2: Add \cf1 after every \pard to force black text in every paragraph
+    rtf = rtf.replace('\\pard', '\\pard\\cf1')
+    return rtf
+
+
+def rtf_escape(text: str) -> str:
+    # Escape RTF control characters
+    return text.replace("\\", r"\\").replace("{", r"\{").replace("}", r"\}")
+
+
+_heading_sizes_halfpt = {
+    1: 64,  # 32 pt
+    2: 52,  # 26 pt
+    3: 44,  # 22 pt
+    4: 40,  # 20 pt
+    5: 36,  # 18 pt
+    6: 34,  # 17 pt
+}
+
+
+def md_to_rtf_builtin(md_text: str) -> str:
+    """
+    Minimal Markdown -> RTF:
+    - #..###### headings -> larger, bold
+    - **bold**, *italic* or _italic_
+    - `inline code` (font switch to f1; resets back to f0 after each span)
+    - blank lines -> paragraph breaks
+    - simple bullets for lines starting with '-' or '*'
+    """
+    lines = md_text.splitlines()
+    rtf_lines = []
+
+    # Default body font f0 (Aptos 16pt), code font f1 (Consolas 14pt)
+    header = (
+        r"{\rtf1\ansi\ansicpg1252\deff0" "\n"
+        r"{\fonttbl{\f0 Aptos;}{\f1 Consolas;}}" "\n"
+        r"{\colortbl;\red0\green0\blue0;}" "\n"
+        r"\pard\plain\f0\fs32\cf1\sa120\sl352\slmult0" "\n"
+    )
+
+    def convert_inline(s: str) -> str:
+        s = rtf_escape(s)
+
+        # Inline code: switch to f1 Consolas 14pt, then back to f0 Aptos 16pt
+        s = re.sub(r"`([^`]+)`", lambda m: r"{\f1\fs28 " + m.group(1) + r"}", s)
+
+        # Bold: **text**
+        s = re.sub(r"\*\*(.+?)\*\*", r"{\\b \1\\b0}", s)
+
+        # Italics: *text* (not bold) and _text_
+        s = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"{\\i \1\\i0}", s)
+        s = re.sub(r"_(.+?)_", r"{\\i \1\\i0}", s)
+
+        return s
+
+    # Paragraph format: 6pt before (\sb120), 1.1 line spacing (\sl264\slmult1)
+    PF = r"\sb120\sl264\slmult1"
+
+    for raw in lines:
+        # Headings
+        m = re.match(r"^(#{1,6})\s+(.*)$", raw)
+        if m:
+            level = len(m.group(1))
+            text = m.group(2).strip()
+            fs = _heading_sizes_halfpt.get(level, 24)
+            text_rtf = convert_inline(text)
+            rtf_lines.append(rf"\pard\cf1{PF}{{\fs{fs}\b {text_rtf}\b0}}\par")
+            continue
+
+        # Simple bullets: - or *
+        m = re.match(r"^\s*[-*]\s+(.*)$", raw)
+        if m:
+            text = convert_inline(m.group(1))
+            # Use a simple bullet + indent (wrap in \pard\li360 ... \pard to reset indent)
+            rtf_lines.append(r"{\pard\li360\cf1" + PF + r"\u8226 ?\tab " + text + r"\par}")
+            continue
+
+        # Blank line -> paragraph break
+        if raw.strip() == "":
+            rtf_lines.append(r"\pard\par")
+        else:
+            rtf_lines.append(r"\pard\cf1" + PF + " " + convert_inline(raw) + r"\par")
+
+    body = "\n".join(rtf_lines)
+    return header + body + "}"
+
+
+def set_windows_clipboard_rtf(rtf_text: str, plain_text: str) -> None:
+    """
+    Set Windows clipboard with RTF + Text by writing temp files and running a short
+    powershell.exe -Command to read them and set the Clipboard. Avoids execution-policy
+    issues (no .ps1 file) and avoids -EncodedCommand size limits. Paths are quoted correctly.
+    """
+    def run(cmd, **kwargs):
+        return subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+
+    def ps_single_quote(s: str) -> str:
+        # PowerShell single-quoted string literal escapes single quotes by doubling
+        return s.replace("'", "''")
+
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        rtf_path_wsl = td_path / "content.rtf"
+        txt_path_wsl = td_path / "content.txt"
+
+        rtf_path_wsl.write_text(rtf_text, encoding="utf-8")
+        txt_path_wsl.write_text(plain_text, encoding="utf-8")
+
+        # Convert WSL -> Windows paths (do NOT RTF-escape these!)
+        rtf_path_win = run(["wslpath", "-w", str(rtf_path_wsl)]).stdout.decode("utf-8").strip()
+        txt_path_win = run(["wslpath", "-w", str(txt_path_wsl)]).stdout.decode("utf-8").strip()
+
+        # Compose a short PowerShell command:
+        # - Read the UTF-8 files
+        # - Put both Text and RTF onto the clipboard (set RTF last so apps prefer it)
+        ps_cmd = (
+            "Add-Type -AssemblyName System.Windows.Forms;"
+            f"$rtfPath = '{ps_single_quote(rtf_path_win)}';"
+            f"$txtPath = '{ps_single_quote(txt_path_win)}';"
+            "$rtf  = [System.IO.File]::ReadAllText($rtfPath,  [Text.Encoding]::UTF8);"
+            "$plain= [System.IO.File]::ReadAllText($txtPath,  [Text.Encoding]::UTF8);"
+            "$data = New-Object System.Windows.Forms.DataObject;"
+            "$data.SetData([System.Windows.Forms.DataFormats]::Text, $plain);"
+            "$data.SetData([System.Windows.Forms.DataFormats]::Rtf,  $rtf);"
+            "[System.Windows.Forms.Clipboard]::SetDataObject($data, $true);"
+            "Write-Output 'OK'"
+        )
+
+        cmd = [
+            "powershell.exe",
+            "-NoProfile",
+            "-ExecutionPolicy", "Bypass",
+            "-STA",
+            "-Command", ps_cmd,
+        ]
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        out = proc.stdout.decode("utf-8", errors="replace").strip()
+        err = proc.stderr.decode("utf-8", errors="replace").strip()
+
+        if proc.returncode != 0 or "OK" not in out:
+            sys.stderr.write("Failed to set Windows clipboard.\n")
+            if out:
+                sys.stderr.write("PowerShell stdout:\n" + out + "\n")
+            if err:
+                sys.stderr.write("PowerShell stderr:\n" + err + "\n")
+            sys.exit(proc.returncode if proc.returncode != 0 else 1)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Convert Markdown to RTF and send to Windows clipboard (WSL).")
+    ap.add_argument("markdown_file", type=Path, help="Path to the Markdown file")
+    group = ap.add_mutually_exclusive_group()
+    group.add_argument("--method", choices=["pandoc", "builtin"], help="Force conversion method")
+    group.add_argument("--no-pandoc", action="store_true", help="Do not use pandoc even if available")
+    ap.add_argument("--debug", action="store_true", help="Print generated RTF to stderr for debugging")
+    args = ap.parse_args()
+
+    md_path = args.markdown_file
+    if not md_path.exists():
+        print(f"ERROR: File not found: {md_path}", file=sys.stderr)
+        sys.exit(1)
+
+    md_text = md_path.read_text(encoding="utf-8")
+
+    # Choose converter
+    if args.method == "pandoc":
+        use_pandoc = True
+    elif args.method == "builtin":
+        use_pandoc = False
+    else:
+        use_pandoc = have_pandoc() and not args.no_pandoc
+
+    if use_pandoc:
+        try:
+            rtf_text = convert_md_to_rtf_pandoc(md_path)
+            method_used = "pandoc"
+        except Exception as e:
+            sys.stderr.write(f"Pandoc failed ({e}); falling back to builtin converter.\n")
+            rtf_text = md_to_rtf_builtin(md_text)
+            method_used = "builtin (pandoc fallback)"
+    else:
+        rtf_text = md_to_rtf_builtin(md_text)
+        method_used = "builtin"
+
+    print(f"Method: {method_used}")
+    print(f"Generated RTF ({len(rtf_text)} bytes)")
+
+    rtf_filename = args.markdown_file.with_suffix(".rtf")
+    open(rtf_filename, "w", encoding="utf-8").write(rtf_text)
+    print(f"RTF output written to: {rtf_filename}")
+
+    set_windows_clipboard_rtf(rtf_text, md_text)
+    print(f"RTF (and plain text) copied to the Windows clipboard.")
+
+
+if __name__ == "__main__":
+    main()

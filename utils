@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  utils - One line description.
+
+USAGE
+  utils [options] <parameters>
+
+OPTIONS
+  -x
+    Description...
+
+  -h|--help
+    Show help text.
+
+DESCRIPTION
+  Description description description description.
+
+AUTHOR
+  mjnurse.github.io - 2020
+"
+help_line="Some bash Utility Functions"
+web_desc_line="Some bash Utility Functions"
+
+colour_default="\e[39m"
+colour_black="\e[30m"
+colour_red="\e[31m"
+colour_green="\e[32m"
+colour_yellow="\e[33m"
+colour_blue="\e[34m"
+colour_magenta="\e[35m"
+colour_cyan="\e[36m"
+colour_dark_gray="\e[90m"
+colour_light_gray="\e[37m"
+colour_light_red="\e[91m"
+colour_light_green="\e[92m"
+colour_light_yellow="\e[93m"
+colour_light_blue="\e[94m"
+colour_light_magenta="\e[95m"
+colour_light_cyan="\e[96m"
+colour_white="\e[97m"
+
+ls="${colour_white}"
+le="${colour_white}"
+
+
+function set_colour() {
+  while [[ "$1" != "" ]]; do
+    case $1 in
+      -red)
+        ls="${colour_red}"
+        ;;
+      -lred)
+        ls="${colour_light_red}"
+        ;;
+      -default)
+        ls="${colour_default}"
+        ;;
+      -black)
+        ls="${colour_black}"
+        ;;
+      -red)
+        ls="${colour_red}"
+        ;;
+      -green)
+        ls="${colour_green}"
+        ;;
+      -yellow)
+        ls="${colour_yellow}"
+        ;;
+      -blue)
+        ls="${colour_blue}"
+        ;;
+      -magenta)
+        ls="${colour_magenta}"
+        ;;
+      -cyan)
+        ls="${colour_cyan}"
+        ;;
+      -dark_gray)
+        ls="${colour_dark_gray}"
+        ;;
+      -light_gray|-lgray)
+        ls="${colour_light_gray}"
+        ;;
+      -light_red|-lred)
+        ls="${colour_light_red}"
+        ;;
+      -light_green|-lgreen)
+        ls="${colour_light_green}"
+        ;;
+      -light_yellow|-lyellow)
+        ls="${colour_light_yellow}"
+        ;;
+      -light_blue|-lblue)
+        ls="${colour_light_blue}"
+        ;;
+      -light_magenta|-lmagenta)
+        ls="${colour_light_magenta}"
+        ;;
+      -light_cyan|-lcyan)
+        ls="${colour_light_cyan}"
+        ;;
+      -white)
+        ls="${colour_white}"
+        ;;
+      *)
+        break
+        ;;
+    esac
+     shift
+  done
+}
+
+function reset_colour() {
+  ls="${colour_white}"
+  le="${colour_white}"
+}
+
+# 
+function echo_line() {
+  if [[ "$1" == "-r" ]]; then
+    shift
+    str="$*"
+    underline="$(echo "$str" | sed "s/./-/g")"
+    echo -e "${ls}${underline}${le}"
+  else
+    char="${2:--}"
+    echo $(printf "%0.s${char}" $(seq 1 $1))
+  fi
+}
+
+function echo_h1() {
+  if [[ "$1" =~ -.* ]]; then
+    set_colour $1
+    shift
+  fi
+  heading="$*"
+  echo -e "${ls}${heading^^}${le}"
+  echo_line -r "${heading}"
+  echo ""
+  reset_colour
+}
+
+function echo_h2() {
+  if [[ "$1" =~ -.* ]]; then
+    set_colour $1
+    shift
+  fi
+  heading="$*"
+  echo -e "${ls}${heading}${le}"
+  echo_line -r "${heading}"
+}

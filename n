@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+  n - Notes
+
+USAGE
+  n [options] <text - consider wrapping in quotes>
+
+OPTIONS
+  -h|--help
+    Show this help message.
+
+  -a|--add
+    Add the <text> as a new note.
+
+  -e|--edit
+    Edit the notes text file.
+
+  -m|--markdown
+    Generate a markdown version of the notes file.
+
+DESCRIPTION
+  Record and query notes.
+
+  Any note which contains the text "[P]" is a Private note. Private notes are not 
+  included in the markdown extract.
+
+AUTHOR
+  mjnurse.github.io - 2026
+"
+
+help_line="Record and query notes"
+web_desc_line="Record and query notes"
+
+# Terminal Colours
+cdef=$'\e[39m' # default colour
+cbla=$'\e[30m'; cgra=$'\e[90m'; clgra=$'\e[37m'; cwhi=$'\e[97m'
+cred=$'\e[31m'; cgre=$'\e[32m'; cyel=$'\e[33m'; cblu=$'\e[34m'; cmag=$'\e[35m'; ccya=$'\e[36m';
+clred=$'\e[91m'; clgre=$'\e[92m'; clyel=$'\e[93m'; clblu=$'\e[94m'; clmag=$'\e[95m'; clcya=$'\e[96m'
+
+nf=~/.notes.txt
+
+word="${1:-dummydummydummy}"
+sed_cmd="
+  s/^\(\w*:\)/CCYA\1CDEF/; 
+  s/\(${word}\)/CGRE\1CDEF/Ig;
+  s/\(# .*\)/CMAG\1CDEF/I;
+  s/\(.*\)\[P\] *\(.*\)/CGRE\[P\]CCYA \1\2/;
+  :a; s/\(# .*\)CDEF/\1CMAG/; ta;
+  s/$/CDEF/;
+  s/CCYA/${clcya}/g; s/CGRE/${clgre}/g; s/CMAG/${clmag}/g; s/CDEF/${cdef}/g
+"
+
+if [[ "$1" == "" ]]; then
+  echo -e $cyel' _  _     _'
+  echo -e      '| \| |___| |_ ___ ___'
+  echo -e      '| .` / _ \  _/ -_|_-<'
+  echo -e      '|_|\_\___/\__\___/__/'$cdef
+  echo
+  cat "$nf" | sed "$sed_cmd"
+  echo
+  echo "Usage: n [options] <text - consider wrapping in quotes>"
+  echo "Try:  \"n -h\" for more information."
+  exit
+fi
+
+case ${1-} in
+  -a|--add)
+    shift
+    echo "$*" >> "$nf"
+    ;;
+  -e|--edit)
+    vi "$nf"
+    ;;
+  -m|--markdown)
+    # Generate a markdown version of the notes file
+    echo "# Miscellaneous Notes"
+    echo
+    echo "The notes captured in the Linux notes tool = \`n\`."
+    echo
+    cat "$nf" \
+    | sed '1s/^/\n/;
+           /\[P\]/d;
+           s/|/###BAR###/g;
+          ' \
+    | sed '/^$/{N;/^\n$/D;}' \
+    | sed '/^$/{ N; 
+           s/\n\([^ \t][^ \t]*\)/\n\n### \1\n\n|||\n|---|---|\n\1/ }' \
+    | sed '1,2d;
+           s/^\(###.*\):/\1/;
+           s/^[^:]\+: *//;
+           s/^\(.*\) # \(.*\)$/|`\1`|\2|/;
+           s/^\([^|#].*\)$/|\1||/;
+           s/###BAR###/\\|/g;
+          '
+    ;;
+  -h|--help)
+    echo "$help_text"
+    exit
+    ;;
+  *)
+    echo -e $cyel"NOTES"$cdef
+    echo -e $cyel"-----"$cdef
+    grep  --ignore-case "$1" "$nf" | sed "$sed_cmd"
+    exit
+    ;;
+esac
+
+sort "$nf"| sed '/^$/d' > "$nf".tmp
+
+# Group lines by their first word, inserting a blank line whenever the first word changes.
+awk '
+    {
+        split($0, words, " ")
+        if (NR == 1) {
+            prev = words[1]
+            print
+        } else {
+            if (words[1] != prev) {
+            print ""
+            prev = words[1]
+            }
+            print
+        }
+    }' "$nf".tmp > "$nf"
+rm -f "$nf".tmp

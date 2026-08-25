@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+help_text="
+usage: gen_python [options] <filename>
+-h : This help text.
+"
+
+help_line="Generates a python script from a template"
+web_desc_line="Generates a python script from a template"
+
+basic_yn=n
+case $1 in
+    -h|--help)
+        echo "$help_text"
+        exit
+        ;;
+esac
+
+new_file="$1"
+
+if [[ "$1" == "" ]]; then
+    echo "Error: no filename provided"
+    echo "$help_text"
+    exit 1
+fi
+
+if [[ -f "$new_file" ]]; then
+    echo "Error: file: $1 already exists"
+    exit 1
+fi
+
+cat "$B/python-script-example" > "$new_file"
+
+chmod +x "$new_file"
+
+read -p "Edit $1? c - code, g - gvim, n - No [cgN]: " cgn
+
+case ${cgn^} in
+    C)
+        code "$new_file"
+        ;;
+    G)
+        gvim "$new_file"
+        ;;
+esac

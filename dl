@@ -1,0 +1,11 @@
+#!/bin/bash
+
+pattern="${1:-*}"
+
+for dir in $pattern/; do
+    if [ -d "$dir" ]; then
+        count=$(find "$dir" -mindepth 1 -maxdepth 1 | wc -l)
+        size=$(du -sh "$dir" | cut -f1)
+        printf "%-40s  %5s items  %10s\n" "$dir" "$count" "$size"
+    fi
+done

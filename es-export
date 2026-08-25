@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+DESCRIPTION="""
+Export Elasticsearch index to bulk-compatible JSONL format.
+"""
+ARGS= [
+    {"name": "-o", "name2": "--output", "type": str, "default": "<index>.jsonl", 
+     "help": "Output filename (default: <index>.jsonl)"},
+    {"name": "--host", "type": str, "default": "localhost", "help": "Elasticsearch host URL (default: localhost)"},
+    {"name": "--port", "type": str, "default": "9200", "help": "Elasticsearch port (default: 9200)"},
+    {"name": "index_name", "type": str, "help": "Name of the Elasticsearch index to dump"}
+]
+AUTHOR="mjnurse.github.io - 2026"
+
+HELP_LINE="Export Elasticsearch index to bulk-compatible JSONL format"
+WEB_DESC_LINE="Export Elasticsearch index to bulk-compatible JSONL format"
+
+import sys
+import argparse
+import json
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import scan
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="description:" + DESCRIPTION.replace("\n", "\n  ")[:-2],
+        epilog="author:\n  " + AUTHOR,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    for arg in ARGS:
+        names = [arg["name"]] + ([arg["name2"]] if "name2" in arg else [])
+        kwargs = {k: v for k, v in arg.items() if k not in ("name", "name2") and v is not None}
+        parser.add_argument(*names, **kwargs)
+    return parser.parse_args()
+
+def dump_index(index_name, output_file, host, port):
+    """Export all documents from an index to JSONL file"""
+    es = Elasticsearch(f"http://{host}:{port}")
+
+    try:
+        es.info()
+    except Exception as e:
+        print(f"ERROR: Could not connect to Elasticsearch at {host}:{port}.\n\nException: {e}")
+        sys.exit(1)
+
+    # Verify index exists
+    if not es.indices.exists(index=index_name):
+        print(f"ERROR: Index '{index_name}' not found.")
+        sys.exit(1)
+
+    # Write bulk-compatible format: metadata line + document line
+    with open(output_file, "w", encoding="utf-8") as f:
+        for doc in scan(es, index=index_name, query={"query": {"match_all": {}}}):
+            meta = {
+                "index": {
+                    "_index": doc["_index"],
+                    "_id": doc["_id"]
+                }
+            }
+            f.write(json.dumps(meta) + "\n")
+            f.write(json.dumps(doc["_source"]) + "\n")
+
+def main():
+    args = parse_args()
+
+    # Set default output filename
+    output_file = f"{args.index_name}.jsonl" if args.output == "<index>.jsonl" else args.output
+    if not output_file.endswith(".jsonl"):
+        output_file += ".jsonl"
+
+    dump_index(args.index_name, output_file, args.host, args.port)
+    
+if __name__ == "__main__":
+    main()

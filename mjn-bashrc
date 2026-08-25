@@ -1,0 +1,255 @@
+# DESCRIPTION
+#     My portable .bashrc file.
+#
+# AUTHOR
+#     mjnurse.github.io - 2026
+
+if [[ "$GITBASH" != "Y" ]]; then
+    sudo sh -c "echo '/mnt/c /c none bind' >> /etc/fstab"
+    sudo mount -a
+    sudo sed -i "/#/d;/8.8.8.8/d" /etc/resolv.conf
+    sudo sed -i "1inameserver 8.8.8.8" /etc/resolv.conf
+fi
+
+export PATH="$PATH:."
+export PATH="$PATH:/home/martin/mjnurse/bash"
+export PATH="$PATH:/home/martin/mjnurse/cli-builder"
+export PATH="$PATH:/home/martin/mjnurse/shortcut-keys"
+export PATH="$PATH:/home/martin/mjnurse/website-builder"
+export PATH="$PATH:/home/martin/mjnurse/todo-done"
+export PATH="$PATH:/home/martin/spark"
+
+export QES_HOST=localhost
+export QES_PORT=9200
+
+for f in /home/martin/mjnurse/cli-builder/*.alias; do
+    source "$f"
+done
+
+lld() {
+    # func: lld: List directories only
+    ls -ld ${*:-*} | sed '/^[^d]/d; s/^[^ ]*  *[0-9]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *[^ ]*  *//'
+}
+
+lmr() {
+    # func: lmr: List most recently modified files matching pattern
+    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+        echo "Usage: lmr [-n <number>] <pattern> - List most recently modified files matching pattern"
+        return 1
+    fi
+    if [[ "$1" == "-n" ]]; then
+        shift
+        n="$1"
+        shift
+    else
+        n=10
+    fi
+    find . -type f -printf '%T@ %TY/%Tm/%Td %TH:%TM:%.2TS %p\n' | sort -rn | head -"$n" | cut -d' ' -f2-
+}
+
+trash() {
+    # func: trash: Moves files to ~/.trash instead of deleting them
+    mkdir -p ~/.trash
+
+    if [[ "$1" == "" ]]; then
+        echo -e "\x1b[92m20 largest:\x1b[39m"
+        ls -alhS ~/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
+        echo -e "\x1b[92m20 most recent:\x1b[39m"
+        ls -alht ~/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
+        echo -e "\x1b[92mSize:\x1b[39m $(du -d0 -h ~/.trash 2>/dev/null)"
+        echo -e "\x1b[92mOptions:\x1b[39m"
+        echo "-f|--force (force delete without confirmation)"
+        echo "-i|--interactive (prompt before deleting each file)"
+        echo "-p|--purge <filename (or leading characters)> (delete file from trash)"
+    fi
+    force_yn=n
+
+    # Parse -p option
+    if [[ "$1" == "-p" || "$1" == "--purge" ]]; then
+        shift
+        ls -alh "/home/martin/.trash/$1"* 2>/dev/null
+        [[ $? -ne 0 ]] && { echo "No matching files found in trash for $1*"; return; }
+        read -p "Purge these files? [yN] " answer
+        [[ "${answer^^}" == "Y" ]] || { echo "Purge cancelled"; return; }
+        \rm "/home/martin/.trash/$1"*
+        return 1
+    fi
+
+    # Parse -f option
+    if [[ "$1" == "-f" || "$1" == "--force" ]]; then
+        force_yn=y
+        shift
+    fi
+
+    # Parse -i option
+    if [[ "$1" == "-i" || "$1" == "--interactive" ]]; then
+        force_yn=n
+        shift
+    fi
+
+    for f in "$@"; do
+        if [ ! -e "$f" ]; then
+            echo "trash: '$f' not found"
+            continue
+        fi
+
+        if [[ $force_yn == n ]]; then
+            read -p "trash: Are you sure you want to delete '$f' [yN] " answer
+            [[ "${answer^^}" == "Y" ]] || { echo "Skipped '$f'"; continue; }
+        fi
+
+        timestamp=$(date +%Y%m%d_%H%M%S)
+        base=$(basename "$f")
+        dest=~/.trash/"$base.$timestamp"
+        mv "$f" "$dest"
+        if [[ -d $dest ]]; then
+            tar -czf "$dest.tar.gz" "$dest" > /tmp/trash.log 2>&1
+            \rm -rf "$dest"
+        else
+	        gzip "$dest" > /tmp/trash.log 2>&1
+        fi
+    done
+}
+
+g () {
+    # func: g: Goto function that uses the 'goto' command and evaluates the result
+    goto -s "$1"
+    eval "$(goto -r)"
+}
+
+md() {
+    # func: md: Format and preview a markdown file in the terminal using glow
+    glow -w $(tput cols)
+}
+
+f() {
+    # func: f: Search for a file with case-insensitive name
+    if [[ "$1" == "" ]]; then
+        echo "Usage: f <filename> - Search for a file with case-insensitive name"
+        return 1
+    fi
+    args=()
+    for f in "$@"; do
+        args+=(-o -iname "$f")
+    done
+    find -type d -name ".?*" -prune \
+      -o -type d -name venv -prune \
+      -o -type d -name google-cloud-sdk -prune \
+      -o -type d -name pkg -prune \
+      "${args[@]}" -print | sort
+}
+
+c() {
+    # func: c: Launch Claude with model selection
+    model=sonnet
+    if [[ "$1" == "" ]]; then
+        echo "Note - can use: c \"<question for Claude>\""
+        echo
+        echo "Select model:"
+        echo "h - Haiku (fast)"
+        echo "s - Sonnet (general)"
+        echo "o - Opus (coding)"
+        echo
+        read -p "> " m
+    fi
+    if [[ "$*" == "h" || "$*" == "s" || "$*" == "o" ]]; then
+        m="$*"
+        shift
+    fi
+    case $m in
+        h)  model=haiku ;;
+        s)  model=sonnet ;;
+        o)  model=opus ;;
+        *)  [[ "$m" != "" ]] && echo "Invalid selection: $m"; return ;;
+    esac
+    question="$*"
+    if [[ "$question" == "" ]]; then
+        claude --model $model
+    else
+        claude --model $model --print "$question"
+    fi
+}
+
+beep() {
+    # func: beep: Beep the terminal
+    powershell.exe -Command '[Console]::Beep()'
+}
+
+# Silence the bell
+xset -b
+
+# Backup important files
+# export BACKUP_DIR=... set in .bashrc
+backup -f -d toto-db ~/.todo.db
+echo
+
+# Refresh misc notes web page
+n -m > /home/martin/mjnurse/mjnurse-website/notes/Miscellaneous_Notes.md
+
+# Check if website been built today, if not build it
+build-website -d
+
+# Check for website changes
+check-for-website-updates
+
+# Check local repos
+clr
+
+alias ebc='code /home/martin/mjnurse/bash/mjn-bashrc'
+alias fwd=file-watch-do
+alias lm=list-move
+alias kd=keep-delete
+alias mo=ms-office
+alias pp=ms-office
+alias ex=ms-office
+alias wo=ms-office
+alias mdu="sudo du -sh --exclude=c --exclude=mnt/c * | sort -h"
+alias lt="ls -altr"
+alias psg='ps -edf | grep'
+alias sbc="source ~/.bashrc"
+alias rm='trash'
+alias drm="command rm -i"
+alias cat="batcat"
+alias bw='build-website'
+alias svg='chafa --scale=20 --size=80x80'
+alias img='catimg'
+alias web='/mnt/c/Windows/System32/cmd.exe /c start'
+alias vf='vi "$(fzf)"'
+alias cf='code "$(fzf)"'
+alias clip="xclip -selection clipboard"
+alias book="dne -a"
+alias c+="chmod u+x"
+alias gbp="gen-bookmark-page"
+
+# Append history instead of overwrite
+shopt -s histappend
+
+# Write to history after every command
+PROMPT_COMMAND='history -a'
+
+# Increase history size, add time stamps
+HISTSIZE=10000
+HISTFILESIZE=20000
+HISTTIMEFORMAT="%F %T  "
+
+# Display trash size and item count if ~/.trash exists
+[ -d ~/.trash ] && echo -e "\nTrash Size: $(du ~/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls ~/.trash | wc -l) Items"
+
+# Some colour codes
+export cdef="\x1b[39m" # default colour
+export cbla="\x1b[30m"
+export cgra="\x1b[90m"
+export clgra="\x1b[37m"
+export cwhi="\x1b[97m"
+export cred="\x1b[31m"
+export cgre="\x1b[32m"
+export cyel="\x1b[33m"
+export cblu="\x1b[34m"
+export cmag="\x1b[35m"
+export ccya="\x1b[36m"
+export clred="\x1b[91m"
+export clgre="\x1b[92m"
+export clyel="\x1b[93m"
+export clblu="\x1b[94m"
+export clmag="\x1b[95m"
+export clcya="\x1b[96m"
