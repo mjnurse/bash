@@ -330,10 +330,17 @@ process_bookmark_file() {
     const go = event.code == "Enter";
     let firstMatchHref = null;
 
+    // Split search string into individual words
+    const searchWords = searchVal.trim().split(/\s+/).filter(word => word.length > 0);
+
     for (let i = 1; i <= maxNum; i++) {
       const item = document.getElementById("item"+i);
-      const itemVal = item.innerHTML;
-      if (itemVal.toUpperCase().indexOf(searchVal) > -1) {
+      const itemVal = item.innerHTML.toUpperCase();
+
+      // Check if all search words are found in the item text (in any order)
+      const allWordsMatch = searchWords.every(word => itemVal.indexOf(word) > -1);
+
+      if (allWordsMatch) {
         item.style.color = "#155799";
         if (!firstMatchHref) {
           firstMatchHref = item.href;
