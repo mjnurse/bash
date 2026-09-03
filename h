@@ -78,12 +78,10 @@ else
     filter=".*"
 fi
 
-# Create a file so that the grep command never fails
-echo "x" > /tmp/h.tmp0
-
-grep --exclude="*.pack" --exclude="*.tmp" --exclude="*.bkp" --exclude="*.json" \
-     --exclude="*.bac" --exclude="mjn*rc" --exclude-dir="*" \
-        -s -L -e "^help_line=" -e "^HELP_LINE=" -e "^-- help_line:" /tmp/h.tmp0 * \
+find . -maxdepth 1 -type f -executable -printf "%f\n" \
+    | xargs grep --exclude="*.pack" --exclude="*.tmp" --exclude="*.bkp" --exclude="*.json" \
+        --exclude="*.bac" --exclude="mjn*rc" --exclude-dir="*" \
+        -s -L -e "^help_line=" -e "^HELP_LINE=" -e "^-- help_line:" \
     | sed '/README.*.md/d; /^h:/d; /tmp0/d' \
     | sort -f > /tmp/h.tmp
 
@@ -99,12 +97,10 @@ if [[ $noissues_yn == n ]]; then
                  " 
     fi
 fi
-# Create a file so that the grep command never fails
-echo 'help_line="tbc"' > /tmp/h.tmp0
-
 
 if [[ $noissues_yn == n ]]; then
-    egrep -s -l -e "help_line=.*tbc.*" /tmp/h.tmp0 * \
+    find . -maxdepth 1 -type f -executable -printf "%f\n" \
+        | xargs egrep -s -l -e "help_line=.*tbc.*" \
         | grep -E "${filter}" \
         | sed "/README.*.md/d; /^h$/d; /tmp0/d
                s/${filter//\.\*/}/${cyel}${filter//\.\*/}${cdef}/g;
@@ -118,7 +114,6 @@ if [[ $noissues_yn == n ]]; then
         cecho lmag --------------
         cat /tmp/h.tmp | sed "/tidy/d"
     fi
-    rm -f /tmp/h.tmp0
 fi
 
 if [[ $issues_only_yn == n ]]; then
@@ -139,11 +134,14 @@ fi
 
 prev_char=""
 
-grep -H -s -i -e "^help_line=" -e "^-- help_line:" * | egrep "$filter" > /tmp/h.tmp
+find . -maxdepth 1 -type f -executable -printf "%f\n" \
+    | xargs grep -H -s -i -e "^help_line=" -e "^-- help_line:" | egrep "$filter" > /tmp/h.tmp
 
-grep func: /home/martin/mjnurse/bash/mjn-bashrc | \
-    egrep "$filter" | \
-    sed 's/ *# *func: *\([^ :]\+\): *\(.*\)$/\1:help_line="\2 BASHFUNC"/' >> /tmp/h.tmp
+if [[ -f /home/martin/mjnurse/bash/mjn-bashrc ]]; then
+    grep func: /home/martin/mjnurse/bash/mjn-bashrc | \
+        egrep "$filter" | \
+        sed 's/ *# *func: *\([^ :]\+\): *\(.*\)$/\1:help_line="\2 BASHFUNC"/' >> /tmp/h.tmp
+fi
 
 cat /tmp/h.tmp | \
 sed ' 
