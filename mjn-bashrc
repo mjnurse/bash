@@ -152,8 +152,8 @@ c() {
         echo
         read -p "> " m
     fi
-    if [[ "$*" == "h" || "$*" == "s" || "$*" == "o" ]]; then
-        m="$*"
+    if [[ "$1" == "h" || "$1" == "s" || "$1" == "o" ]]; then
+        m="$1"
         shift
     fi
     case $m in
@@ -195,31 +195,31 @@ check-for-website-updates
 # Check local repos
 clr
 
-alias ebc='code /home/martin/mjnurse/bash/mjn-bashrc'
-alias fwd=file-watch-do
-alias lm=list-move
-alias kd=keep-delete
-alias mo=ms-office
-alias pp=ms-office
-alias ex=ms-office
-alias wo=ms-office
-alias mdu="sudo du -sh --exclude=c --exclude=mnt/c * | sort -h"
-alias lt="ls -altr"
-alias psg='ps -edf | grep'
-alias sbc="source ~/.bashrc"
-alias rm='trash'
-alias drm="command rm -i"
-alias cat="batcat"
+alias bt='d -a' # help_line: Book time CODE:HH [CODE:HH]
+alias bp='gen-bookmark-page -a' # help_line: Add a new bookmark to a bookmark page
 alias bw='build-website'
-alias svg='chafa --scale=20 --size=80x80'
-alias img='catimg'
-alias web='/mnt/c/Windows/System32/cmd.exe /c start'
-alias vf='vi "$(fzf)"'
+alias c+='chmod u+x' # help_line: Make a file executable
+alias cat='batcat'
 alias cf='code "$(fzf)"'
-alias clip="xclip -selection clipboard"
-alias book="dne -a"
-alias c+="chmod u+x"
-alias gbp="gen-bookmark-page"
+alias clip='xclip -selection clipboard'
+alias drm='command rm -i'
+alias ebc='code /home/martin/mjnurse/bash/mjn-bashrc' # help_line: Edit the mjn-bashrc file
+alias fwd='file-watch-do'
+alias gbp='gen-bookmark-page'
+alias img='catimg' # help_line: Display images in the terminal
+alias kd='keep-delete'
+alias lle='ls -al | \egrep "^[^d]..x|^[^d].....x|^[^d]........x"' # help_line: List executable files
+alias lm='list-move'
+alias lls='ls -lhSrA --color=always | grep --color=never '^-'' # help_line: List files sorted by size in reverse order
+alias llt='ls -altr --color=always | grep --color=never '^-'' # help_line: List files sorted by modification time in reverse order
+alias mdu='sudo du -sh --exclude=c --exclude=mnt/c * | sort -h' # help_line: Display disk usage of files and directories
+alias mo='ms-office' # help_line: Open file in Microsoft Office
+alias psg='ps -edf | grep'
+alias rm='trash'
+alias sbc='source ~/.bashrc' # help_line: Reload the bash configuration ~/.bashrc
+alias svg='chafa --scale=20 --size=80x80' # help_line: Display SVG images in the terminal
+alias vf='vi "$(fzf)"'
+alias web='/mnt/c/Windows/System32/cmd.exe /c start' # help_line: Open page in the default browser
 
 # Append history instead of overwrite
 shopt -s histappend

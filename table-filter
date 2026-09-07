@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+DESCRIPTION="""
+Python tool processing whitespace-separated tabular data from stdin, allowing:
+- Filter rows based on column values with various operators.
+- Group rows by one or more columns.
+- Aggregate data using functions like sum, average, min, max, and count.
+"""
+AUTHOR="mjnurse.github.io - 2026"
+
+HELP_LINE="Python tool for filtering, grouping, and aggregating tabular data from stdin"
+WEB_DESC_LINE="Python tool for filtering, grouping, and aggregating tabular data from stdinh"
 import sys
 import argparse
 import re
