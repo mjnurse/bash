@@ -208,6 +208,7 @@ alias fwd='file-watch-do'
 alias gbp='gen-bookmark-page'
 alias img='catimg' # help_line: Display images in the terminal
 alias kd='keep-delete'
+alias kp='f(){ ps aux | fzf -i -e -q "$1" | awk "{print \$2}" | xargs -r kill -9; }; f' # help_line: Kill a process selected via search list
 alias lle='ls -al | \egrep "^[^d]..x|^[^d].....x|^[^d]........x"' # help_line: List executable files
 alias lm='list-move'
 alias lls='ls -lhSrA --color=always | grep --color=never '^-'' # help_line: List files sorted by size in reverse order
@@ -220,6 +221,7 @@ alias sbc='source ~/.bashrc' # help_line: Reload the bash configuration ~/.bashr
 alias svg='chafa --scale=20 --size=80x80' # help_line: Display SVG images in the terminal
 alias vf='vi "$(fzf)"'
 alias web='/mnt/c/Windows/System32/cmd.exe /c start' # help_line: Open page in the default browser
+alias word='w(){ grep -iE "$1" /usr/share/dict/words; }; w' # help_line: Search for a word in the system dictionary
 
 # Append history instead of overwrite
 shopt -s histappend

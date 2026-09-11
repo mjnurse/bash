@@ -168,7 +168,7 @@ if [[ -f /home/martin/mjnurse/bash/mjn-bashrc ]]; then
 
     grep -E --ignore-case "^alias.*#" /home/martin/mjnurse/bash/mjn-bashrc | \
         egrep --ignore-case "$filter" | \
-        sed 's/alias *\([^=]*\)=\(.*\)# help_line:*=* *\(.*\) *$/\1:help_line="\3 #CGRA(alias-only: \2)#CDEF"/' >> /tmp/h.tmp
+        sed 's/alias *\([^=]*\)=\(.*\)# help_line:*=* *\(.*\) *$/\1:help_line="\3 #CGRA(alias-only)#CDEF"/' >> /tmp/h.tmp
 fi
 
 cat /tmp/h.tmp | \

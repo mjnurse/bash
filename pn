@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+help_line="Adds a note to a client's clientname_notes.md file"
+
+mode=add
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -e|--edit)
+            mode=edit
+            ;;
+        -h|--help)
+            echo "Usage:   pn [options] [<client> [<note>]]"
+            echo "Options:"
+            echo "  -e, --edit    Edit the client's notes file"
+            echo "  -l, --list    List the first 30 lines of the client's notes file"
+            echo "  -h, --help    Show this help message"
+            echo "Example: pn client_name 'This is a note.'"
+            exit
+            ;;
+        -l|--list)
+            mode=list
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift
+done
+
+cd "$DOCS"
+
+if [[ $# -gt 0 ]]; then
+    client="${1,,}"
+    shift
+    if [[ ! -d "c_${client}" ]]; then
+        echo "Client directory c_${client} does not exist."
+        exit
+    fi
+    shift
+else
+    COLUMNS=1
+    PS3="Choose client: "
+    select client in $(ls -d c_*/ | sed 's/c_//; s/\/$//'); do
+        [ -n "$client" ] && break
+    done
+fi
+
+if [[ ! -f  "c_${client}/${client}_notes.md" ]]; then
+    echo -e "# ${client^^}\n\n" > "c_${client}/${client}_notes.md"
+fi
+
+if [[ "$mode" == "list" ]]; then
+    head -n 30 "c_${client}/${client}_notes.md"
+    exit
+fi
+
+if [[ "$mode" == "edit" ]]; then
+    code "c_${client}/${client}_notes.md"
+    exit
+fi
+
+if [[ $# -lt 1 ]]; then
+    read -p "Notes: " note
+    if [[ -z "$note" ]]; then
+        exit
+    fi
+else
+    note="$*"
+fi
+
+echo
+echo "Add: $note"
+read -p "To:  c_${client}/${client}_notes.md? (yN) " confirm
+if [[ "${confirm^^}" == "Y" ]]; then
+    note="$(date +%y-%m-%d): $note"
+    sed -i "2a${note}\n" "c_${client}/${client}_notes.md"
+fi
