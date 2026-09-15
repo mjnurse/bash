@@ -100,7 +100,7 @@ fi
 
 if [[ $noissues_yn == n ]]; then
     find . -maxdepth 1 -type f -executable -printf "%f\n" \
-        | xargs egrep -s -l -e --ignore-case "help_line=.*tbc.*" \
+        | xargs egrep -s -l --ignore-case -e "help_line=.*tbc.*" \
         | grep -E --ignore-case "${filter}" \
         | sed "/README.*.md/d; /^h$/d; /tmp0/d
                s/${filter//\.\*/}/${cyel}${filter//\.\*/}${cdef}/g;
