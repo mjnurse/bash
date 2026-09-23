@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+help_line="Formats markdown text with terminal colours"
+
+ # Terminal Colours
+cdef="\x1b[39m" # default colour
+cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
+cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
+clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
+cbold="\x1b[1m"; cnorm="\x1b[0m"
+
+text="$(cat)"
+
+echo -e "$text" | sed "
+    s/^\(#.*\)\((.*)\)/\1$cgra\2$cdef/
+    s/^#.*/$clmag&$cdef/
+    s/\*\*\([^\*]*\)\*\*/$cbold\1$cnorm/g
+    s/^[0-9][0-9]-[0-9][0-9]-[0-9][0-9]:/$clcya&$cdef/
+"

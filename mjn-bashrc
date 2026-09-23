@@ -64,6 +64,11 @@ trash() {
     fi
     force_yn=n
 
+    # ignore -r
+    if [[ "$1" == "-r" ]]; then
+        shift
+    fi
+    
     # Parse -p option
     if [[ "$1" == "-p" || "$1" == "--purge" ]]; then
         shift
@@ -75,8 +80,9 @@ trash() {
         return 1
     fi
 
+
     # Parse -f option
-    if [[ "$1" == "-f" || "$1" == "--force" ]]; then
+    if [[ "$1" == "-f" || "$1" == "--force" || "$1" == "-rf" ]]; then
         force_yn=y
         shift
     fi
@@ -181,6 +187,7 @@ xset -b
 # Backup important files
 # export BACKUP_DIR=... set in .bashrc
 backup -f -d toto-db ~/.todo.db
+backup -f -d notes ~/.notes.txt
 echo
 
 # Refresh misc notes web page
@@ -255,3 +262,5 @@ export clyel="\x1b[93m"
 export clblu="\x1b[94m"
 export clmag="\x1b[95m"
 export clcya="\x1b[96m"
+
+export EDITOR=vi

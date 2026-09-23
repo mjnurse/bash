@@ -4,7 +4,7 @@ NAME
   n - Notes
 
 USAGE
-  n [options] <text - consider wrapping in quotes>
+  n [options] [<text - consider wrapping in quotes> <text2> <text3>]
 
 OPTIONS
   -h|--help
@@ -40,26 +40,42 @@ clred=$'\e[91m'; clgre=$'\e[92m'; clyel=$'\e[93m'; clblu=$'\e[94m'; clmag=$'\e[9
 
 nf=~/.notes.txt
 
-word="${1:-dummydummydummy}"
-sed_cmd="
-  s/^\(\w*:\)/CCYA\1CDEF/; 
-  s/\(${word}\)/CGRE\1CDEF/Ig;
-  s/\(# .*\)/CMAG\1CDEF/I;
-  s/\(.*\)\[P\] *\(.*\)/CGRE\[P\]CCYA \1\2/;
-  :a; s/\(# .*\)CDEF/\1CMAG/; ta;
-  s/$/CDEF/;
-  s/CCYA/${clcya}/g; s/CGRE/${clgre}/g; s/CMAG/${clmag}/g; s/CDEF/${cdef}/g
-"
-
-if [[ "$1" == "" ]]; then
+function display_notes() {
+  w1="$1"
+  if [[ "$w1" == "" ]]; then
+    w1="dummydummydummy"; w2="$w1"; w3="$w1"
+    notes="$(cat "$nf")"
+  else
+    if [[ "$2" == "" ]]; then w2="$1"; else w2="$2"; fi
+    if [[ "$3" == "" ]]; then w3="$1"; else w3="$3"; fi
+    if [[ ${#w1} -lt 2 || ${#w2} -lt 2 || ${#w3} -lt 2 ]]; then
+      echo "Error: Search terms must be at least 2 characters long."
+      return
+    fi
+    notes="$(cat "$nf" | grep --ignore-case "$w1" | grep --ignore-case "$w2" | grep --ignore-case "$w3")"
+  fi
   echo -e $cyel' _  _     _'
   echo -e      '| \| |___| |_ ___ ___'
   echo -e      '| .` / _ \  _/ -_|_-<'
   echo -e      '|_|\_\___/\__\___/__/'$cdef
   echo
-  cat "$nf" | sed "$sed_cmd"
+  echo "$notes" | sed "
+    s/^\(\w*:\)/CCYA\1CDEF/; 
+    s/\(${w1}\)/CGRE\1CDEF/Ig;
+    s/\(${w2}\)/CGRE\1CDEF/Ig;
+    s/\(${w3}\)/CGRE\1CDEF/Ig;
+    s/\(# .*\)/CMAG\1CDEF/I;
+    s/\(.*\)\[P\] *\(.*\)/CGRE\[P\]CCYA \1\2/;
+    :a; s/\(# .*\)CDEF/\1CMAG/; ta;
+    s/$/CDEF/;
+    s/CCYA/${clcya}/g; s/CGRE/${clgre}/g; s/CMAG/${clmag}/g; s/CDEF/${cdef}/g
+  "
+}
+
+if [[ "$1" == "" ]]; then
+  display_notes
   echo
-  echo "Usage: n [options] <text - consider wrapping in quotes>"
+  echo "Usage: n [options] [<text - consider wrapping in quotes> <text2> <text3>]"
   echo "Try:  \"n -h\" for more information."
   exit
 fi
@@ -102,14 +118,12 @@ case ${1-} in
     exit
     ;;
   *)
-    echo -e $cyel"NOTES"$cdef
-    echo -e $cyel"-----"$cdef
-    grep  --ignore-case "$1" "$nf" | sed "$sed_cmd"
+    display_notes "$1" "$2" "$3"
     exit
     ;;
 esac
 
-sort "$nf"| sed '/^$/d' > "$nf".tmp
+sort "$nf" | sed '/^$/d' > "$nf".tmp
 
 # Group lines by their first word, inserting a blank line whenever the first word changes.
 awk '

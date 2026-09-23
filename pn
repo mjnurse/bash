@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 
+# for f in c_*/*_notes.md; do awk -v dt="$(date -d '1 month ago' +%y-%m-%d)" 'NR==1 || ($1 ~ /[0-9]{2}-[0-9]{2}-[0-9]{2}/ && $1 > dt) {print FNR, $0 "\n"}' $f; done
+
 help_line="Adds a note to a client's clientname_notes.md file"
+
+# Terminal Colours
+cdef="\x1b[39m" # default colour
+cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
+cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
+clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
+
+cd "$DOCS"
 
 mode=add
 while [[ $# -gt 0 ]]; do
@@ -20,6 +30,23 @@ while [[ $# -gt 0 ]]; do
         -l|--list)
             mode=list
             ;;
+        -r|--recent)
+            if [[ "$2" != "" ]]; then
+                filter="*$2*"
+            fi
+            for c in c_*$filter; do
+                if [[ "$c" == "c_archive"* ]]; then
+                    continue
+                fi
+                f="$c/${c#c_}_notes.md"
+                if [[ -f "$f" ]]; then
+                    awk -v dt="$(date -d '1 month ago' +%y-%m-%d)" \
+                        'NR==1 {print "\n--------------------------------------------------\n" $0, "('$c')"} 
+                        ($1 ~ /[0-9]{2}-[0-9]{2}-[0-9]{2}/ && $1 > dt) {print "\n" $0}' $f | mdc
+                fi
+            done
+            exit
+            ;;
         *)
             break
             ;;
@@ -27,11 +54,9 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-cd "$DOCS"
 
 if [[ $# -gt 0 ]]; then
     client="${1,,}"
-    shift
     if [[ ! -d "c_${client}" ]]; then
         echo "Client directory c_${client} does not exist."
         exit
@@ -50,7 +75,7 @@ if [[ ! -f  "c_${client}/${client}_notes.md" ]]; then
 fi
 
 if [[ "$mode" == "list" ]]; then
-    head -n 30 "c_${client}/${client}_notes.md"
+    head -n 30 "c_${client}/${client}_notes.md" | mdc
     exit
 fi
 
@@ -68,10 +93,10 @@ else
     note="$*"
 fi
 
+note="$(date +%y-%m-%d): $note"
 echo
 echo "Add: $note"
 read -p "To:  c_${client}/${client}_notes.md? (yN) " confirm
 if [[ "${confirm^^}" == "Y" ]]; then
-    note="$(date +%y-%m-%d): $note"
     sed -i "2a${note}\n" "c_${client}/${client}_notes.md"
 fi
