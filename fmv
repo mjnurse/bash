@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+if [ "$#" -lt 2 ]; then
+    echo "Usage: $0 <file_selector> <sed_search_replace_pattern>"
+    exit 1
+fi
+
+args=("$@")
+
+# Pop the last element (op)
+op="${args[-1]}"
+unset 'args[-1]'
+
+# Remaining elements are files
+files=$(eval echo "${args[@]}")
+
+if [[ -z "$files" || "$(ls $files 2>/dev/null)" == "" ]]; then
+    echo "No files found matching the selector: $1"
+    exit 1
+fi
+
+ml=0
+for file in $files; do
+    l=$(echo "$file" | awk '{print length}')
+    if [ $l -gt $ml ]; then
+        ml=$l
+    fi
+done
+
+change_count=0
+for file in $files; do
+    new_name=$(echo "$file" | sed -e "$op")
+    file_padded=$(printf "%-${ml}s" "$file")
+    if [[ "$file" != "$new_name" ]]; then
+        echo "mv $file_padded $new_name"
+        ((change_count++))
+    else
+        echo "   $file_padded - NO CHANGE"
+    fi
+done
+
+echo
+if [ $change_count -eq 0 ]; then
+    echo "No files will be renamed."
+    exit 0
+fi
+
+read -p "Run the above commands [yN]? " yn
+if [[ "${yn^^}" == "Y" ]]; then
+    for file in $files; do
+        mv -i "$file" "$(echo "$file" | sed -e "$op")"
+    done
+fi

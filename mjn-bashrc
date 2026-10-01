@@ -124,8 +124,8 @@ g () {
 }
 
 md() {
-    # func: md: Format and preview a markdown file in the terminal using glow
-    glow -w $(tput cols)
+    # func: md: View/Edit a markdown file
+    nvim "$*"
 }
 
 f() {
@@ -163,9 +163,9 @@ c() {
         shift
     fi
     case $m in
-        h)  model=haiku ;;
-        s)  model=sonnet ;;
-        o)  model=opus ;;
+        h)  model=claude-haiku-4-5 ;;
+        s)  model=claude-sonnet-5-5 ;;
+        o)  model=claude-opus-5-5 ;;
         *)  [[ "$m" != "" ]] && echo "Invalid selection: $m"; return ;;
     esac
     question="$*"
@@ -226,6 +226,7 @@ alias psg='ps -edf | grep'
 alias rm='trash'
 alias sbc='source ~/.bashrc' # help_line: Reload the bash configuration ~/.bashrc
 alias svg='chafa --scale=20 --size=80x80' # help_line: Display SVG images in the terminal
+alias tf='table-filter'
 alias vf='vi "$(fzf)"'
 alias web='/mnt/c/Windows/System32/cmd.exe /c start' # help_line: Open page in the default browser
 alias word='w(){ grep -iE "$1" /usr/share/dict/words; }; w' # help_line: Search for a word in the system dictionary

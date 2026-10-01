@@ -1,0 +1,61 @@
+#!/bin/bash
+
+help_line="Search for processes matching provided name with option to kill"
+
+if [ -z "$1" ]; then
+    echo "Usage: pk <process_name>"
+    exit 1
+fi
+
+# Get matching processes, exclude grep itself and this script
+mapfile -t processes < <(ps aux | grep "$1" | grep -v grep | grep -v "bash.*pk")
+
+if [ ${#processes[@]} -eq 0 ]; then
+    echo "No processes found matching: $1"
+    exit 0
+fi
+
+# Display processes with numbers
+echo "Matching processes:"
+echo ""
+for i in "${!processes[@]}"; do
+    echo "$((i+1)). ${processes[$i]}"
+done
+echo ""
+
+# Prompt for selection
+read -p "Enter number to kill (or press Enter to cancel): " selection
+
+# Check if user pressed Enter (empty input)
+if [ -z "$selection" ]; then
+    echo "Cancelled."
+    exit 0
+fi
+
+# Validate input is a number
+if ! [[ "$selection" =~ ^[0-9]+$ ]]; then
+    echo "Invalid input. Cancelled."
+    exit 1
+fi
+
+# Convert to array index (subtract 1)
+index=$((selection - 1))
+
+# Check if selection is valid
+if [ $index -lt 0 ] || [ $index -ge ${#processes[@]} ]; then
+    echo "Invalid selection. Cancelled."
+    exit 1
+fi
+
+# Extract PID (second column in ps aux output)
+pid=$(echo "${processes[$index]}" | awk '{print $2}')
+
+echo "Killing process $pid: ${processes[$index]}"
+kill -9 "$pid"
+
+if [ $? -eq 0 ]; then
+    echo "Process killed successfully."
+else
+    echo "Failed to kill process. You may need sudo permissions."
+    exit 1
+fi

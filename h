@@ -68,8 +68,13 @@ case ${1-} in
         exit
 esac
 
-location="$(which h)"
-cd "${location:0:-2}"
+running_elsewhere_yn=y
+current_location="$(pwd)"
+location="$(realpath "$(which h)")"
+
+if [[ "$current_location" == "${location:0:-2}" ]]; then
+    running_elsewhere_yn=n
+fi
 
 if [[ "$1" != "" ]]; then
     filter="$1"
@@ -78,12 +83,24 @@ else
     filter=".*"
 fi
 
+if [[ $running_elsewhere_yn == y ]]; then
+    find . -maxdepth 1 -type f -executable -printf "%f\n" \
+        | xargs grep --exclude="*.pack" --exclude="*.tmp" --exclude="*.bkp" --exclude="*.json" \
+            --exclude="*.bac" --exclude="mjn*rc" --exclude-dir="*" \
+            -s -e "^help_line=" -e "^HELP_LINE=" -e "^-- help_line:" \
+        | sed '/README.*.md/d; /^h:/d; /tmp0/d' \
+        | sort -f > /tmp/h.l.tmp
+fi
+
+cd "${location:0:-2}"
+
 find . -maxdepth 1 -type f -executable -printf "%f\n" \
     | xargs grep --exclude="*.pack" --exclude="*.tmp" --exclude="*.bkp" --exclude="*.json" \
         --exclude="*.bac" --exclude="mjn*rc" --exclude-dir="*" \
         -s -L -e "^help_line=" -e "^HELP_LINE=" -e "^-- help_line:" \
     | sed '/README.*.md/d; /^h:/d; /tmp0/d' \
     | sort -f > /tmp/h.tmp
+
 
 if [[ $noissues_yn == n ]]; then
     if [[ $(cat /tmp/h.tmp | wc -l) != 0 ]]; then
@@ -171,36 +188,50 @@ if [[ -f /home/martin/mjnurse/bash/mjn-bashrc ]]; then
         sed 's/alias *\([^=]*\)=\(.*\)# help_line:*=* *\(.*\) *$/\1:help_line="\3 #CGRA(alias-only)#CDEF"/' >> /tmp/h.tmp
 fi
 
-cat /tmp/h.tmp | \
-sed '
-    s/\\/\\\\/g;
-    /help_line=.*tbc.*/d
-    /^h:/d; s/help_line=//I; s/-- help_line://I; s/"/ /g;
-    /tidy:.*echo/d;
-    /^README.*md/d;
-    s/:[0-9][0-9]*:/:/;
-    s/ )#CDEF/)#CDEF/;
-    s/#CGRE/'${cgre}'/g;
-    s/#CLGRE/'${clgre}'/g;
-    s/#CGRA/'${cgra}'/g;
-    s/#CDEF/'${cdef}'/g;
-    ' | \
-sort | while IFS= read -r line ; do 
-    curr_char="${line:0:1}"
-    line="${line/ALIASONLY/${cgra}alias-only:}"
-    if [[ "$curr_char" != "$prev_char" ]]; then
-         prev_char="$curr_char"
-         echo -e "${clmag}${curr_char}${cdef} - ${clcya}$line"
-    else
-         echo -e "${cdef}${cdef}    ${clcya}$line" 
-    fi
-done | sed  "
-     s/: /:$cdef                                                     /;
-     s/\(...............................................\) *\(.*\)/\1\2/;
-     s/^\([^:]*\)${filter//\.\*/}/\1${cyel}${filter//\.\*/}${clcya}/g;
-     s/^\(.*:.*\)${filter//\.\*/}/\1${cyel}${filter//\.\*/}${cdef}/g;
-     /tidy:.*echo/d
-     " > /tmp/h.out 
+function list() {
 
-cat /tmp/h.out
-rm -f /tmp/h.out /tmp/h.tmp
+    cat "$1" | \
+    sed '
+        s/\\/\\\\/g;
+        /help_line=.*tbc.*/d
+        /^h:/d; s/help_line=//I; s/-- help_line://I; s/"/ /g;
+        /tidy:.*echo/d;
+        /^README.*md/d;
+        s/:[0-9][0-9]*:/:/;
+        s/ )#CDEF/)#CDEF/;
+        s/#CGRE/'${cgre}'/g;
+        s/#CLGRE/'${clgre}'/g;
+        s/#CGRA/'${cgra}'/g;
+        s/#CDEF/'${cdef}'/g;
+        ' | \
+    sort | while IFS= read -r line ; do 
+        curr_char="${line:0:1}"
+        line="${line/ALIASONLY/${cgra}alias-only:}"
+        if [[ "$curr_char" != "$prev_char" ]]; then
+            prev_char="$curr_char"
+            echo -e "${clmag}${curr_char}${cdef} - ${clcya}$line"
+        else
+            echo -e "${cdef}${cdef}    ${clcya}$line" 
+        fi
+    done | sed  "
+        s/: /:$cdef                                                     /;
+        s/\(...............................................\) *\(.*\)/\1\2/;
+        s/^\([^:]*\)${filter//\.\*/}/\1${cyel}${filter//\.\*/}${clcya}/g;
+        s/^\(.*:.*\)${filter//\.\*/}/\1${cyel}${filter//\.\*/}${cdef}/g;
+        /tidy:.*echo/d
+        "
+}
+
+list /tmp/h.tmp
+
+if [[ "$running_elsewhere_yn" == "y"  && -e /tmp/h.l.tmp ]]; then
+    if [[ "$(cat /tmp/h.l.tmp | wc -l)" -gt 0 ]]; then
+        echo
+        cecho lmag -------------
+        cecho lmag Local Scripts
+        cecho lmag -------------
+        list /tmp/h.l.tmp
+    fi
+fi
+
+rm -f /tmp/h.tmp /tmp/h.l.tmp
