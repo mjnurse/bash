@@ -1,0 +1,312 @@
+#!/usr/bin/env bash
+help_text="
+NAME
+    emoji - Search and find emoji characters.
+
+USAGE
+    emoji [options] <search-terms>
+
+OPTIONS
+    -e|--exact
+        Perform exact matching of search terms.
+
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Search through emojis.
+
+AUTHOR
+    mjnurse.github.io - 2026
+"
+help_line="Search and find Emoji characters"
+web_desc_line="Search and find Emoji characters"
+
+tmpfile="/tmp/uc.tmp"
+rm -f $tmpfile
+
+# Terminal Colours
+cdef="\x1b[39m" # default colour
+cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
+cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
+clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+exact=false
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -e|--exact)
+            exact=true
+            ;;
+        ?*)
+            break
+            ;;
+    esac
+    shift
+done
+
+if [[ $exact == true ]]; then
+    sp=" "
+fi
+p1="${sp}${1}${sp}"
+p2="${sp}${2:-$1}${sp}"
+p3="${sp}${3:-$1}${sp}"
+
+n=1
+cat $0 | sed 's/$/ /; s/:/ : /' | \
+    egrep "^## |^# [^:]*:.*${p1}" | \
+    egrep "^## |.*:.*${p2}" | \
+    egrep "^## |.*:.*${p3}" | \
+    sed '/^##/{N;/\n# /!d}' | \
+    sed '/^##/{$d;N;/\n#/!D}' | \
+    sed -E "
+        s/^# //; 
+        s/^## (.*)$/#${clcya}\1${cdef}/; 
+        s/(.*:.*)(${p1})/\1${clmag}\2${cdef}/g;
+        s/(.*:.*)(${p2})/\1${clmag}\2${cdef}/g;
+        s/(.*:.*)(${p3})/\1${clmag}\2${cdef}/g;
+    " | \
+while read -r line; do
+    if [[ "${line:0:1}" == "#" ]]; then
+        echo -e "\n${line:1}"
+    else
+        echo -e "$n) $line"
+        tmp="${line/ */}"
+        echo -e "${tmp:-1}" >> "$tmpfile"
+        ((n++))
+    fi
+done
+
+echo
+printf "${clcya}Select a character by number copy to clipboard (blank to exit): ${cdef}"
+read n
+if [[ -z "$n" ]]; then
+    exit
+fi
+echo
+char=$(sed -n "$((n))p" $tmpfile)
+printf "$char" | powershell.exe -NoProfile -Command '[Console]::InputEncoding=[Text.Encoding]::UTF8; Set-Clipboard -Value ([Console]::In.ReadToEnd())'
+
+echo "(copied to clipboard)"
+
+## smileys & people
+# \U0001f600:grinning face
+# \U0001f603:grinning face with big eyes 
+# \U0001f604:grinning face with smiling eyes 
+# \U0001f601:beaming face 
+# \U0001f606:grinning squinting face 
+# \U0001f605:grinning face with sweat 
+# \U0001f923:rolling on the floor laughing 
+# \U0001f602:face with tears of joy 
+# \U0001f60a:smiling face with smiling eyes 
+# \U0001f607:smiling face with halo 
+# \U0001f60d:heart eyes 
+# \U0001f929:star-struck 
+# \U0001f60e:smiling face with sunglasses 
+# \U0001f914:thinking face 
+# \U0001f634:sleeping face 
+# \U0001f631:face screaming in fear 
+# \U0001f92f:exploding head 
+# \U0001f973:partying face 
+# \U0001f608:smiling face with horns 
+# \U0001f480:skull 
+# \U0001f47b:ghost 
+# \U0001f916:robot 
+# \U0001f44d:thumbs up 
+# \U0001f44e:thumbs down 
+# \U0001f44b:waving hand 
+# \U0001f44f:clapping hands 
+# \U0001f64c:raising hands 
+# \U0001f91d:handshake 
+# \U270c:victory hand 
+# \U0001f4aa:flexed biceps 
+# 
+## symbols
+# \U2764:red heart 
+# \U0001f9e1:orange heart 
+# \U0001f49b:yellow heart 
+# \U0001f49a:green heart 
+# \U0001f499:blue heart 
+# \U0001f49c:purple heart 
+# \U0001f5a4:black heart 
+# \U0001f494:broken heart 
+# \U0001f4af:hundred points 
+# \U0001f4a5:collision 
+# \U0001f4ab:dizzy 
+# \U0001f4a6:sweat droplets 
+# \U0001f525:fire 
+# \U2728:sparkles 
+# \U2b50:star 
+# \U0001f31f:glowing star 
+# \U0001f4a1:light bulb 
+# 
+## nature
+# \U0001f436:dog face 
+# \U0001f431:cat face 
+# \U0001f42d:mouse face 
+# \U0001f43b:bear 
+# \U0001f98a:fox 
+# \U0001f427:penguin 
+# \U0001f984:unicorn 
+# \U0001f40d:snake 
+# \U0001f422:turtle 
+# \U0001f41d:honeybee 
+# \U0001f98b:butterfly 
+# \U0001f338:cherry blossom 
+# \U0001f339:rose 
+# \U0001f33b:sunflower 
+# \U0001f332:evergreen tree 
+# \U0001f308:rainbow 
+# \U2600:sun 
+# \U0001f319:crescent moon 
+# \U26a1:high voltage 
+# \U2744:snowflake 
+# \U0001f30a:water wave 
+# 
+## drink
+# \U0001f34e:red apple 
+# \U0001f355:pizza 
+# \U0001f354:hamburger 
+# \U0001f37a:beer mug 
+# \U2615:hot beverage 
+# \U0001f369:doughnut 
+# \U0001f382:birthday cake 
+# \U0001f37f:popcorn 
+# 
+## transport
+# \U0001f680:rocket 
+# \U2708:airplane 
+# \U0001f697:car 
+# \U0001f682:locomotive 
+# \U0001f6a2:ship 
+# \U0001f3e0:house 
+# \U0001f3e2:office building 
+# \U0001f3ed:factory 
+# \U0001f30d:globe (europe-africa) 
+# \U0001f30e:globe (americas) 
+# \U0001f30f:globe (asia-australia) 
+# \U0001f5fa:world map 
+# 
+## tech favourites
+# \U0001f4bb:laptop 
+# \U0001f5a5:desktop computer 
+# \U2328:keyboard 
+# \U0001f5b1:computer mouse 
+# \U0001f4f1:mobile phone 
+# \U0001f527:wrench 
+# \U0001f528:hammer 
+# \U2699:gear 
+# \U0001f6e0:hammer and wrench 
+# \U0001f511:key 
+# \U0001f512:locked 
+# \U0001f513:unlocked 
+# \U0001f41b:bug 
+# \U0001f9ea:test tube 
+# \U0001f9ec:dna 
+# \U0001f4e1:satellite antenna 
+# \U0001f50c:electric plug 
+# \U0001f50b:battery 
+# \U0001f4be:floppy disk 
+# \U0001f4c0:dvd 
+# \U0001f9f2:magnet 
+# \U0001f52c:microscope 
+# \U0001f52d:telescope 
+# \U0001f3d7:building construction 
+# \U0001f4e6:package 
+# \U0001f5c2:card index dividers 
+# \U0001f4cb:clipboard 
+# \U0001f4dd:memo 
+# \U0001f4ca:bar chart 
+# \U0001f4c8:chart increasing 
+# \U0001f4c9:chart decreasing 
+# 
+## indicators
+# \U2705:check mark 
+# \U274c:cross mark 
+# \U26a0:warning 
+# \U0001f6ab:prohibited 
+# \U2753:question mark 
+# \U2757:exclamation mark 
+# \U0001f534:red circle 
+# \U0001f7e0:orange circle 
+# \U0001f7e1:yellow circle 
+# \U0001f7e2:green circle 
+# \U0001f535:blue circle 
+# \U0001f7e3:purple circle 
+# \U26aa:white circle 
+# \U26ab:black circle 
+# \U0001f7e5:red square 
+# \U0001f7e7:orange square 
+# \U0001f7e8:yellow square 
+# \U0001f7e9:green square 
+# \U0001f7e6:blue square 
+# \U0001f7ea:purple square 
+# \U2b1b:black large square 
+# \U2b1c:white large square 
+# \U25b6:play button 
+# \U23f8:pause button 
+# \U23f9:stop button 
+# \U0001f504:counterclockwise arrows 
+# \U267b:recycling symbol 
+# \U0001f3c1:chequered flag 
+# \U0001f6a9:triangular flag 
+# \U0001f3af:bullseye 
+# 
+## calendar
+# \U23f0:alarm clock 
+# \U23f1:stopwatch 
+# \U23f3:hourglass 
+# \U0001f4c5:calendar 
+# \U0001f550:one oclock 
+# \U0001f551:two oclock 
+# \U0001f552:three oclock 
+# \U0001f553:four oclock 
+# \U0001f554:five oclock 
+# \U0001f555:six oclock 
+# 
+## directions
+# \U2b06:up arrow 
+# \U2b07:down arrow 
+# \U2b05:left arrow 
+# \U27a1:right arrow 
+# \U2197:up-right arrow 
+# \U2198:down-right arrow 
+# \U2199:down-left arrow 
+# \U2196:up-left arrow 
+# \U21a9:right arrow curving left 
+# \U21aa:left arrow curving right 
+# 
+## objects
+# \U0001f389:party popper 
+# \U0001f38a:confetti ball 
+# \U0001f388:balloon 
+# \U0001f3c6:trophy 
+# \U0001f947:gold medal 
+# \U0001f948:silver medal 
+# \U0001f949:bronze medal 
+# \U0001f3b5:musical note 
+# \U0001f3b6:musical notes 
+# \U0001f3ae:video game 
+# \U0001f3b2:game die 
+# \U0001f9e9:puzzle piece 
+# \U0001f4cc:pushpin 
+# \U0001f4ce:paperclip 
+# \U270f:pencil 
+# \U0001f58a:pen 
+# \U0001f4da:books 
+# \U0001f4d6:open book 
+# \U0001f4b0:money bag 
+# \U0001f4b3:credit card 
+# \U0001f4e7:email 
+# \U0001f4de:telephone receiver 
+# \U0001f514:bell 
+# \U0001f515:bell with slash 
+# \U0001f50a:speaker high volume 
+# \U0001f507:muted speaker 

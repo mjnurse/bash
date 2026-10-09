@@ -57,35 +57,63 @@ done
 
 if [[ $# -gt 0 ]]; then
     client="${1,,}"
-    if [[ ! -d "c_${client}" ]]; then
-        echo "Client directory c_${client} does not exist."
+    match=false
+    for c in $(ls -d c_*/ q_portfolio/*notes.md | sed 's/^c_//; s/\/$//; s/_notes.md//'); do
+        if [[ "$c" == *"$client"* ]]; then
+            client="$c"
+            match=true
+            echo -e "${clmag}Matched: ${cdef}$client\n"
+            break
+        fi
+    done
+    if [[ "$match" == false ]]; then
+        echo -e "${cred}No matching client found for client:${cdef} $client"
         exit
     fi
     shift
 else
     COLUMNS=1
     PS3="Choose client: "
-    select client in $(ls -d c_*/ | sed 's/c_//; s/\/$//'); do
+    select client in $(ls -d c_*/ q_portfolio/*notes.md | sed 's/^c_//; s/\/$//; s/_notes.md//'); do
         [ -n "$client" ] && break
     done
 fi
 
-if [[ ! -f  "c_${client}/${client}_notes.md" ]]; then
-    echo -e "# ${client^^}\n\n" > "c_${client}/${client}_notes.md"
+if [[ "$client" =~ ^q_portfolio/ ]]; then
+    portfolio=true
+else
+    portfolio=false
+fi
+
+if [[ $portfolio == true ]]; then
+    :
+else
+    if [[ ! -f  "c_${client}/${client}_notes.md" ]]; then
+        echo -e "# ${client^^}\n\n" > "c_${client}/${client}_notes.md"
+    fi
 fi
 
 if [[ "$mode" == "list" ]]; then
-    head -n 30 "c_${client}/${client}_notes.md" | mdc
+    if [[ $portfolio == true ]]; then
+        head -n 30 "${client}_notes.md" | mdc
+    else
+        head -n 30 "c_${client}/${client}_notes.md" | mdc
+    fi
     exit
 fi
 
 if [[ "$mode" == "edit" ]]; then
-    code "c_${client}/${client}_notes.md"
+    if [[ $portfolio == true ]]; then
+        code "${client}_notes.md"
+    else
+        code "c_${client}/${client}_notes.md"
+    fi
     exit
 fi
 
 if [[ $# -lt 1 ]]; then
-    read -p "Notes: " note
+    printf "${clcya}Notes: ${cdef}"
+    read note
     if [[ -z "$note" ]]; then
         exit
     fi
@@ -95,8 +123,14 @@ fi
 
 note="$(date +%y-%m-%d): $note"
 echo
-echo "Add: $note"
-read -p "To:  c_${client}/${client}_notes.md? (yN) " confirm
+echo -e "${clmag}Add:${cdef} $note"
+if [[ $portfolio == true ]]; then
+    target="${client}_notes.md"
+else
+    target="c_${client}/${client}_notes.md"
+fi
+printf "${clmag}To:${cdef} $target ${clcya}(yN) ${cdef}" 
+read confirm
 if [[ "${confirm^^}" == "Y" ]]; then
-    sed -i "2a${note}\n" "c_${client}/${client}_notes.md"
+    sed -i "2a${note}\n" "$target"
 fi

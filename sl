@@ -95,7 +95,7 @@ fi
 
 buf=""
 mode=null
-sl_options="-csv -header"
+sl_options="-column -header"
 
 while [[ 1 ]]; do
     if [[ $mode == ins ]]; then

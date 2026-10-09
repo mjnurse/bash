@@ -213,6 +213,7 @@ alias drm='command rm -i'
 alias ebc='code /home/martin/mjnurse/bash/mjn-bashrc' # help_line: Edit the mjn-bashrc file
 alias fwd='file-watch-do'
 alias gbp='gen-bookmark-page'
+alias gp='g(){ egrep -i "$1" *; }; g' # help_line: Search/egrep for a pattern in the current directory
 alias img='catimg' # help_line: Display images in the terminal
 alias kd='keep-delete'
 alias kp='f(){ ps aux | fzf -i -e -q "$1" | awk "{print \$2}" | xargs -r kill -9; }; f' # help_line: Kill a process selected via search list

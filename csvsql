@@ -1,27 +1,36 @@
 #!/usr/bin/env bash
 help_text="
 NAME
-  csvsql - Run a SQL query over a csv file
+    csvsql - Run a SQL query over a csv file
 
 USAGE
-  csvsql <csv_filename> [<sql_query (in quotes)>]
+    csvsql [options] <csv_filename> [<sql_query (in quotes)>]
 
 OPTIONS
-  -h, --help
-    Show this help message and exit
+    -d, --database
+        Specify the database file to use with sqlite3. If not provided, an in-memory database is used.
 
-   -f, --file
-    Specify a file containing a SQL query to run over the csv file.
+    -h, --help
+        Show this help message and exit
+
+    -f, --file
+        Specify a file containing a SQL query to run over the csv file.
+    
+    -n, --no-query
+        Do not run any SQL query over the CSV file. For use with -d|--database to load a csv to a database.
+
+    -s, --silent
+        Suppress warnings about unexpected columns in the CSV file.
 
 DESCRIPTION
-  A script to run a SQL query over data in a csv file using sqlite3.
+    A script to run a SQL query over data in a csv file using sqlite3.
 
-  If no SQL query is provided, Sqlite3 will be run in interactive mode.
+    If no SQL query is provided, Sqlite3 will be run in interactive mode.
 
-  The table to query has the name 't'
+    The table to query has the name 't'
 
 AUTHOR
-  mjnurse.github.io - 2022
+    mjnurse.github.io - 2026
 "
 
 help_line="Run a SQL query over a csv file"
@@ -33,10 +42,16 @@ if [[ "$1" == "" ]]; then
   exit
 fi
 
+database=":memory:"
 silent=false
 sql_file=""
+no_query=false
 while [[ "$1" != "" ]]; do
     case $1 in
+        -d|--database)
+            shift
+            database="$1"
+            ;;
         -f|--file)
             shift
             sql_file="$1"
@@ -48,6 +63,9 @@ while [[ "$1" != "" ]]; do
         -s|--silent)
             silent=true
             ;;
+        -n|--no-query)
+            no_query=true
+            ;;
         ?*)
             break
             ;;
@@ -57,20 +75,24 @@ done
 
 filter=""
 if [[ $silent == true ]]; then
-  filter="
-    /expected.*columns but found/d;
-  "
+    filter="
+        /expected.*columns but found/d;
+    "
 fi
 if [[ "$sql_file" != "" ]]; then
-  # Run the SQL query from the file
-  sqlite3 :memory: -cmd ".mode csv" -cmd ".import $1 t" \
-          -cmd ".mode column" -header < "$sql_file" 2>&1 | sed -e "$filter"
+    # Run the SQL query from the file
+    sqlite3 "$database" -cmd ".mode csv" -cmd ".import $1 t" \
+            -cmd ".mode column" -header < "$sql_file" 2>&1 | sed -e "$filter"
+elif [[ "$no_query" == true ]]; then
+    # Do not run any SQL query over the CSV file
+    sqlite3 "$database" -cmd ".mode csv" -cmd ".import $1 t" \
+            -cmd ".mode column" -header ".q" 2>&1
 elif [[ "$2" == "" ]]; then
-  # Run sqlite3 in interactive mode
-  sqlite3 :memory: -cmd ".mode csv" -cmd ".import $1 t" \
-          -cmd ".mode column" -header 2>&1
+    # Run sqlite3 in interactive mode
+    sqlite3 "$database" -cmd ".mode csv" -cmd ".import $1 t" \
+            -cmd ".mode column" -header 2>&1
 else
-  # Run the SQL query from the command line
-  sqlite3 :memory: -cmd ".mode csv" -cmd ".import $1 t" \
-          -cmd ".mode column" -header "$2" 2>&1 | sed -e "$filter"
+    # Run the SQL query from the command line
+    sqlite3 "$database" -cmd ".mode csv" -cmd ".import $1 t" \
+            -cmd ".mode column" -header "$2" 2>&1 | sed -e "$filter"
 fi

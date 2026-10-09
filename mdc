@@ -12,8 +12,13 @@ cbold="\x1b[1m"; cnorm="\x1b[0m"
 text="$(cat)"
 
 echo -e "$text" | sed "
+    s/^-/\n-/
     s/^\(#.*\)\((.*)\)/\1$cgra\2$cdef/
-    s/^#.*/$clmag&$cdef/
+    s/^# .*/$clmag&$cdef/
+    s/^## .*/$clcya&$cdef/
+    s/^###.*/$clgre&$cdef/
     s/\*\*\([^\*]*\)\*\*/$cbold\1$cnorm/g
     s/^[0-9][0-9]-[0-9][0-9]-[0-9][0-9]:/$clcya&$cdef/
+" | sed "
+    /^$/N;/^\n$/D
 "

@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 
 if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <file_selector> <sed_search_replace_pattern>"
+    echo "Usage: $0 <file_selector> <search_for> <replace_with>"
     exit 1
 fi
 
 args=("$@")
 
-# Pop the last element (op)
-op="${args[-1]}"
+# Pop the last two elements (search_for and replace_with)
+replace_with="${args[-1]}"
+unset 'args[-1]'
+search_for="${args[-1]}"
 unset 'args[-1]'
 
 # Remaining elements are files
@@ -29,7 +31,7 @@ done
 
 change_count=0
 for file in $files; do
-    new_name=$(echo "$file" | sed -e "$op")
+    new_name=$(echo "$file" | sed -e "s/$search_for/$replace_with/g")
     file_padded=$(printf "%-${ml}s" "$file")
     if [[ "$file" != "$new_name" ]]; then
         echo "mv $file_padded $new_name"
@@ -48,6 +50,6 @@ fi
 read -p "Run the above commands [yN]? " yn
 if [[ "${yn^^}" == "Y" ]]; then
     for file in $files; do
-        mv -i "$file" "$(echo "$file" | sed -e "$op")"
+        mv -i "$file" "$(echo "$file" | sed -e "s/$search_for/$replace_with/g")"
     done
 fi
