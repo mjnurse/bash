@@ -1,0 +1,156 @@
+#!/bin/bash
+help_text="
+NAME
+    sck - Query shortcut keys.  Options to add, edit, delete.
+
+USAGE
+    sck [options] [<parameters>]
+
+OPTIONS
+    -a|--add [<application> <area> <shortcut key> <description>]
+        Wrap each parameter in quotes if multiple words required.  If not parameters are passed in
+        then the user will be prompt for the values.
+
+    -e|--edit
+        Edit the shortcut key csv storage file direct in gvim.
+
+    -m|--markdown
+        Generate a markdown document of shortcut keys.
+  
+    -h|--help
+        Show help text.
+
+DESCRIPTION
+    Query shortcut keys. To show all records use \".\" as the search string.
+
+AUTHOR
+    mjnurse.github.io - 2020
+"
+help_line="Query shortcut keys.  Options to add, edit, delete."
+web_desc_line="Query shortcut keys - Options to add edit delete"
+
+sck_csv="/home/martin/mjnurse/shortcut-keys/sck.csv"
+tmp_file="/tmp/sck.tmp"
+
+try="Try \"${0##*/} -h\" for more information"
+tmp="${help_text##*USAGE}"
+usage="$(echo Usage: ${tmp%%OPTIONS*})"
+
+if [[ "$1" == "" ]]; then
+    echo
+    sck -s
+    echo
+    echo "${usage}"
+    echo "${try}"
+    echo "     \"sck .\" to list all records"
+    exit 1
+fi
+
+gen_md_yn=n
+
+while [[ "$1" != "" ]]; do
+    case $1 in 
+        -h|--help)
+        echo "$help_text"
+        exit
+        ;;
+    -a|--add)
+        shift
+        if [[ "$1" == "" ]]; then
+            read -p "Application: " a
+            read -p "Sub Heading: " s
+            read -p "ShortCut Keys: " k
+            read -p "Description: " d
+        else
+            a="$1"
+            s="$2"
+            k="$3"
+            d="$4"
+        fi
+        echo "\"$a\",\"$s\",\"$k\",\"$d\"" >> "$sck_csv"
+        exit
+        ;;
+    -e|--edit)
+        gvim "$sck_csv"
+        exit
+        ;;
+    -m|--markdown)
+        gen_md_yn=y
+        ;;
+    -s|--summary)
+        echo "Group                 Count"
+        echo "------------------- -------"
+        cat $sck_csv | \
+            sed '
+                s/ *,.*//;
+                s/"//g;
+                s/$/:                             /;
+                s/^\(....................\).*/\1/' | \
+            sort | uniq -c | \
+            sed 's/^\([ 0-9]*\)\(.*\)/\2\1/'
+        exit
+        ;;
+    -*)
+        echo "Error: $1 - bad option"
+        exit
+        ;;
+    ?*)
+        break
+        ;;
+    esac 
+    shift
+done 
+
+if [[ $gen_md_yn == y ]]; then
+    sort "$sck_csv" | sed "/^ *$/d" | \
+        sed 's/^"\(.*\)","\(.*\)","\(.*\)","\(.*\)"$/\1\n\2\n| \`\3\` | \4 |/' \
+        > $tmp_file
+    prev_heading=""
+    prev_subheading=""
+    echo "# Shortcut Keys"
+    echo
+    while read heading; do
+        read subheading
+        read line
+
+        if [[ "$heading" != "$prev_heading" ]]; then
+            echo
+            echo "## $heading"
+            echo
+            if [[ "$subheading" == "" ]]; then
+                echo "| Key | Description |"
+                echo "|-----|-------------|"
+            fi
+            prev_subheading=""
+            prev_heading="$heading"
+        fi
+        if [[ "$subheading" != "$prev_subheading" ]]; then
+            echo
+            echo "### $subheading"
+            echo
+            echo "| Key | Description |"
+            echo "|-----|-------------|"
+            prev_subheading="$subheading"
+        fi
+        echo "$line"
+    done < $tmp_file 
+    # rm -f $tmp_file
+else
+    w1="$1"
+    w2="${2:-$w1}"
+    w3="${3:-$w1}"
+    w4="${4:-$w1}"
+    w5="${5:-$w1}"
+    words="$*"
+    words="${words// /\\|}"
+    if [[ "$w1" == "." ]]; then
+        cat "$sck_csv" | sort | \
+            sed "s/\",\"/ - /g; s/^\"//; s/\"$//; s/ -  - / - /" 
+        exit
+    fi
+    echo
+    grep -i "$w1" "$sck_csv" | grep -i "$w2" | grep -i "$w3" | grep -i "$w4" | grep -i "$w5" | sort | \
+        sed "s/\",\"/ - /g; s/^\"//; s/\"$//; s/ -  - / - /" | grep -i --color=auto "$words"
+    echo
+fi
+
