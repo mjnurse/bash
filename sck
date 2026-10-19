@@ -136,13 +136,8 @@ if [[ $gen_md_yn == y ]]; then
     done < $tmp_file 
     # rm -f $tmp_file
 else
-    w1="$1"
-    w2="${2:-$w1}"
-    w3="${3:-$w1}"
-    w4="${4:-$w1}"
-    w5="${5:-$w1}"
-    words="$*"
-    words="${words// /\\|}"
+    w1="$1"; w2="${2:-$w1}"; w3="${3:-$w1}"; w4="${4:-$w1}"; w5="${5:-$w1}"
+    words="$*"; words="${words// /\\|}"
     if [[ "$w1" == "." ]]; then
         cat "$sck_csv" | sort | \
             sed "s/\",\"/ - /g; s/^\"//; s/\"$//; s/ -  - / - /" 
