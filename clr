@@ -89,7 +89,6 @@ if [[ "$push_yn" == "n" ]]; then
 fi
 
 for d in /home/martin/mjnurse/bash \
-         /home/martin/mjnurse/shortcut-keys \
          /home/martin/mjnurse/python \
          /home/martin/mjnurse/cli-builder \
          /home/martin/mjnurse/website-builder \
