@@ -68,12 +68,12 @@ cecho lgre "Checking local git repositories for uncommitted changes..."
 
 if [[ "$push_yn" == "n" ]]; then 
     changes_yn=n
-    for d in /home/martin/mjnurse/bash \
-             /home/martin/mjnurse/python \
-             /home/martin/mjnurse/cli-builder \
-             /home/martin/mjnurse/website-builder \
-             /home/martin/mjnurse/mjnurse-website \
-             /home/martin/mjnurse/mjnurse.github.io \
+    for d in ~/mjnurse/bash \
+             ~/mjnurse/python \
+             ~/mjnurse/cli-builder \
+             ~/mjnurse/website-builder \
+             ~/mjnurse/mjnurse-website \
+             ~/mjnurse/mjnurse.github.io \
             ; do
         cd $d
         if [[ "$(git status --short)" != "" ]]; then
@@ -88,12 +88,12 @@ if [[ "$push_yn" == "n" ]]; then
     exit 1
 fi
 
-for d in /home/martin/mjnurse/bash \
-         /home/martin/mjnurse/python \
-         /home/martin/mjnurse/cli-builder \
-         /home/martin/mjnurse/website-builder \
-         /home/martin/mjnurse/mjnurse-website \
-         /home/martin/mjnurse/mjnurse.github.io \
+for d in ~/mjnurse/bash \
+         ~/mjnurse/python \
+         ~/mjnurse/cli-builder \
+         ~/mjnurse/website-builder \
+         ~/mjnurse/mjnurse-website \
+         ~/mjnurse/mjnurse.github.io \
         ; do
     cd $d
     if [[ "$(git status --short)" != "" ]]; then
