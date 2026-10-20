@@ -39,7 +39,7 @@ clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
 
 function cecho {
     color=c$1; shift
-    echo -e "${!color}$*${cdef}"
+    echo $"${!color}$*${cdef}"
 }
 
 try="Try ${0##*/} -h for more information"
@@ -77,7 +77,7 @@ if [[ "$push_yn" == "n" ]]; then
             ; do
         cd $d
         if [[ "$(git status --short)" != "" ]]; then
-            echo -e "${ccya}- Uncommitted changes in repo: ${clcya}$d${cdef}"
+            echo $"${ccya}- Uncommitted changes in repo: ${clcya}$d${cdef}"
             changes_yn=y
         fi
     done
