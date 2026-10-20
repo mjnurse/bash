@@ -39,7 +39,7 @@ clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
 
 function cecho {
     color=c$1; shift
-    echo $"${!color}$*${cdef}"
+    echo -e $"${!color}$*${cdef}"
 }
 
 try="Try ${0##*/} -h for more information"
