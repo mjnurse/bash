@@ -1,0 +1,654 @@
+#!/usr/bin/env python3
+
+import subprocess
+import sqlite3
+import re
+from datetime import datetime, timedelta
+import os
+import sys
+import readline
+import argparse
+import signal
+import atexit
+
+# File: todo-check-and-run.vbs
+#
+# A file to check for overdue tasks and run the todo script from WSL hidden window (no ugly popup as it checks)
+#
+# Set shell = CreateObject("WScript.Shell")
+#
+# tempFile = shell.ExpandEnvironmentStrings("%TEMP%") & "\todo-result.txt"
+#
+# ' Run WSL hidden and redirect output
+# shell.Run "cmd.exe /c wsl.exe -d Ubuntu-24.04 -- /home/martin/mjnurse/todo-done/todo -o > """ & tempFile & """ 2>&1", 0, True
+#
+# ' Read the result
+# Set fso = CreateObject("Scripting.FileSystemObject")
+# Set file = fso.OpenTextFile(tempFile, 1)
+# result = Trim(file.ReadAll)
+# file.Close
+#
+# fso.DeleteFile tempFile
+#
+# ' Only open a visible window if result is Y
+# If IsNumeric(result) Then
+#     If CInt(result) > 0 Then
+#         shell.Run "cmd.exe /c wsl.exe -d Ubuntu-24.04 -- /home/martin/mjnurse/todo-done/todo", 1, False
+#     End If
+# End If
+
+HOME = os.path.expanduser('~')
+DBFILE = os.path.join(HOME, '.todo.db')
+HISTFILE = os.path.join(HOME, '.todo_history')
+
+RESET = '\x1b[0m'
+BRIGHT = '\x1b[1m'
+DIM = '\x1b[2m'
+UNDERSCORE = '\x1b[4m'
+
+FGBLACK = '\x1b[30m'
+FGRED = '\x1b[31m'
+FGGREEN = '\x1b[32m'
+FGYELLOW = '\x1b[33m'
+FGBLUE = '\x1b[34m'
+FGMAGENTA = '\x1b[35m'
+FGCYAN = '\x1b[36m'
+FGWHITE = '\x1b[37m'
+
+BGBLACK = '\x1b[40m'
+BGRED = '\x1b[41m'
+BGGREEN = '\x1b[42m'
+BGYELLOW = '\x1b[43m'
+BGBLUE = '\x1b[44m'
+BGMAGENTA = '\x1b[45m'
+BGCYAN = '\x1b[46m'
+BGWHITE = '\x1b[47m'
+
+def dbOpen(name):
+   conn = sqlite3.connect(name)
+   cur = conn.cursor()
+   cur.execute('''CREATE TABLE IF NOT EXISTS groups
+                  (name TEXT PRIMARY KEY,
+                   description TEXT,
+                   created TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+   # Ensure due column exists
+   cols = [row[1] for row in cur.execute('PRAGMA table_info(todo)').fetchall()]
+   if 'due' not in cols:
+      cur.execute('ALTER TABLE todo ADD COLUMN due TEXT')
+   conn.commit()
+   return conn
+
+def dbRunSQL(conn, sql, values = ()):
+   try:
+      cur = conn.cursor()
+      cur.execute(sql, values)
+      rows = cur.fetchall()
+      conn.commit()
+      return rows
+   except Exception as e:
+      print('Error:', e)
+
+def parseDue(s):
+   s = s.lstrip('@')
+   if len(s) == 4:
+      s = datetime.now().strftime('%y') + s
+   if len(s) != 6 or not s.isdigit():
+      return None
+   try:
+      datetime.strptime(s, '%y%m%d')
+      return s
+   except ValueError:
+      return None
+
+def isInt(value, printError = True):
+   try:
+      dummy = int(value)
+      return True
+   except:
+      if printError:
+         print(f'\n{value} - Is not an integer')
+         return False
+
+def renum():
+   conn = dbOpen(DBFILE)
+   res = dbRunSQL(conn, 'SELECT rowid, pos FROM todo WHERE done = "n" ORDER BY CASE WHEN due IS NOT NULL THEN 0 ELSE 1 END, due, pos')
+   n = 10
+   for r in res:
+      if r[1] != n:
+         dbRunSQL(conn, 'UPDATE todo SET pos = ? WHERE rowid = ?', (n, r[0]))
+      n = n + 10
+   conn.close()
+
+def color(color, str):
+   return(color+str+RESET)
+
+def getGroups():
+   conn = dbOpen(DBFILE)
+   res = dbRunSQL(conn, 'SELECT name FROM groups ORDER BY name')
+   conn.close()
+   return [r[0] for r in res]
+
+def fmtDue(due):
+   if not due:
+      return ''
+   d = datetime.strptime(due, '%y%m%d')
+   return d.strftime('%m/%d')
+
+def isOverdue(due):
+   if not due:
+      return False
+   d = datetime.strptime(due, '%y%m%d')
+   return d.date() < datetime.now().date()
+
+def list(option = '', noClear = False):
+   renum()
+   str = ''
+   conn = dbOpen(DBFILE)
+   if not noClear:
+      os.system('clear')
+   if option == 'd':
+      str += color(FGMAGENTA, '\nDone:\n\n')
+
+      res = dbRunSQL(conn, 'SELECT pos / 10, grp, details, ' +
+                           '       strftime("%m/%d %H:%M", upd) AS upd ' +
+                           'FROM todo WHERE done = "y" ORDER BY pos')
+      for r in res:
+         grp = ''
+         if r[1] != None and r[1] !='':
+            grp = color(FGMAGENTA, f'[{r[1]}] ')
+         str += color(FGGREEN, f'{r[0]:2} - ') + grp + \
+                color(FGWHITE, f'{r[2]} ') + \
+                color(FGCYAN, f'({r[3]})\n')
+
+   res = dbRunSQL(conn, 'SELECT pos / 10, grp, details, ' +
+                        '       strftime("%m/%d %H:%M", upd) AS upd, ' +
+                        '       cast(julianday("now") - julianday(upd) AS integer) AS age, ' +
+                        '       due ' +
+                        'FROM todo ' +
+                        'WHERE done = "n" ' +
+                        'ORDER BY pos')
+   if len(res) > 0:
+      str += color(FGMAGENTA, '\nTodo:\n')
+   today = datetime.now().date()
+   soon = today + timedelta(days=2)
+   def section(r):
+      if not r[5]:
+         return 3
+      d = datetime.strptime(r[5], '%y%m%d').date()
+      if d < today:
+         return 0
+      if d <= soon:
+         return 1
+      return 2
+   sections = [[], [], [], []]
+   for r in res:
+      sections[section(r)].append(r)
+   sections = [s for s in sections if s]
+   for i, rows in enumerate(sections):
+      if i > 0:
+         str += '\n'
+      for r in rows:
+         grp = ''
+         if r[1] != None and r[1] !='':
+            grp = color(FGMAGENTA, f'[{r[1]}] ')
+         str += '\n'
+         due = r[5]
+         dueStr = ''
+         overdue = '  '
+         if due:
+            dueStr = color(FGYELLOW, f'@{fmtDue(due)} ')
+         if isOverdue(due):
+            overdue = color(FGRED, BRIGHT + '* ' + RESET)
+         str += overdue + color(FGGREEN, f'{r[0]:2} - ') + grp + \
+                color(FGWHITE, f'{r[2]} ') + \
+                dueStr + color(FGCYAN, f'({r[3]})') + '\n'
+
+   conn.close()
+   print(str)
+
+def listGroups(group = ''):
+   conn = dbOpen(DBFILE)
+   os.system('clear')
+   
+   if group == '':
+      str = color(FGMAGENTA, '\nGroups:\n\n')
+      
+      res = dbRunSQL(conn, 'SELECT g.name, g.description, COUNT(t.rowid) AS count ' +
+                           'FROM groups g ' +
+                           'LEFT JOIN todo t ON g.name = t.grp AND t.done = "n" ' +
+                           'GROUP BY g.name, g.description ' +
+                           'ORDER BY g.name')
+      
+      if len(res) > 0:
+         for r in res:
+            desc = f' - {r[1]}' if r[1] else ''
+            str += color(FGGREEN, f'  [{r[0]}]') + \
+                   color(FGWHITE, desc) + \
+                   color(FGCYAN, f' ({r[2]} tasks)\n')
+      else:
+         str += color(FGWHITE, '  No groups found\n')
+      
+      conn.close()
+      print(str)
+   else:
+      # Get group description
+      desc_res = dbRunSQL(conn, 'SELECT description FROM groups WHERE name = ?', (group,))
+      desc = desc_res[0][0] if desc_res and desc_res[0][0] else ''
+      
+      str = color(FGMAGENTA, f'\nGroup [{group}]')
+      if desc:
+         str += color(FGWHITE, f' - {desc}')
+      str += '\n\n'
+      
+      res = dbRunSQL(conn, 'SELECT pos / 10, details, ' +
+                           '       strftime("%m/%d %H:%M", upd) AS upd ' +
+                           'FROM todo ' +
+                           'WHERE done = "n" AND grp = ? ' +
+                           'ORDER BY pos', (group,))
+      
+      if len(res) > 0:
+         for r in res:
+            str += color(FGGREEN, f'{r[0]} - ') + \
+                   color(FGWHITE, f'{r[1]} ') + \
+                   color(FGCYAN, f'({r[2]})\n')
+      else:
+         str += color(FGWHITE, f'  No tasks found in group [{group}]\n')
+      
+      conn.close()
+      print(str)
+
+def addNewGroup(param = ''):
+   name = ''
+   description = ''
+   
+   if param != '':
+      parts = param.split(None, 1)  # Split on first whitespace only
+      name = parts[0]
+      if len(parts) > 1:
+         description = parts[1]
+   
+   if name == '':
+      name = input('Group name > ')
+   if description == '':
+      description = input('Description > ')
+   
+   if name != '':
+      conn = dbOpen(DBFILE)
+      
+      # Check if group already exists
+      existing = dbRunSQL(conn, 'SELECT name FROM groups WHERE name = ?', (name,))
+      if existing:
+         print(color(FGRED, f'\nError: Group "{name}" already exists.'))
+         conn.close()
+         return
+      
+      dbRunSQL(conn, 'INSERT INTO groups (name, description) VALUES (?, ?)', 
+               (name, description))
+      conn.close()
+      print(color(FGGREEN, f'\nGroup [{name}] created successfully.'))
+      listGroups()
+
+def editGroup(param = ''):
+   name = ''
+   if param != '':
+      name = param.strip()
+   if name == '':
+      name = input('Group name to edit > ')
+   if name == '':
+      return
+
+   conn = dbOpen(DBFILE)
+   existing = dbRunSQL(conn, 'SELECT name, description FROM groups WHERE name = ?', (name,))
+   if not existing:
+      print(color(FGRED, f'\nError: Group "{name}" does not exist.'))
+      conn.close()
+      return
+
+   oldDesc = existing[0][1] or ''
+   print(f'\nCurrent name: {name}')
+   print(f'Current description: {oldDesc}')
+
+   newName = input(f'New name (enter to keep [{name}]) > ').strip()
+   newDesc = input(f'New description (enter to keep) > ').strip()
+
+   if newName == '':
+      newName = name
+   if newDesc == '':
+      newDesc = oldDesc
+
+   if newName != name:
+      # Check new name doesn't conflict
+      conflict = dbRunSQL(conn, 'SELECT name FROM groups WHERE name = ?', (newName,))
+      if conflict:
+         print(color(FGRED, f'\nError: Group "{newName}" already exists.'))
+         conn.close()
+         return
+      dbRunSQL(conn, 'UPDATE groups SET name = ?, description = ? WHERE name = ?',
+               (newName, newDesc, name))
+      dbRunSQL(conn, 'UPDATE todo SET grp = ? WHERE grp = ?', (newName, name))
+   else:
+      dbRunSQL(conn, 'UPDATE groups SET description = ? WHERE name = ?', (newDesc, name))
+
+   conn.close()
+   print(color(FGGREEN, f'\nGroup updated successfully.'))
+   listGroups()
+
+def add(details = ''):
+   if details == '':
+      details = input('\nDetails > ')
+   grp = details.split()[0] if details.split() else ''
+   if grp and grp[0] == '#':
+      grp = grp[1:]
+      details = details.replace('#' + grp, '').strip()
+
+      existing_groups = getGroups()
+      if grp not in existing_groups:
+         print(color(FGRED, f'\nError: Group "{grp}" does not exist.'))
+         print(color(FGYELLOW, 'Available groups: ') + ', '.join([f'[{g}]' for g in existing_groups]) if existing_groups else color(FGYELLOW, 'No groups exist yet.'))
+         print(color(FGCYAN, 'Use "ag <group> <description>" to create a new group.\n'))
+         return
+   else:
+      grp = ''
+
+   # Extract due date (@YYMMDD or @MMDD)
+   due = None
+   words = details.split()
+   for w in words:
+      if w.startswith('@'):
+         due = parseDue(w)
+         if due:
+            details = details.replace(w, '').strip()
+            details = re.sub(r'\s+', ' ', details)
+         else:
+            print(color(FGRED, f'\nInvalid due date: {w} - use @YYMMDD or @MMDD'))
+            return
+         break
+
+   if details != '':
+      conn = dbOpen(DBFILE)
+      dbRunSQL(conn, 'INSERT INTO todo (pos, details, done, upd, grp, due) ' +
+                     'SELECT MAX(pos) + 10, ?, "n", CURRENT_TIMESTAMP, ?, ? ' +
+                     'FROM todo', (details, grp, due))
+      conn.close()
+   renum()
+   list()
+
+def addGroup(param = ''):
+   pos = ''
+   grp = ''
+   if param != '':
+      param = param.split()
+      pos = param[0]
+   if len(param) > 1:
+      grp = param[1]
+   if pos == '':
+      pos = input('Enter number of task to add group > ')
+   if grp == '':
+      grp = input('Enter Group > ')
+   if pos != '' and grp != '':
+      # Validate group exists
+      existing_groups = getGroups()
+      if grp not in existing_groups:
+         print(color(FGRED, f'\nError: Group "{grp}" does not exist.'))
+         print(color(FGCYAN, 'Use "ag <group> <description>" to create a new group first.\n'))
+         return
+      
+      conn = dbOpen(DBFILE)
+      dbRunSQL(conn, 'UPDATE todo SET grp = ? WHERE pos = ?', (grp, int(pos)*10))
+      conn.close()
+   list()
+
+def done(num = ''):
+   if num == '':
+      num = input('\nNumber of task to mark done > ')
+   if isInt(num):
+      conn = dbOpen(DBFILE)
+      dbRunSQL(conn, 'UPDATE todo SET done = "y", upd = CURRENT_TIMESTAMP, pos = 0 ' +
+                     'WHERE pos = ?', (int(num) * 10,))
+      conn.close()
+      renum()
+      list()
+
+def top(num = ''):
+   if num == '':
+      num = input('\nNumber of task to move to top> ')
+   if isInt(num):
+      conn = dbOpen(DBFILE)
+      dbRunSQL(conn, 'UPDATE todo SET pos = 1 ' +
+                     'WHERE pos = ?', (int(num) * 10,))
+      conn.close()
+      renum()
+      list()
+
+def bottom(num = ''):
+   if num == '':
+      num = input('\nNumber of task to move to bottom> ')
+   if isInt(num):
+      conn = dbOpen(DBFILE)
+      dbRunSQL(conn, 'UPDATE todo SET pos = 999999 ' +
+                     'WHERE pos = ?', (int(num) * 10,))
+      conn.close()
+      renum()
+      list()
+
+def edit(num = ''):
+   if num == '':
+      num = input('\nNumber of task to edit > ')
+   if isInt(num):
+      conn = dbOpen(DBFILE)
+      existing = dbRunSQL(conn, 'SELECT details, grp FROM todo WHERE pos = ?', (int(num) * 10,))
+      if not existing:
+         print(color(FGRED, f'\nError: Task {num} not found.'))
+         conn.close()
+         return
+
+      oldDet = existing[0][0] or ''
+      oldGrp = existing[0][1] or ''
+
+      print(f'\nCurrent group: {oldGrp if oldGrp else "(none)"}')
+      print(f'Current details: {oldDet}')
+
+      newGrp = input(f'New group (enter to keep, - to clear) > ').strip()
+      newDet = input(f'New details (enter to keep) > ').strip()
+
+      if newDet == '':
+         newDet = oldDet
+      if newGrp == '-':
+         newGrp = ''
+      elif newGrp == '':
+         newGrp = oldGrp
+      else:
+         existing_groups = getGroups()
+         if newGrp not in existing_groups:
+            print(color(FGRED, f'\nError: Group "{newGrp}" does not exist.'))
+            conn.close()
+            return
+
+      dbRunSQL(conn, 'UPDATE todo SET details = ?, grp = ? WHERE pos = ?',
+               (newDet, newGrp, int(num) * 10))
+      conn.close()
+      list()
+
+def setDue(param = ''):
+   num = ''
+   dueStr = ''
+   if param != '':
+      parts = param.split()
+      num = parts[0]
+      if len(parts) > 1:
+         dueStr = parts[1]
+   if num == '':
+      num = input('\nNumber of task > ')
+   if not isInt(num):
+      return
+   conn = dbOpen(DBFILE)
+   existing = dbRunSQL(conn, 'SELECT details, due FROM todo WHERE pos = ? AND done = "n"', (int(num) * 10,))
+   if not existing:
+      print(color(FGRED, f'\nError: Task {num} not found.'))
+      conn.close()
+      return
+   currDue = existing[0][1]
+   if currDue:
+      print(f'\nCurrent due date: {fmtDue(currDue)}')
+   else:
+      print(f'\nNo due date set.')
+   if dueStr == '':
+      dueStr = input('Due date (@YYMMDD or @MMDD, +N for N days, - to clear) > ').strip()
+   if dueStr == '-':
+      dbRunSQL(conn, 'UPDATE todo SET due = NULL WHERE pos = ?', (int(num) * 10,))
+   elif dueStr != '':
+      # Check for relative date (+N days)
+      if dueStr.startswith('+'):
+         try:
+            days = int(dueStr[1:])
+            target_date = datetime.now() + timedelta(days=days)
+            due = target_date.strftime('%y%m%d')
+            dbRunSQL(conn, 'UPDATE todo SET due = ? WHERE pos = ?', (due, int(num) * 10))
+         except ValueError:
+            print(color(FGRED, f'\nInvalid relative date: {dueStr} - use +N where N is number of days'))
+            conn.close()
+            return
+      else:
+         due = parseDue(dueStr)
+         if due:
+            dbRunSQL(conn, 'UPDATE todo SET due = ? WHERE pos = ?', (due, int(num) * 10))
+         else:
+            print(color(FGRED, f'\nInvalid due date: {dueStr} - use @YYMMDD or @MMDD'))
+            conn.close()
+            return
+   conn.close()
+   list()
+
+def dme():
+   conn = dbOpen(DBFILE)
+   dbRunSQL(conn, 'DELETE FROM todo WHERE details LIKE "%dme%"')
+   conn.close()
+   renum()
+   list('a')
+
+def help():
+   print()
+   print('a  [<details>]          - Add new task. Use #<group> and/or @YYMMDD/@MMDD for due date')
+   print('ag [<name> <desc>]      - Add new group - eg: ag w Work related tasks')
+   print('eg [<group>]            - Edit group name/description')
+   print('b  [<task num>]         - Move task to bottom of list')
+   print('d  [<task num>]         - Mark task as done')
+   print('dd [<num> <date>]       - Set/update due date (@YYMMDD/@MMDD, +N days, - to clear)')
+   print('e  [<task num>]         - Edit task')
+   print('g  [<task num> <group>] - Add/change group for task')
+   print('l  [d]                  - List tasks (d - done tasks)')
+   print('lg [<group>]            - List all groups, or tasks in specified group')
+   print('t  [<task num>]         - Move task to top of list')
+   print('q                       - Quit')
+
+def timeout_handler(signum, frame):
+   print(color(FGYELLOW, '\n\nTime limit reached. Exiting...\n'))
+   readline.write_history_file(HISTFILE)
+   sys.exit(0)
+
+if __name__ == "__main__":
+   # Parse command line arguments
+   parser = argparse.ArgumentParser(
+      description='Interactive todo list manager with groups and due dates',
+      epilog='Run without arguments to start interactive mode')
+   parser.add_argument('-l', '--list', action='store_true',
+                       help='List tasks and exit (non-interactive)')
+   parser.add_argument('-o', '--overdue', action='store_true',
+                       help='Show count of overdue tasks and exit (non-interactive)')
+   parser.add_argument('-t', '--ttl', type=int, metavar='SECONDS', default=None,
+                       help='Time to live - auto-exit after SECONDS of inactivity (default: 60 if flag provided without value)')
+   args = parser.parse_args()
+
+   if args.list:
+      list(noClear=True)
+      sys.exit(0)
+
+   if args.overdue:
+      conn = dbOpen(DBFILE)
+      res = dbRunSQL(conn, 'SELECT COUNT(*) FROM todo WHERE done = "n" AND due IS NOT NULL')
+      conn.close()
+      count = 0
+      if res and len(res) > 0:
+         all_due = res[0][0]
+         # Now count only overdue
+         conn = dbOpen(DBFILE)
+         res = dbRunSQL(conn, 'SELECT due FROM todo WHERE done = "n" AND due IS NOT NULL')
+         conn.close()
+         for r in res:
+            if isOverdue(r[0]):
+               count += 1
+      print(count)
+      sys.exit(0)
+
+   result = subprocess.run(
+      ["pgrep", "-f", " ..todo"],
+      capture_output=True,
+      text=True
+   )
+
+   for pid in result.stdout.splitlines():
+      if int(pid) != os.getpid():
+         os.kill(int(pid), signal.SIGTERM)
+
+   # Set up timeout if TTL is specified
+   ttl_seconds = None
+   if args.ttl is not None:
+      ttl_seconds = args.ttl if args.ttl > 0 else 60
+      signal.signal(signal.SIGALRM, timeout_handler)
+      signal.alarm(ttl_seconds)
+
+   # Load command history
+   if os.path.exists(HISTFILE):
+      readline.read_history_file(HISTFILE)
+   readline.set_history_length(1000)
+
+   print("\033]0;✅ TODO\007", end="", flush=True)
+
+   os.system('clear')
+   option = ''
+   list()
+
+   try:
+      while option.lower() != 'q':
+         entry = input('\n> ')
+
+         # Reset timer on any activity
+         if ttl_seconds is not None:
+            signal.alarm(ttl_seconds)
+
+         option = entry[0:2] if len(entry) >= 2 and entry[0:2] in ['lg', 'ag', 'eg', 'dd'] else entry[0:1]
+         param = entry[2:].strip() if option in ['lg', 'ag', 'eg', 'dd'] else entry[1:].strip()
+         if option == 'a':
+            add(param)
+         elif option == 'ag':
+            addNewGroup(param)
+         elif option == 'b':
+            bottom(param)
+         elif option == 'dd':
+            setDue(param)
+         elif option == 'd':
+            done(param)
+         elif option == 'e':
+            edit(param)
+         elif option == 'eg':
+            editGroup(param)
+         elif option == 'g':
+            addGroup(param)
+         elif option == 'h':
+            help()
+         elif option == 'l':
+            list(param)
+         elif option == 'lg':
+            listGroups(param)
+         elif option == 'r':
+            renum()
+         elif option == 't':
+            top(param)
+         elif option == '#':
+            dme()
+         elif option != 'q':
+            list()
+            print('\nInvalid option - enter h for help.')
+   finally:
+      # Save command history on exit
+      readline.write_history_file(HISTFILE)

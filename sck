@@ -145,7 +145,7 @@ else
     fi
     echo
     grep -i "$w1" "$sck_csv" | grep -i "$w2" | grep -i "$w3" | grep -i "$w4" | grep -i "$w5" | sort | \
-        sed "s/\",\"/ - /g; s/^\"//; s/\"$//; s/ -  - / - /" | grep -i --color=auto "$words"
+        sed 's/","/¬/g; s/^"//; s/"$//' | column -s¬ -t | grep -i --color "$words" 
     echo
 fi
 

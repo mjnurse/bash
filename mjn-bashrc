@@ -157,10 +157,16 @@ c() {
         echo "o - Opus (coding)"
         echo
         read -p "> " m
+        echo
+        read -p "Resume [yN]? " answer
+        [[ "${answer^^}" == "Y" ]] && resume="--resume"
     fi
     if [[ "$1" == "h" || "$1" == "s" || "$1" == "o" ]]; then
         m="$1"
         shift
+    fi
+    if [[ "${2^^}" == "R" ]]; then
+        resume="--resume"
     fi
     case $m in
         h)  model=claude-haiku-4-5 ;;
@@ -170,7 +176,7 @@ c() {
     esac
     question="$*"
     if [[ "$question" == "" ]]; then
-        claude --model $model
+        claude --model $model $resume
     else
         claude --model $model --print "$question"
     fi
