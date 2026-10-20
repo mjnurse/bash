@@ -165,8 +165,9 @@ c() {
         m="$1"
         shift
     fi
-    if [[ "${2^^}" == "R" ]]; then
+    if [[ "${1^^}" == "R" ]]; then
         resume="--resume"
+        shift
     fi
     case $m in
         h)  model=claude-haiku-4-5 ;;

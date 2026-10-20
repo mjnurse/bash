@@ -493,3 +493,5 @@
 "Claude","cli","\,RTN","New line"
 "Excel","Autofit Row","`Ctrl+A, ALT+H, O, A","Autofit all rows to content"
 "Windows","","WIN-.","Select Emoji, symbol, etc."
+"Windows","Print Screen","ALT-PRINTSCREEN","Capture current window"
+"Windows","Print Screen","SHIFT-PRINTSCREEN","Capture all screens"

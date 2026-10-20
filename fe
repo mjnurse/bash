@@ -15,6 +15,9 @@ OPTIONS
 
     -g|--use-grep
         Run grep - search content of files instead of filename.
+    
+    -p|--path
+        Edit first matching file in current PATH config
 
 DESCRIPTION
     Search for a file and edit in gvim or VSCode.  A list of matching files will
@@ -49,6 +52,16 @@ while [[ "$1" != "" ]]; do
             ;;
         -g|--use-grep) # arg: Run grep - search content of files instead of filename.
             run_grep=y
+            ;;
+        -p|--path) # arg: Edit first matching file in current PATH config
+            read -p "code/gVim/vi [Cgv]? " choice
+            if [[ "${choice,,}" == "v" ]]; then
+                vi "$(which $2)"
+            elif [[ "${choice,,}" == "g" ]]; then
+                gvim "$(which $2)"
+            else
+                code "$(which $2)"
+            fi
             ;;
         ?*)
             break

@@ -36,6 +36,12 @@ try="Try \"${0##*/} -h\" for more information"
 tmp="${help_text##*USAGE}"
 usage="$(echo Usage: ${tmp%%OPTIONS*})"
 
+# Terminal Colours
+cdef="\x1b[39m" # default colour
+cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
+cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
+clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
+
 if [[ "$1" == "" ]]; then
     echo
     sck -s
@@ -144,8 +150,16 @@ else
         exit
     fi
     echo
-    grep -i "$w1" "$sck_csv" | grep -i "$w2" | grep -i "$w3" | grep -i "$w4" | grep -i "$w5" | sort | \
-        sed 's/","/¬/g; s/^"//; s/"$//' | column -s¬ -t | grep -i --color "$words" 
-    echo
+    grep -i "$w1" "$sck_csv" | grep -i "$w2" | grep -i "$w3" | grep -i "$w4" | grep -i "$w5" | 
+        sort |
+        sed "1i\\${clmag}Application¬Sub Heading¬Key¬Descriptions${cdef}" | 
+        sed 's/","/¬/g; s/^"//; s/"$//' |
+        column -s¬ -t | awk 'NR>1 && $1!=prev {print ""} {print; prev=$1}' |
+        sed "s/$1/$(printf '\033[1;32m&\033[0m')/Ig" |
+        sed "s/${2:-IIGGNNOORREE}/$(printf '\033[1;32m&\033[0m')/Ig" |
+        sed "s/${3:-IIGGNNOORREE}/$(printf '\033[1;32m&\033[0m')/Ig" |
+        sed "s/${4:-IIGGNNOORREE}/$(printf '\033[1;32m&\033[0m')/Ig" |
+        sed "s/${5:-IIGGNNOORREE}/$(printf '\033[1;32m&\033[0m')/Ig"
+        echo
 fi
 
