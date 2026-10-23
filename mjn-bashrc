@@ -224,6 +224,7 @@ alias gp='g(){ egrep -i "$1" *; }; g' # help_line: Search/egrep for a pattern in
 alias img='catimg' # help_line: Display images in the terminal
 alias kd='keep-delete'
 alias kp='f(){ ps aux | fzf -i -e -q "$1" | awk "{print \$2}" | xargs -r kill -9; }; f' # help_line: Kill a process selected via search list
+alias ll="ls -al"
 alias lle='ls -al | \egrep "^[^d]..x|^[^d].....x|^[^d]........x"' # help_line: List executable files
 alias lm='list-move'
 alias lls='ls -lhSrA --color=always | grep --color=never '^-'' # help_line: List files sorted by size in reverse order

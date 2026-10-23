@@ -75,10 +75,12 @@ if [[ "$push_yn" == "n" ]]; then
              ~/mjnurse/mjnurse-website \
              ~/mjnurse/mjnurse.github.io \
             ; do
-        cd $d
-        if [[ "$(git status --short)" != "" ]]; then
-            echo $"${ccya}- Uncommitted changes in repo: ${clcya}$d${cdef}"
-            changes_yn=y
+        if [[ -d $d ]]; then
+            cd $d
+            if [[ "$(git status --short)" != "" ]]; then
+                cecho cya "Uncommitted changes in repo: ${clcya}$d"
+                changes_yn=y
+            fi
         fi
     done
     if [[ "$changes_yn" == "y" ]]; then
