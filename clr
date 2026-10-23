@@ -97,30 +97,32 @@ for d in ~/mjnurse/bash \
          ~/mjnurse/mjnurse-website \
          ~/mjnurse/mjnurse.github.io \
         ; do
-    cd $d
-    if [[ "$(git status --short)" != "" ]]; then
-        echo
-        cecho lmag "------------------------------------------------------------"
-        cecho lmag "Repository: $d"
-        cecho lmag "------------------------------------------------------------"
-        git status
-        echo
-        printf "${clcya}Commit and Push changes in repo (Y/N) or view diff (D) [dyN]? ${cdef}"
-        read yn
-        if [[ "${yn^}" == "D" ]]; then
-            git diff
-            printf "${clcya}Commit and Push changes in repo [yN]? ${cdef}"
+    if [[ -d $d ]]; then
+        cd $d
+        if [[ "$(git status --short)" != "" ]]; then
+            echo
+            cecho lmag "------------------------------------------------------------"
+            cecho lmag "Repository: $d"
+            cecho lmag "------------------------------------------------------------"
+            git status
+            echo
+            printf "${clcya}Commit and Push changes in repo (Y/N) or view diff (D) [dyN]? ${cdef}"
             read yn
-        fi
-        if [[ "${yn^}" == "Y" ]]; then
-            printf "${clcya}Commit Message (Blank to use 'Various'): ${cdef}" 
-            read cm
-            if [[ -z "$cm" ]]; then
-                cm="Various"
+            if [[ "${yn^}" == "D" ]]; then
+                git diff
+                printf "${clcya}Commit and Push changes in repo [yN]? ${cdef}"
+                read yn
             fi
-            git add .
-            git commit -m "$cm"
-            git push
+            if [[ "${yn^}" == "Y" ]]; then
+                printf "${clcya}Commit Message (Blank to use 'Various'): ${cdef}" 
+                read cm
+                if [[ -z "$cm" ]]; then
+                    cm="Various"
+                fi
+                git add .
+                git commit -m "$cm"
+                git push
+            fi
         fi
     fi
 done
