@@ -12,17 +12,17 @@ if [[ "$GITBASH" != "Y" && "$(uname -s)" != "Darwin" ]]; then
 fi
 
 export PATH="$PATH:."
-export PATH="$PATH:/home/martin/mjnurse/bash"
-export PATH="$PATH:/home/martin/mjnurse/cli-builder"
-export PATH="$PATH:/home/martin/mjnurse/shortcut-keys"
-export PATH="$PATH:/home/martin/mjnurse/website-builder"
-export PATH="$PATH:/home/martin/mjnurse/todo-done"
-export PATH="$PATH:/home/martin/spark"
+export PATH="$PATH:~/mjnurse/bash"
+export PATH="$PATH:~/mjnurse/cli-builder"
+export PATH="$PATH:~/mjnurse/shortcut-keys"
+export PATH="$PATH:~/mjnurse/website-builder"
+export PATH="$PATH:~/mjnurse/todo-done"
+export PATH="$PATH:~/spark"
 
 export QES_HOST=localhost
 export QES_PORT=9200
 
-for f in /home/martin/mjnurse/cli-builder/*.alias; do
+for f in ~/mjnurse/cli-builder/*.alias; do
     source "$f"
 done
 
@@ -72,11 +72,11 @@ trash() {
     # Parse -p option
     if [[ "$1" == "-p" || "$1" == "--purge" ]]; then
         shift
-        ls -alh "/home/martin/.trash/$1"* 2>/dev/null
+        ls -alh "~/.trash/$1"* 2>/dev/null
         [[ $? -ne 0 ]] && { echo "No matching files found in trash for $1*"; return; }
         read -p "Purge these files? [yN] " answer
         [[ "${answer^^}" == "Y" ]] || { echo "Purge cancelled"; return; }
-        \rm "/home/martin/.trash/$1"*
+        \rm "~/.trash/$1"*
         return 1
     fi
 
@@ -198,7 +198,7 @@ backup -f -d notes ~/.notes.txt
 echo
 
 # Refresh misc notes web page
-n -m > /home/martin/mjnurse/mjnurse-website/notes/Miscellaneous_Notes.md
+n -m > ~/mjnurse/mjnurse-website/notes/Miscellaneous_Notes.md
 
 # Check if website been built today, if not build it
 build-website -d
@@ -217,7 +217,7 @@ alias cat='batcat'
 alias cf='code "$(fzf)"'
 alias clip='xclip -selection clipboard'
 alias drm='command rm -i'
-alias ebc='code /home/martin/mjnurse/bash/mjn-bashrc' # help_line: Edit the mjn-bashrc file
+alias ebc='code ~/mjnurse/bash/mjn-bashrc' # help_line: Edit the mjn-bashrc file
 alias fwd='file-watch-do'
 alias gbp='gen-bookmark-page'
 alias gp='g(){ egrep -i "$1" *; }; g' # help_line: Search/egrep for a pattern in the current directory

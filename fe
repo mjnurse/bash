@@ -54,13 +54,15 @@ while [[ "$1" != "" ]]; do
             run_grep=y
             ;;
         -p|--path) # arg: Edit first matching file in current PATH config
+            file="$(command -v $2)"
+            echo "filei: $file"
             read -p "code/gVim/vi [Cgv]? " choice
             if [[ "${choice,,}" == "v" ]]; then
-                vi "$(which $2)"
+                vi "$file"
             elif [[ "${choice,,}" == "g" ]]; then
-                gvim "$(which $2)"
+                gvim "$file"
             else
-                code "$(which $2)"
+                code "$file"
             fi
             exit
             ;;
