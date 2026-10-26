@@ -26,6 +26,8 @@ case "$(uname -s)" in
         echo "WARNING: Unknown operating system: $(uname -s)"
         ;;
 esac
+echo "OS: $OS"
+
 
 export PATH="$PATH:."
 export PATH="$PATH:~/mjnurse/bash"
