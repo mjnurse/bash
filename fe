@@ -29,6 +29,18 @@ AUTHOR
 help_line="Search for a file and edit"
 web_desc_line="Search for a file and edit"
 
+# Terminal Colours
+cdef="\x1b[39m" # default colour
+cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
+cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
+clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
+
+function cecho {
+    if [[ "$1" == "-u" ]]; then ul=true; shift; else ul=false; fi
+    color=c$1; shift; echo -e "${!color}$*${cdef}"
+    if $ul; then echo -e "${!color}${*//?/-}${cdef}"; fi
+}
+
 try="Try ${0##*/} -h for more information"
 tmp="${help_text##*USAGE}"
 usage="$(echo Usage: ${tmp%%OPTIONS*})"
@@ -55,8 +67,9 @@ while [[ "$1" != "" ]]; do
             ;;
         -p|--path) # arg: Edit first matching file in current PATH config
             file="$(command -v $2)"
-            echo "filei: $file"
-            read -p "code/gVim/vi [Cgv]? " choice
+            echo -e "${clmag}First instance on path: ${cdef}$file"
+            printf "${clcya}code/gVim/vi [Cgv]? ${cdef}"
+            read choice
             if [[ "${choice,,}" == "v" ]]; then
                 vi "$file"
             elif [[ "${choice,,}" == "g" ]]; then
