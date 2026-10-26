@@ -4,7 +4,6 @@
 # AUTHOR
 #     mjnurse.github.io - 2026
 
-<<<<<<< HEAD
 case "$(uname -s)" in
     Linux)
         export OS=WSL # For me anyway
@@ -27,18 +26,6 @@ case "$(uname -s)" in
         echo "WARNING: Unknown operating system: $(uname -s)"
         ;;
 esac
-=======
-
-
-if [[ "$GITBASH" != "Y" && "$(uname -s)" != "Darwin" ]]; then
-    sudo sh -c "echo '/mnt/c /c none bind' >> /etc/fstab"
-    sudo mount -a
-    sudo sed -i "/#/d;/8.8.8.8/d" /etc/resolv.conf
-    sudo sed -i "1inameserver 8.8.8.8" /etc/resolv.conf
-fi
->>>>>>> aa3088e (Various)
-
-
 
 export PATH="$PATH:."
 export PATH="$PATH:~/mjnurse/bash"
