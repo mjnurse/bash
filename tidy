@@ -69,6 +69,51 @@ function cecho {
     message="$*"
     echo -e "${!color}${message}${cdef}"
 }
+
+
+cecho gre ================================================================================
+cecho gre "File Type Shouldn't be executable"
+cecho gre ================================================================================
+
+for f in *; do
+    ft="$(file -b "$f")"
+    case "$ft" in
+        HTML*) ft="HTML";;
+        JPEG*) ft="JPEG";;
+        PNG*) ft="PNG";;
+        GIF*) ft="GIF";;
+        M*Excel*) ft="Excel";;
+        M*Word*) ft="Word";;
+        M*PowerPoint*) ft="PowerPoint";;
+        PDF*) ft="PDF";;
+        Zip*) ft="Zip";;
+        *) echo $f - $ft;ft="Other";;
+    esac
+    if [[ "$ft" != "Other" && -x "$f" ]]; then
+            echo --------------------------------------------------------------------------------
+            echo -e "FILE:      $f"
+            echo -e "TYPE:      $ft"
+            echo --------------------------------------------------------------------------------
+        opt=""
+        while [[ ! "${opt^}" =~ ^[IRSQ]$ ]]; do
+            [[ -n "$opt" ]] && echo "Invalid option: $opt"
+            printf "${clblu}[i]gnore rule, [r]emove executable, [s]kip, q[uit]. [irSq]?: ${cdef}"
+            read opt
+            [[ -z "$opt" ]] && opt="S"
+        done
+        case $opt in
+            r|R)
+                chmod -x "$f"
+                ;;
+            i|I)
+                break;;
+            q|Q)
+                exit;;
+        esac
+    fi
+done
+
+
 cecho gre ================================================================================
 cecho gre "Filename contains character other than [a-z][0-9]_-."
 cecho gre ================================================================================
@@ -129,33 +174,33 @@ if [[ $names_only == y ]]; then
 fi
 
 cecho gre ================================================================================
-cecho gre Executable but not '#!/usr/bin/env bash'
+cecho gre Executable but not '#!/usr/bin/env ...'
 cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 -executable); do
 
     if [[ -f $f && ! -L $f ]]; then
-        line1="$(head -1 $f)"
-        if [[ "${line1:0:18}" != "#!/usr/bin/env bash" ]]; then
+        line1="$(head -1 "$f")"
+        if [[ "${line1:0:13}" != "#!/usr/bin/env" ]]; then
             echo --------------------------------------------------------------------------------
             echo FILE: $f
             echo --------------------------------------------------------------------------------
             echo First 5 lines:
             echo --------------
-            head -5 $f
+            head -5 "$f" | trunc
             echo
             printf "${clblu}[i]gnore rule, [r]emove exec, add [b]ash, add [p]ython3, [s]kip, q[uit]. [irbpSq]?: ${cdef}"
             read opt
             case $opt in
                 r|R)
-                    chmod a-x $f
+                    chmod a-x "$f"
                     ;;
                 b|B)
-                    sed -i '/^#!\/bin\/bash/d' $f
-                    sed -i '1i#!/usr/bin/env bash' $f
+                    sed -i '/^#!\/bin\/bash/d' "$f"
+                    sed -i '1i#!/usr/bin/env bash' "$f"
                     ;;
                 p|P)
-                    sed -i '1i#!/usr/bin/env python3' $f
+                    sed -i '1i#!/usr/bin/env python3' "$f"
                     ;;
                 i|I)
                     break
@@ -174,7 +219,7 @@ cecho gre ======================================================================
 
 for f in $(find . -maxdepth 1 ! -executable); do
    if [[ -f $f && ! -L $f ]]; then
-      line1="$(head -1 $f)"
+      line1="$(head -1 "$f" | tr -d '\000')"
       line1=${line1//[$' \t\r\n']}
       if [[ "$line1" == "#!/usr/bin/env bash" ]]; then
          echo --------------------------------------------------------------------------------
@@ -182,14 +227,14 @@ for f in $(find . -maxdepth 1 ! -executable); do
          echo --------------------------------------------------------------------------------
          echo First 5 lines:
             echo --------------
-         head -5 $f
+         head -5 "$f"
          echo
          read -p "[i]gnore rule, [d]elete '#!/usr/bin/env bash', [m]ake exec, [s]kip, q[uit]. [idmSq]?: " opt
          case $opt in
             d|D)
-               sed -i '1d' $f;;
+               sed -i '1d' "$f";;
             m|M)
-               chmod u+x $f;;
+               chmod u+x "$f";;
             i|I)
                break;;
             q|Q)
@@ -289,13 +334,13 @@ cecho gre ======================================================================
 
 for f in $(find . -maxdepth 1 -executable); do
    if [[ -f $f && ! -L $f ]]; then
-      l1="$(cat $f | sed -n '1p')"
-      l2="$(cat $f | sed -n '2p')"
+      l1="$(cat "$f" | sed -n '1p')"
+      l2="$(cat "$f" | sed -n '2p')"
       if [[ "$l1" == "#!/usr/bin/env bash" && "${l2:0:10}" != "help_text=" ]]; then
          echo --------------------------------------------------------------------------------
-         ls -al $f
+         ls -al "$f"
          echo
-         head -15 $f
+         head -15 "$f"
          echo
          read -p "[i]gnore rule, [a]dd header, edit [v]im, edit [c]ode, [s]kip, q[uit]. [iavcSq]?: " opt
          case $opt in
@@ -342,8 +387,8 @@ case $1 in
         ;;
 esac
 ' > $tidytmp
-               tail +2 $f >> $tidytmp
-               cp -f $tidytmp $f
+               tail +2 "$f" >> $tidytmp
+               cp -f $tidytmp "$f"
                ;;
             v|V)
                vgim $f
