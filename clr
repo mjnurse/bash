@@ -106,7 +106,6 @@ for d in ~/mjnurse/bash \
             cecho lmag "Repository: $d"
             cecho lmag "------------------------------------------------------------"
             git status
-            # git pull --rebase
             yn=""
             while [[ "${yn^}" != "Y" && "${yn^}" != "N" ]]; do
                 echo
@@ -128,6 +127,7 @@ for d in ~/mjnurse/bash \
                 if [[ "${yn^}" == "Y" ]]; then
                     git add .
                     git commit -m "$cm"
+                    git pull --rebase
                     git push
                 fi
             done
