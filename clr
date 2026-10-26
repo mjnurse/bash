@@ -112,8 +112,6 @@ for d in ~/mjnurse/bash \
                 read yn
                 yn="${yn:-N}"
 
-                echo YN:$yn
-
                 if [[ "${yn^}" == "D" ]]; then
                     git diff
                 fi
@@ -123,6 +121,7 @@ for d in ~/mjnurse/bash \
                     yn="Y"
                 else
                     cm="Various"
+                    echo -e $"${clcya}Using default commit message:${cdef} Various"
                 fi
                 if [[ "${yn^}" == "Y" ]]; then
                     git add .
