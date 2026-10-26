@@ -155,7 +155,7 @@ find . -maxdepth 1 -type f -executable -printf "%f\n" \
     | xargs grep --ignore-case -H -s -i -e "^help_line=" -e "^-- help_line:" | egrep --ignore-case "$filter" > /tmp/h.tmp
 
 # Append any alias descriptions to the help lines
-aliases="$(grep -E --ignore-case "^alias " /home/martin/mjnurse/bash/mjn-bashrc)"
+aliases="$(grep -E --ignore-case "^alias " ~/mjnurse/bash/mjn-bashrc)"
 while IFS= read -r line; do
     # Extract the script name (text before the first colon)
     script_name=$(echo "$line" | cut -d: -f1)
@@ -178,12 +178,12 @@ done < /tmp/h.tmp > /tmp/h.tmp2
 
 cp /tmp/h.tmp2 /tmp/h.tmp
 
-if [[ -f /home/martin/mjnurse/bash/mjn-bashrc ]]; then
-    grep --ignore-case func: /home/martin/mjnurse/bash/mjn-bashrc | \
+if [[ -f ~/mjnurse/bash/mjn-bashrc ]]; then
+    grep --ignore-case func: ~/mjnurse/bash/mjn-bashrc | \
         egrep --ignore-case "$filter" | \
         sed 's/ *# *func: *\([^ :]\+\): *\(.*\)$/\1:help_line="\2 #CGRA(bash-function)#CDEF"/' >> /tmp/h.tmp
 
-    grep -E --ignore-case "^alias.*#" /home/martin/mjnurse/bash/mjn-bashrc | \
+    grep -E --ignore-case "^alias.*#" ~/mjnurse/bash/mjn-bashrc | \
         egrep --ignore-case "$filter" | \
         sed 's/alias *\([^=]*\)=\(.*\)# help_line:*=* *\(.*\) *$/\1:help_line="\3 #CGRA(alias-only)#CDEF"/' >> /tmp/h.tmp
 fi
