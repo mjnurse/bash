@@ -99,6 +99,7 @@ for d in ~/mjnurse/bash \
         ; do
     if [[ -d $d ]]; then
         cd $d
+        echo "Checking repository: $d"
         git fetch
         if [[ "$(git status --short)" != "" ]]; then
             echo
