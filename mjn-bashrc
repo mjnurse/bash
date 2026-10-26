@@ -29,6 +29,7 @@ esac
 
 echo "OS: $OS"
 
+
 export PATH="$PATH:."
 export PATH="$PATH:~/mjnurse/bash"
 export PATH="$PATH:~/mjnurse/cli-builder"
