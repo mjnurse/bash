@@ -4,12 +4,28 @@
 # AUTHOR
 #     mjnurse.github.io - 2026
 
-if [[ "$GITBASH" != "Y" && "$(uname -s)" != "Darwin" ]]; then
-    sudo sh -c "echo '/mnt/c /c none bind' >> /etc/fstab"
-    sudo mount -a
-    sudo sed -i "/#/d;/8.8.8.8/d" /etc/resolv.conf
-    sudo sed -i "1inameserver 8.8.8.8" /etc/resolv.conf
-fi
+case "$(uname -s)" in
+    Linux)
+        export OS=WSL # For me anyway
+
+        sudo sh -c "echo '/mnt/c /c none bind' >> /etc/fstab"
+        sudo mount -a
+        sudo sed -i "/#/d;/8.8.8.8/d" /etc/resolv.conf
+        sudo sed -i "1inameserver 8.8.8.8" /etc/resolv.conf
+        ;;
+    Darwin)
+        export OS=Mac
+
+        alias find="gfind"
+        ;;
+    MINCW64)
+        export OS=GitBash
+        ;;
+    *)
+        export OS=Unknown
+        echo "WARNING: Unknown operating system: $(uname -s)"
+        ;;
+esac
 
 export PATH="$PATH:."
 export PATH="$PATH:~/mjnurse/bash"
@@ -21,6 +37,25 @@ export PATH="$PATH:~/spark"
 
 export QES_HOST=localhost
 export QES_PORT=9200
+
+# Some colour codes
+export cdef="\x1b[39m" # default colour
+export cbla="\x1b[30m"
+export cgra="\x1b[90m"
+export clgra="\x1b[37m"
+export cwhi="\x1b[97m"
+export cred="\x1b[31m"
+export cgre="\x1b[32m"
+export cyel="\x1b[33m"
+export cblu="\x1b[34m"
+export cmag="\x1b[35m"
+export ccya="\x1b[36m"
+export clred="\x1b[91m"
+export clgre="\x1b[92m"
+export clyel="\x1b[93m"
+export clblu="\x1b[94m"
+export clmag="\x1b[95m"
+export clcya="\x1b[96m"
 
 for f in ~/mjnurse/cli-builder/*.alias; do
     source "$f"
@@ -80,7 +115,6 @@ trash() {
         return 1
     fi
 
-
     # Parse -f option
     if [[ "$1" == "-f" || "$1" == "--force" || "$1" == "-rf" ]]; then
         force_yn=y
@@ -130,10 +164,19 @@ md() {
 
 f() {
     # func: f: Search for a file with case-insensitive name
-    if [[ "$1" == "" ]]; then
-        echo "Usage: f <filename> - Search for a file with case-insensitive name"
-        return 1
-    fi
+
+    sort_op='-k3' # default sort by name
+    case "${1:--h}" in
+        -h|--help) 
+            echo "Usage: f <filename> - Search for a file with case-insensitive name - use quotes for filenames with wildcards"
+            echo "Options:"
+            echo "  -t, --time, -d, --date    Order by file timestamps"
+            return 1 ;;
+        -t|--time|-d|--date)
+            sort_op=''
+            shift
+            ;;
+    esac
     args=()
     for f in "$@"; do
         args+=(-o -iname "$f")
@@ -142,12 +185,13 @@ f() {
       -o -type d -name venv -prune \
       -o -type d -name google-cloud-sdk -prune \
       -o -type d -name pkg -prune \
-      "${args[@]}" -print | sort
+      "${args[@]}" -printf "%TY-%Tm-%Td %TH:%TM  %p\n" | sort $sort_op | sed "s/^/${clcya}/; s/  /${cdef}  /"
 }
 
 c() {
     # func: c: Launch Claude with model selection
     model=sonnet
+    resume=""
     if [[ "$1" == "" ]]; then
         echo "Note - can use: c \"<question for Claude>\""
         echo
@@ -158,7 +202,7 @@ c() {
         echo
         read -p "> " m
         echo
-        read -p "Resume [yN]? " answer
+        read -p "Resume previous a session [yN]? " answer
         [[ "${answer^^}" == "Y" ]] && resume="--resume"
     fi
     if [[ "$1" == "h" || "$1" == "s" || "$1" == "o" ]]; then
@@ -177,6 +221,7 @@ c() {
     esac
     question="$*"
     if [[ "$question" == "" ]]; then
+        [[ "$resume" == "" ]] && printf "\n${clgre}(remember c <model> r to resume a previous session)${cdef}\n"
         claude --model $model $resume
     else
         claude --model $model --print "$question"
@@ -254,23 +299,5 @@ HISTTIMEFORMAT="%F %T  "
 # Display trash size and item count if ~/.trash exists
 [ -d ~/.trash ] && echo -e "\nTrash Size: $(du ~/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls ~/.trash | wc -l) Items"
 
-# Some colour codes
-export cdef="\x1b[39m" # default colour
-export cbla="\x1b[30m"
-export cgra="\x1b[90m"
-export clgra="\x1b[37m"
-export cwhi="\x1b[97m"
-export cred="\x1b[31m"
-export cgre="\x1b[32m"
-export cyel="\x1b[33m"
-export cblu="\x1b[34m"
-export cmag="\x1b[35m"
-export ccya="\x1b[36m"
-export clred="\x1b[91m"
-export clgre="\x1b[92m"
-export clyel="\x1b[93m"
-export clblu="\x1b[94m"
-export clmag="\x1b[95m"
-export clcya="\x1b[96m"
 
 export EDITOR=vi
