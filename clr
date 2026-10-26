@@ -105,24 +105,31 @@ for d in ~/mjnurse/bash \
             cecho lmag "Repository: $d"
             cecho lmag "------------------------------------------------------------"
             git status
-            echo
-            printf "${clcya}Commit and Push changes in repo (Y/N) or view diff (D) [dyN]? ${cdef}"
-            read yn
-            if [[ "${yn^}" == "D" ]]; then
-                git diff
-                printf "${clcya}Commit and Push changes in repo [yN]? ${cdef}"
+            yn=""
+            while [[ "${yn^}" != "Y" && "${yn^}" != "N" ]]; do
+                echo
+                printf "${clcya}Commit and Push changes with comment Various (YN), custom comment (C) or view diff (D) [cdyN]? ${cdef}"
                 read yn
-            fi
-            if [[ "${yn^}" == "Y" ]]; then
-                printf "${clcya}Commit Message (Blank to use 'Various'): ${cdef}" 
-                read cm
-                if [[ -z "$cm" ]]; then
+                yn="${yn:-N}"
+
+                echo YN:$yn
+
+                if [[ "${yn^}" == "D" ]]; then
+                    git diff
+                fi
+                if [[ "${yn^}" == "C" ]]; then
+                    printf "${clcya}Commit Message: ${cdef}" 
+                    read cm
+                    yn="Y"
+                else
                     cm="Various"
                 fi
-                git add .
-                git commit -m "$cm"
-                git push
-            fi
+                if [[ "${yn^}" == "Y" ]]; then
+                    git add .
+                    git commit -m "$cm"
+                    git push
+                fi
+            done
         fi
     fi
 done
