@@ -104,6 +104,7 @@ for d in ~/mjnurse/bash \
             cecho lmag "------------------------------------------------------------"
             cecho lmag "Repository: $d"
             cecho lmag "------------------------------------------------------------"
+            git pull --rebase
             git status
             yn=""
             while [[ "${yn^}" != "Y" && "${yn^}" != "N" ]]; do
