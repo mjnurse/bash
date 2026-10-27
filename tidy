@@ -75,41 +75,60 @@ cecho gre ======================================================================
 cecho gre "File Type Shouldn't be executable"
 cecho gre ================================================================================
 
+remove_all=n
 for f in *; do
-    ft="$(file -b "$f")"
-    case "$ft" in
-        HTML*) ft="HTML";;
-        JPEG*) ft="JPEG";;
-        PNG*) ft="PNG";;
-        GIF*) ft="GIF";;
-        M*Excel*) ft="Excel";;
-        M*Word*) ft="Word";;
-        M*PowerPoint*) ft="PowerPoint";;
-        PDF*) ft="PDF";;
-        Zip*) ft="Zip";;
-        *) echo $f - $ft;ft="Other";;
-    esac
-    if [[ "$ft" != "Other" && -x "$f" ]]; then
-            echo --------------------------------------------------------------------------------
-            echo -e "FILE:      $f"
-            echo -e "TYPE:      $ft"
-            echo --------------------------------------------------------------------------------
-        opt=""
-        while [[ ! "${opt^}" =~ ^[IRSQ]$ ]]; do
-            [[ -n "$opt" ]] && echo "Invalid option: $opt"
-            printf "${clblu}[i]gnore rule, [r]emove executable, [s]kip, q[uit]. [irSq]?: ${cdef}"
-            read opt
-            [[ -z "$opt" ]] && opt="S"
-        done
-        case $opt in
-            r|R)
-                chmod -x "$f"
-                ;;
-            i|I)
-                break;;
-            q|Q)
-                exit;;
+    if [[ -x "$f" ]]; then
+        ft="$(file -b "$f")"
+        case "${ft^^}" in
+            DIRECTORY*) ft="Directory";;
+            HTML*) ft="HTML";;
+            JPEG*) ft="JPEG";;
+            PNG*) ft="PNG";;
+            GIF*) ft="GIF";;
+            JSON*) ft="JSON";;
+            M*EXCEL*) ft="Excel";;
+            M*WORD*) ft="Word";;
+            M*POWERPOINT*) ft="PowerPoint";;
+            PEM*) ft="PEM";;
+            PDF*) ft="PDF";;
+            SVG*) ft="SVG";;
+            ZIP*) ft="Zip";;
+            # The following can be executable so skip them
+            BOURNE*) ft="skip";;
+            PYTHON*) ft="skip";;
+            # Print other file types
+            *) echo $f - $ft;ft="Other";;
         esac
+        if [[ "$ft" != "Other" && "$ft" != "skip" && "$ft" != "Directory" ]]; then
+                echo --------------------------------------------------------------------------------
+                echo -e "FILE:      $f"
+                echo -e "TYPE:      $ft"
+                echo --------------------------------------------------------------------------------
+            opt=""
+            if [[ "$remove_all" == "y" ]]; then
+                chmod -x "$f"
+                continue
+            fi
+            while [[ ! "${opt^}" =~ ^[AIQRS]$ ]]; do
+                [[ -n "$opt" ]] && echo "Invalid option: $opt"
+                printf "${clblu}[i]gnore rule, [r]emove exec, remove exec from [a]ll, [s]kip, q[uit]. [aiqrS]?: ${cdef}"
+                read opt
+                [[ -z "$opt" ]] && opt="S"
+            done
+            case $opt in
+                a|A)
+                    remove_all=y
+                    chmod -x "$f"
+                    ;;
+                r|R)
+                    chmod -x "$f"
+                    ;;
+                i|I)
+                    break;;
+                q|Q)
+                    exit;;
+            esac
+        fi
     fi
 done
 
@@ -118,6 +137,7 @@ cecho gre ======================================================================
 cecho gre "Filename contains character other than [a-z][0-9]_-."
 cecho gre ================================================================================
 
+rename_all=n
 for f in *; do
     if [[ -f "$f" && ! -L "$f" ]]; then
         if [[ -x "$f" ]]; then
@@ -141,15 +161,19 @@ for f in *; do
             echo -e "FILE:      $f $exec_message"
             echo "Rename as: $newname"
             echo --------------------------------------------------------------------------------
-            if [[ $force == y ]]; then
+            if [[ $force == y || $rename_all == y ]]; then
                 opt="r"
             else
                 opt=""
-                while [[ ! "${opt^}" =~ ^[IRSQ]$ ]]; do
+                while [[ ! "${opt^}" =~ ^[AIQRS]$ ]]; do
                     [[ -n "$opt" ]] && echo "Invalid option: $opt"
-                    printf "${clblu}[i]gnore rule, [r]ename, [s]kip, q[uit]. [irSq]?: ${cdef}"
+                    printf "${clblu}[i]gnore rule, [q]uit, [r]ename, rename [a]ll, [s]kip [aiqrS]?: ${cdef}"
                     read opt
                     [[ -z "$opt" ]] && opt="S"
+                    if [[ "${opt^}" == "A" ]]; then
+                        rename_all=y
+                        opt="r"
+                    fi
                 done
             fi
             case $opt in
@@ -159,6 +183,7 @@ for f in *; do
                     val=$RANDOM
                     mv "$f" "${newname}.tmp.${val}"
                     mv "${newname}.tmp.${val}" "$newname"
+                    cecho gre "Renamed to: $newname"
                     ;;
                 i|I)
                     break;;
@@ -181,7 +206,7 @@ for f in $(find . -maxdepth 1 -executable); do
 
     if [[ -f $f && ! -L $f ]]; then
         line1="$(head -1 "$f")"
-        if [[ "${line1:0:13}" != "#!/usr/bin/env" ]]; then
+        if [[ "${line1:0:14}" != "#!/usr/bin/env" ]]; then
             echo --------------------------------------------------------------------------------
             echo FILE: $f
             echo --------------------------------------------------------------------------------
@@ -214,13 +239,39 @@ for f in $(find . -maxdepth 1 -executable); do
 done
 
 cecho gre ================================================================================
-cecho gre '#!/usr/bin/env bash' but not Executable
+cecho gre '#!/bin/bash not #!/usr/bin/env bash'
 cecho gre ================================================================================
 
 for f in $(find . -maxdepth 1 ! -executable); do
    if [[ -f $f && ! -L $f ]]; then
       line1="$(head -1 "$f" | tr -d '\000')"
       line1=${line1//[$' \t\r\n']}
+      if [[ "$line1" == "#!/bin/bash" ]]; then
+         echo --------------------------------------------------------------------------------
+         echo '#!/bin/bash not #!/usr/bin/env bash'
+         echo
+         echo FILE: $f
+         echo --------------------------------------------------------------------------------
+         read -p "[i]gnore rule, [u]pdate to #!/usr/bin/env bash, [s]kip, q[uit]. [iuSq]?: " opt
+         case $opt in
+            u|U)
+               sed -i '1s|#!/bin/bash|#!/usr/bin/env bash|' "$f";;
+            i|I)
+               break;;
+            q|Q)
+               exit;;
+         esac
+      fi 
+   fi
+done
+
+cecho gre ================================================================================
+cecho gre '#!/usr/bin/env bash' but not Executable
+cecho gre ================================================================================
+
+for f in $(find . -maxdepth 1 ! -executable); do
+   if [[ -f $f && ! -L $f ]]; then
+      line1="$(head -1 "$f" | tr -d '\000')"
       if [[ "$line1" == "#!/usr/bin/env bash" ]]; then
          echo --------------------------------------------------------------------------------
          echo FILE: $f
@@ -337,14 +388,15 @@ for f in $(find . -maxdepth 1 -executable); do
       l1="$(cat "$f" | sed -n '1p')"
       l2="$(cat "$f" | sed -n '2p')"
       if [[ "$l1" == "#!/usr/bin/env bash" && "${l2:0:10}" != "help_text=" ]]; then
-         echo --------------------------------------------------------------------------------
+         cecho lcya --------------------------------------------------------------------------------
+         cecho lcya No header:
          ls -al "$f"
-         echo
+         cecho lcya --------------------------------------------------------------------------------
          head -15 "$f"
          echo
-         read -p "[i]gnore rule, [a]dd header, edit [v]im, edit [c]ode, [s]kip, q[uit]. [iavcSq]?: " opt
-         case $opt in
-            a|A)
+         read -p "[i]gnore rule, [a]dd header, add [b]asic header, edit [v]im, edit [c]ode, [s]kip, q[uit]. [iabvcSq]?: " opt
+         case ${opt^} in
+            A)
                tidytmp="/tmp/tidy.tmp"
 echo '#!/usr/bin/env bash
 help_text="
@@ -390,16 +442,30 @@ esac
                tail +2 "$f" >> $tidytmp
                cp -f $tidytmp "$f"
                ;;
-            v|V)
+            B)
+               tidytmp="/tmp/tidy.tmp"
+echo '#!/usr/bin/env bash
+help_text="
+usage: <<FILENAME>> [options] <filename>
+-h : This help text.
+"
+
+help_line="tbc"
+web_desc_line="tbc"
+' > $tidytmp
+               tail +2 "$f" >> $tidytmp
+               cp -f $tidytmp "$f"
+               ;;            
+            V)
                vgim $f
                ;;
-            c|C)
+            C)
                code $f
                ;;
-            i|I)
+            I)
                break
                ;;
-            q|Q)
+            Q)
                exit
                ;;
          esac

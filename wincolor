@@ -53,6 +53,7 @@ declare -A COLORS=(
 
 resolve_color() {
   local input="${1,,}"
+  # echo colour resolution for input: "$input"
   if [[ -n "${COLORS[$input]}" ]]; then
     echo "${COLORS[$input]}"
   elif [[ "$input" =~ ^#?[0-9a-f]{6}$ ]]; then
