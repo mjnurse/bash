@@ -308,6 +308,7 @@ alias cf='code "$(fzf)"'
 alias clip='xclip -selection clipboard'
 alias drm='command rm -i'
 alias ebc='code ~/mjnurse/bash/mjn-bashrc' # help_line: Edit the mjn-bashrc file
+alias ebe='code ~/mjnurse/bash/bash-script-example' # help_line: Edit bash-script-example
 alias fwd='file-watch-do'
 alias gbp='gen-bookmark-page'
 alias gp='g(){ egrep -i "$1" *; }; g' # help_line: Search/egrep for a pattern in the current directory
