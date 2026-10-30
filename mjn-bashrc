@@ -347,3 +347,6 @@ HISTTIMEFORMAT="%F %T  "
 
 
 export EDITOR=vi
+
+
+echo 'REMEMBER: eval "$(starship init bash)"'

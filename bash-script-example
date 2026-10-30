@@ -22,10 +22,12 @@ AUTHOR
 help_line="Example Bash Script"
 web_desc_line="Example Bash Script"
 
+set -u -o pipefail # Treat unset variables as an error and fail on pipe errors
+# set -x # for debugging
+
 tmpfile=$(mktemp)
 trap 'rm -f "$tmpfile"' EXIT
 
-# set -x # for debugging
 
 # Terminal Colours
 cdef="\x1b[39m" # default colour

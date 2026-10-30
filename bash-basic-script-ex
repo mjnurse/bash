@@ -7,6 +7,8 @@ usage: <<FILENAME>> [options] <filename>
 help_line="Example Basic Bash Script"
 web_desc_line="Example Basic Bash Script"
 
+set -uo pipefail # Treat unset variables as an error and fail on pipe errors
+
 case $1 in
     -h|--help)
         echo "$help_text"

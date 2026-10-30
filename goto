@@ -88,7 +88,7 @@ while [[ "$1" != "" ]]; do
                 echo "Directory name details must not end with a /"
                 exit 1
             fi
-            ls -d "$1"* 2>/dev/null | sed 's/\(^.*\/\)\(.*\)/\2, \1\2/' >> $0.dat
+            ls -d "$1"* 2>/dev/null | sed 's/\(^.*\/\)\(.*\)/\L\2\E, \1\2/' >> $0.dat
                 cat $0.dat | sed '
                     /^ *$/d;
                     s/,/                                            /; 
