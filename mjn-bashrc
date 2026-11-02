@@ -279,10 +279,10 @@ beep() {
 }
 
 # Silence the bell
-xset -b
+[[ $OS == "WSL" ]] && xset -b
+[[ $OS == "Mac" ]] && defaults write -g com.apple.sound.beep.volume -float 0
 
 # Backup important files
-# export BACKUP_DIR=... set in .bashrc
 backup -f -d toto-db ~/.todo.db
 backup -f -d notes ~/.notes.txt
 echo
@@ -344,7 +344,6 @@ HISTTIMEFORMAT="%F %T  "
 
 # Display trash size and item count if ~/.trash exists
 [ -d ~/.trash ] && echo -e "\nTrash Size: $(du ~/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls ~/.trash | wc -l) Items"
-
 
 export EDITOR=vi
 
