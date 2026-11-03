@@ -57,6 +57,8 @@ case "$(uname -s)" in
 
         alias find="gfind"
         alias sed="gsed"
+        alias code="ttt"
+        alias python="python3"
 
         # Prompt: user@host:directory [repo:branch ↑ahead ↓behind *] $
         # PS1='\u@\h:\w\[$(git_prompt_info)\]\$ '
