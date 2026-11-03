@@ -131,13 +131,14 @@ fi
 
 egrep ".*$1.*," $0.dat > $tf
 
+
 if [[ "$(wc -l < $tf)" == "0" ]]; then
     echo "No match found for '$1'"
     rm $tf
     exit 1
 fi
 
-if [[ "$(wc -l < $tf)" == "1" ]]; then
+if [[ "$(wc -l < $tf | tr -d ' ')" == "1" ]]; then
     cat $tf | sed 's/^[^,]*, *//' > $0.tmp
 else
     echo "Multiple matches found for '$1':"
