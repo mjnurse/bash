@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 help_line="Search for processes matching provided name with option to kill"
 

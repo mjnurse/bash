@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Print extended ASCII (128-255) and Unicode box-drawing/arrow characters
 
 echo "=== Extended ASCII (CP437) ==="
