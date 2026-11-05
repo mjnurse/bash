@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+help_text="
+usage: lo [options] <filename-regex>
+-h : This help text.
+"
+
+help_line="Locate files using bash locate"
+web_desc_line="Locate files using bash locate"
+
+set -uo pipefail # Treat unset variables as an error and fail on pipe errors
+
+# Terminal Colours
+cdef="\x1b[39m" # default colour
+cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
+cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
+clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
+
+search_all=false
+case ${1:-} in
+    -h|--help)
+        echo "$help_text"
+        exit
+        ;;
+    -a|--all)
+        search_all=true
+        shift
+        ;;
+esac
+
+if [[ "${1:-}" == "" ]]; then
+    echo "$help_text"
+    exit 1
+fi
+
+h="${1//\*/}"
+if [[ "$h" == "$1" ]]; then
+    if [[ "${search_all}" == true ]]; then
+        s="/$1$"
+    else
+        s="^$1$"
+    fi
+else
+    s="^${1//\*/.\*}$"
+fi
+
+if [[ "${search_all}" == true ]]; then
+    res="$(locate -r "$s")"
+    grep_cmd=(grep --color=always "$h")
+    msg="Searched for paths/files matching regex: $s"
+else
+    res="$(locate -br "$s")"
+    grep_cmd=(grep -P --color=always "$h(?!.*$h)")
+    msg="Searched for files matching regex: $s"
+fi
+
+mapfile -t matches < <(printf '%s\n' "$res" | sed '/^$/d')
+
+if [[ ${#matches[@]} -eq 0 ]]; then
+    echo -e "\n${cyel}${msg}${cdef}"
+    exit 0
+fi
+
+# List matches (numbered if multiple), marking directories
+multi=false
+[[ ${#matches[@]} -gt 1 ]] && multi=true
+for i in "${!matches[@]}"; do
+    line="$(printf '%s\n' "${matches[$i]}" | "${grep_cmd[@]}")"
+    if [[ -d "${matches[$i]}" ]]; then
+        line="${line}/ ${clblu}[dir]${cdef}"
+    fi
+    if [[ "$multi" == true ]]; then
+        printf '%3d) %b\n' "$((i + 1))" "$line"
+    else
+        printf '%b\n' "$line"
+    fi
+done
+echo -e "\n${cyel}${msg}${cdef}"
+
+if [[ "$multi" == true ]]; then
+    printf "${clmag}Select: # copy name, v# view (cat/ls), e# edit in code, i# edit in vim (Enter to quit): ${cdef}"
+else
+    printf "${clmag}Enter copy name, v view (cat/ls), e edit in code, i edit in vim (q to quit): ${cdef}"
+fi
+read -r choice </dev/tty
+echo -ne "${cdef}"
+
+[[ -z "$choice" && "$multi" == true ]] && exit 0
+[[ "$choice" == "q" ]] && exit 0
+
+if [[ "$choice" =~ ^([vei]?)([0-9]*)$ ]]; then
+    action="${BASH_REMATCH[1]}"
+    n="${BASH_REMATCH[2]}"
+    if [[ -z "$n" ]]; then
+        if [[ "$multi" == true ]]; then
+            echo "Invalid selection: $choice" >&2
+            exit 1
+        fi
+        n=1
+    fi
+    if (( n < 1 || n > ${#matches[@]} )); then
+        echo "Invalid selection: $choice" >&2
+        exit 1
+    fi
+    file="${matches[$((n - 1))]}"
+    case "$action" in
+        "") printf '%s' "$file" | xclip -selection clipboard ;;
+        v)  if [[ -d "$file" ]]; then ls -la --color=auto "$file"; else cat "$file"; fi ;;
+        e)  code "$file" ;;
+        i)  vim "$file" ;;
+    esac
+else
+    echo "Invalid selection: $choice" >&2
+    exit 1
+fi

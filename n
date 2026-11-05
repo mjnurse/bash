@@ -75,7 +75,8 @@ function display_notes() {
 if [[ "$1" == "" ]]; then
   display_notes
   echo
-  echo "Usage: n [options] [<text - consider wrapping in quotes> <text2> <text3>]"
+  echo "Usage: n [options] [<note text - consider wrapping in quotes>]"
+  echo "Suggested Format: \"<application>: <command> # <description>\""
   echo "Try:  \"n -h\" for more information."
   exit
 fi
@@ -83,7 +84,21 @@ fi
 case ${1-} in
   -a|--add)
     shift
-    echo "$*" >> "$nf"
+    if [[ -z "$*" ]]; then
+      printf "Suggested Format: \"${clcya}<application>: ${cdef}<command> ${clmag}# <description>${cdef}\"\n"
+      printf "\n${clmag}Note: ${cdef}"
+      read note
+      set -- "$note"
+    fi
+    note="$*"
+    if [[ "$note" != *:*#* ]]; then
+      printf "\n${cred}NOTE!${cdef} Does not match the suggested Format: \"${clcya}<application>: ${cdef}<command> ${clmag}# <description>${cdef}\"\n"
+    fi
+    printf "\n${clmag}Add note: ${cdef}$* ${clmag}[yN]: ${cdef}"
+    read yn
+    if [[ "${yn^}" == "Y" ]]; then
+      echo "$*" >> "$nf"
+    fi
     ;;
   -e|--edit)
     vi "$nf"
