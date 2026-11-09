@@ -9,17 +9,22 @@ USAGE
 
 OPTIONS
     -p|--push
-        Interactively commit and push changes for each repository
-        with uncommitted changes.
+        Interactively commit, rebase, and push changes for each repository
+        with uncommitted or unpushed changes.
+
+    -f|--force
+        With -p, commit (with default message 'Various') and push without
+        prompting for confirmation unless a conflict occurs.
 
     -h|--help
         Show help text.
 
 DESCRIPTION
     Checks a predefined list of local git repositories for uncommitted
-    changes. When run without options, displays a list of repositories
-    that have uncommitted changes. With the -p option, iterates through
-    each repository with changes and prompts to commit and push.
+    changes, unpushed commits, or unfinished rebases/merges. When run
+    without options, displays a summary of repositories needing attention.
+    With the -p option, iterates through each repository and prompts to
+    commit, pull --rebase, and push.
 
 AUTHOR
     mjnurse.github.io - 2026
@@ -47,38 +52,150 @@ tmp="${help_text##*USAGE}"
 usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
 
 push_yn=n
+force_yn=n
 while [[ "$1" != "" ]]; do
     case $1 in
         -h|--help)
             echo "$help_text"
-            exit
+            exit 0
             ;;
         -p|--push)
             push_yn=y
             ;;
+        -f|--force)
+            force_yn=y
+            ;;
         ?*)
-            break
+            cecho lred "Unknown option: $1"
+            echo "$usage"
+            echo "$try"
+            exit 1
             ;;
     esac
     shift
 done
+
+repos=(
+    ~/mjnurse/bash
+    ~/mjnurse/python
+    ~/mjnurse/cli-builder
+    ~/mjnurse/website-builder
+    ~/mjnurse/mjnurse-website
+    ~/mjnurse/mjnurse.github.io
+)
+
+function is_rebase_in_progress {
+    local git_dir
+    git_dir="$(git rev-parse --git-dir 2>/dev/null)" || return 1
+    [[ -d "$git_dir/rebase-merge" || -d "$git_dir/rebase-apply" ]]
+}
+
+function is_merge_in_progress {
+    local git_dir
+    git_dir="$(git rev-parse --git-dir 2>/dev/null)" || return 1
+    [[ -f "$git_dir/MERGE_HEAD" ]]
+}
+
+function get_ahead_behind {
+    # Sets global ahead_count and behind_count relative to upstream (if configured)
+    ahead_count=0
+    behind_count=0
+    if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
+        local counts
+        counts="$(git rev-list --left-right --count @{u}...HEAD 2>/dev/null)"
+        if [[ -n "$counts" ]]; then
+            read -r behind_count ahead_count <<< "$counts"
+        fi
+    fi
+}
+
+function pull_rebase_and_push {
+    local repo_dir="$1"
+
+    get_ahead_behind
+    if (( behind_count > 0 )); then
+        cecho lcya "Pulling $behind_count remote commit(s) with rebase..."
+        if ! git pull --rebase; then
+            cecho lred "Rebase conflict encountered in $repo_dir!"
+            git status --short
+            local res=""
+            while [[ ! "${res^}" =~ ^[LRA]$ ]]; do
+                echo
+                printf "${clyel}Resolve conflict keeping [L]ocal changes, [R]emote changes, or [A]bort rebase [lrA]? ${cdef}"
+                read -r res
+                res="${res:-A}"
+            done
+            case "${res^}" in
+                L)
+                    git diff --name-only --diff-filter=U | while IFS= read -r file; do
+                        [[ -n "$file" ]] && git checkout --theirs -- "$file" && git add -- "$file"
+                    done
+                    if ! GIT_EDITOR=true git rebase --continue; then
+                        cecho lred "Failed to continue rebase automatically. Aborting rebase."
+                        git rebase --abort
+                        return 1
+                    fi
+                    ;;
+                R)
+                    git diff --name-only --diff-filter=U | while IFS= read -r file; do
+                        [[ -n "$file" ]] && git checkout --ours -- "$file" && git add -- "$file"
+                    done
+                    if ! GIT_EDITOR=true git rebase --continue; then
+                        cecho lred "Failed to continue rebase automatically. Aborting rebase."
+                        git rebase --abort
+                        return 1
+                    fi
+                    ;;
+                A)
+                    git rebase --abort
+                    cecho lyel "Rebase aborted for $repo_dir (local commit preserved on branch)."
+                    return 1
+                    ;;
+            esac
+        fi
+    fi
+
+    # Warn if remote origin uses HTTPS instead of SSH on github.com
+    local remote_url
+    remote_url="$(git remote get-url origin 2>/dev/null)"
+    if [[ "$remote_url" =~ ^https://github\.com/(.+)$ ]]; then
+        local ssh_url="git@github.com:${BASH_REMATCH[1]}"
+        [[ "$ssh_url" != *.git ]] && ssh_url="${ssh_url}.git"
+        cecho lyel "Note: origin uses HTTPS ($remote_url). Switching to SSH ($ssh_url)..."
+        git remote set-url origin "$ssh_url"
+    fi
+
+    cecho lcya "Pushing to remote..."
+    if git push; then
+        cecho lgre "Successfully pushed $repo_dir."
+    else
+        cecho lred "Failed to push $repo_dir!"
+        return 1
+    fi
+}
 
 echo
 cecho lgre "Checking local git repositories for uncommitted changes..."
 
 if [[ "$push_yn" == "n" ]]; then 
     changes_yn=n
-    for d in ~/mjnurse/bash \
-             ~/mjnurse/python \
-             ~/mjnurse/cli-builder \
-             ~/mjnurse/website-builder \
-             ~/mjnurse/mjnurse-website \
-             ~/mjnurse/mjnurse.github.io \
-            ; do
-        if [[ -d $d ]]; then
-            cd $d
-            if [[ "$(git status --short)" != "" ]]; then
+    for d in "${repos[@]}"; do
+        if [[ -d "$d" ]]; then
+            cd "$d" || continue
+            if is_rebase_in_progress || is_merge_in_progress; then
+                cecho lred "Rebase/merge in progress in repo: ${clcya}$d"
+                changes_yn=y
+            elif ! git symbolic-ref -q HEAD >/dev/null 2>&1; then
+                cecho lred "Detached HEAD in repo: ${clcya}$d"
+                changes_yn=y
+            fi
+            if [[ -n "$(git status --porcelain)" ]]; then
                 cecho cya "Uncommitted changes in repo: ${clcya}$d"
+                changes_yn=y
+            fi
+            get_ahead_behind
+            if (( ahead_count > 0 )); then
+                cecho lyel "Unpushed commits ($ahead_count ahead) in repo: ${clcya}$d"
                 changes_yn=y
             fi
         fi
@@ -86,52 +203,117 @@ if [[ "$push_yn" == "n" ]]; then
     if [[ "$changes_yn" == "y" ]]; then
         echo
         cecho lmag "Run clr -p to selectively commit/push changes."
+        exit 1
     fi
-    exit 1
+    exit 0
 fi
 
-for d in ~/mjnurse/bash \
-         ~/mjnurse/python \
-         ~/mjnurse/cli-builder \
-         ~/mjnurse/website-builder \
-         ~/mjnurse/mjnurse-website \
-         ~/mjnurse/mjnurse.github.io \
-        ; do
-    if [[ -d $d ]]; then
-        cd $d
+for d in "${repos[@]}"; do
+    if [[ -d "$d" ]]; then
+        cd "$d" || continue
         echo "Checking repository: $d"
-        git fetch
-        if [[ "$(git status --short)" != "" ]]; then
+        git fetch --quiet
+
+        # Handle unfinished rebase or merge first
+        if is_rebase_in_progress; then
+            echo
+            cecho lred "------------------------------------------------------------"
+            cecho lred "Repository: $d (REBASE IN PROGRESS)"
+            cecho lred "------------------------------------------------------------"
+            git status
+            echo
+            printf "${clyel}Continue rebase (C), abort rebase (A), or skip (S) [caS]? ${cdef}"
+            read -r rb_choice
+            rb_choice="${rb_choice:-S}"
+            if [[ "${rb_choice^}" == "A" ]]; then
+                git rebase --abort
+                cecho lyel "Rebase aborted."
+            elif [[ "${rb_choice^}" == "C" ]]; then
+                git add .
+                if GIT_EDITOR=true git rebase --continue; then
+                    cecho lgre "Rebase completed."
+                    pull_rebase_and_push "$d"
+                else
+                    cecho lred "Could not complete rebase automatically."
+                fi
+                continue
+            else
+                continue
+            fi
+        fi
+
+        has_uncommitted=n
+        [[ -n "$(git status --porcelain)" ]] && has_uncommitted=y
+        get_ahead_behind
+
+        if [[ "$has_uncommitted" == "y" ]]; then
             echo
             cecho lmag "------------------------------------------------------------"
             cecho lmag "Repository: $d"
             cecho lmag "------------------------------------------------------------"
             git status
-            yn=""
+
+            if [[ "$force_yn" == "y" ]]; then
+                yn="Y"
+                cm="Various"
+            else
+                yn=""
+            fi
+
             while [[ "${yn^}" != "Y" && "${yn^}" != "N" ]]; do
                 echo
                 printf "${clcya}Commit and Push changes with comment Various (YN), custom comment (C) or view diff (D) [cdyN]? ${cdef}"
-                read yn
+                read -r yn
                 yn="${yn:-N}"
 
-                if [[ "${yn^}" == "D" ]]; then
-                    git diff
-                fi
-                if [[ "${yn^}" == "C" ]]; then
-                    printf "${clcya}Commit Message: ${cdef}" 
-                    read cm
-                    yn="Y"
-                else
-                    cm="Various"
-                    echo -e $"${clcya}Using default commit message:${cdef} Various"
-                fi
-                if [[ "${yn^}" == "Y" ]]; then
-                    git add .
-                    git commit -m "$cm"
-                    git pull --rebase
-                    git push
-                fi
+                case "${yn^}" in
+                    D)
+                        git diff
+                        ;;
+                    C)
+                        printf "${clcya}Commit Message (blank defaults to 'Various'): ${cdef}" 
+                        read -r cm
+                        cm="${cm:-Various}"
+                        yn="Y"
+                        ;;
+                    Y)
+                        cm="Various"
+                        echo -e $"${clcya}Using default commit message:${cdef} Various"
+                        ;;
+                    N)
+                        ;;
+                    *)
+                        cecho lyel "Invalid choice: $yn"
+                        ;;
+                esac
             done
+
+            if [[ "${yn^}" == "Y" ]]; then
+                git add .
+                if git commit -m "$cm"; then
+                    pull_rebase_and_push "$d"
+                else
+                    cecho lred "Commit failed in $d."
+                fi
+            fi
+        elif (( ahead_count > 0 || behind_count > 0 )); then
+            echo
+            cecho lmag "------------------------------------------------------------"
+            cecho lmag "Repository: $d (clean working tree; ahead $ahead_count, behind $behind_count)"
+            cecho lmag "------------------------------------------------------------"
+            git status -sb
+            if [[ "$force_yn" == "y" ]]; then
+                sync_yn="Y"
+            else
+                echo
+                printf "${clcya}Sync (pull --rebase / push) this repository with origin [yN]? ${cdef}"
+                read -r sync_yn
+                sync_yn="${sync_yn:-N}"
+            fi
+            if [[ "${sync_yn^}" == "Y" ]]; then
+                pull_rebase_and_push "$d"
+            fi
         fi
     fi
 done
+
