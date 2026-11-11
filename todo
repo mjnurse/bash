@@ -445,22 +445,32 @@ def edit(num = ''):
       oldDet = existing[0][0] or ''
       oldGrp = existing[0][1] or ''
 
-      print(f'\nCurrent group: {oldGrp if oldGrp else "(none)"}')
-      print(f'Current details: {oldDet}')
+      prefill = (f'#{oldGrp} ' if oldGrp else '') + oldDet
+      print('\nEdit task (start with #<group> to set group, no #group clears it)')
+      readline.set_startup_hook(lambda: readline.insert_text(prefill))
+      try:
+         text = input('> ').strip()
+      finally:
+         readline.set_startup_hook()
 
-      newGrp = input(f'New group (enter to keep, - to clear) > ').strip()
-      newDet = input(f'New details (enter to keep) > ').strip()
+      if text == '':
+         print(color(FGYELLOW, '\nEmpty details - edit cancelled.'))
+         conn.close()
+         return
 
-      if newDet == '':
-         newDet = oldDet
-      if newGrp == '-':
-         newGrp = ''
-      elif newGrp == '':
-         newGrp = oldGrp
-      else:
+      newGrp = ''
+      newDet = text
+      first = text.split()[0]
+      if first.startswith('#'):
+         newGrp = first[1:]
+         newDet = text[len(first):].strip()
          existing_groups = getGroups()
          if newGrp not in existing_groups:
             print(color(FGRED, f'\nError: Group "{newGrp}" does not exist.'))
+            conn.close()
+            return
+         if newDet == '':
+            print(color(FGYELLOW, '\nEmpty details - edit cancelled.'))
             conn.close()
             return
 
