@@ -94,7 +94,11 @@ case ${1-} in
     if [[ "$note" != *:*#* ]]; then
       printf "\n${cred}NOTE!${cdef} Does not match the suggested Format: \"${clcya}<application>: ${cdef}<command> ${clmag}# <description>${cdef}\"\n"
     fi
-    printf "\n${clmag}Add note: ${cdef}$* ${clmag}[yN]: ${cdef}"
+    before_colon="${note%%:*}"
+    after_hash="${note#*#}"
+    after_colon="${note#*:}"
+    between_colon_and_hash="${after_colon%#*}"
+    printf "\n${clgre}Add note: ${clcya}${before_colon}${cdef}:${cdef}${between_colon_and_hash}${clmag}#${after_hash}${clgre} - [yN]: ${cdef}"
     read yn
     if [[ "${yn^}" == "Y" ]]; then
       echo "$*" >> "$nf"
