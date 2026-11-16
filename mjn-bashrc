@@ -55,6 +55,7 @@ case "$(uname -s)" in
     Darwin)
         export OS=Mac
 
+        export PATH="/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:$PATH"
         alias find="gfind"
         alias sed="gsed"
         alias code="ttt"
@@ -291,7 +292,7 @@ backup -f -d notes ~/.notes.txt
 echo
 
 # Refresh misc notes web page
-n -m > ~/mjnurse/mjnurse-website/notes/Miscellaneous_Notes.md
+n -m > ~/mjnurse/mjnurse-website/notes/miscellaneous_notes.md
 
 # Check if website been built today, if not build it
 build-website -d
