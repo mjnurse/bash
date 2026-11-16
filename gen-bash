@@ -8,7 +8,7 @@ usage: gen_bash [options] <filename>
 help_line="Generates a bash script from a template"
 web_desc_line="Generates a bash script from a template"
 
-BASH_HOME="/home/martin/mjnurse/bash"
+BASH_HOME="$HOME/mjnurse/bash"
 
 basic_yn=n
 case $1 in

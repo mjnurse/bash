@@ -20,7 +20,7 @@ import atexit
 # tempFile = shell.ExpandEnvironmentStrings("%TEMP%") & "\todo-result.txt"
 #
 # ' Run WSL hidden and redirect output
-# shell.Run "cmd.exe /c wsl.exe -d Ubuntu-24.04 -- /home/martin/mjnurse/todo-done/todo -o > """ & tempFile & """ 2>&1", 0, True
+# shell.Run "cmd.exe /c wsl.exe -d Ubuntu-24.04 -- $HOME/mjnurse/todo-done/todo -o > """ & tempFile & """ 2>&1", 0, True
 #
 # ' Read the result
 # Set fso = CreateObject("Scripting.FileSystemObject")
@@ -33,7 +33,7 @@ import atexit
 # ' Only open a visible window if result is Y
 # If IsNumeric(result) Then
 #     If CInt(result) > 0 Then
-#         shell.Run "cmd.exe /c wsl.exe -d Ubuntu-24.04 -- /home/martin/mjnurse/todo-done/todo", 1, False
+#         shell.Run "cmd.exe /c wsl.exe -d Ubuntu-24.04 -- $HOME/mjnurse/todo-done/todo", 1, False
 #     End If
 # End If
 

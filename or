@@ -15,8 +15,8 @@ AUTHOR
 help_line="Connect to oracle using sqlplus"
 web_desc_line="Connect to oracle using sqlplus"
 
-export ORACLE_PATH=.:/home/martin/code/oracle:/home/martin/code/private/oracle
+export ORACLE_PATH=.:$HOME/code/oracle:$HOME/code/private/oracle
 
-rlwrap /home/martin/oracle_client/product/11.2.0/client_1/bin/sqlplus.exe /NOLOG
+rlwrap $HOME/oracle_client/product/11.2.0/client_1/bin/sqlplus.exe /NOLOG
 
 #rlwrap sqlplus /NOLOG

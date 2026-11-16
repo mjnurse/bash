@@ -46,7 +46,7 @@ set spell spelllang=en_gb
 if has("win32") || has("win64")
    set spellfile=c:\Users\MartinNurse\vimspellfile.add
 elseif has("unix")
-   set spellfile=/home/martin/mjnurse/bash/vimspellfile.add
+   set spellfile=$HOME/mjnurse/bash/vimspellfile.add
 endif
 set spellcapcheck=""
 

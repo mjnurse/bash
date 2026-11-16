@@ -121,7 +121,7 @@ function improve() {
     local text="$(sed 's/(/\\(/g; s/)/\\)/g' <<<"$1")"
     local instruction="You are a concise senior technical editor. Improve clarity, tone, grammar, and flow; preserve meaning; Improve the following text and return only the improved text"
 
-    /home/martin/.local/bin/claude --print "${instruction}: ${text}"
+    $HOME/.local/bin/claude --print "${instruction}: ${text}"
 }
 
 if [[ "$1" != "" && -f "$1" ]]; then
