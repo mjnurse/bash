@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+help_text="
+usage: sysinfo
+-h : This help text.
+-d : Show disk usage information.
+-n : Show network information.
+-p : Show processes information.
+"
+
+help_line="Display Linux system information"
+web_desc_line="Display Linux system information"
+
+set -uo pipefail # Treat unset variables as an error and fail on pipe errors
+
+# Terminal Colours
+cdef="\x1b[39m" # default colour
+cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
+cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
+clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
+
+function cecho {
+    if [[ "$1" == "-u" ]]; then ul=true; shift; else ul=false; fi
+    color=c$1; shift; echo -e "${!color}$*${cdef}"
+    if $ul; then echo -e "${!color}${*//?/-}${cdef}"; fi
+}
+
+function h1 {
+    txt="$*"
+    echo
+    cecho lmag "$txt"
+    cecho lmag "${txt//?/-}"
+}
+
+usage() {
+    echo "Usage: $0 [options]"
+    echo "Options:"
+    grep "# arg:" $0 | grep -v "grep" | sed 's/^ *//; s/).*# *arg://'
+    exit 1
+}
+
+network=false
+processes=false
+disk=false
+
+# Split combined short arguments (eg -abc) into individual arguments (-a -b -c). Remove = symbols.
+new_args=()
+while [[ "${1:-}" != "" ]]; do
+    if [[ ${1:-} == -* && ${1:-} != --* && ${#1} -gt 2 ]]; then
+        for ((i=1; i<${#1}; i++)); do
+            arg="${1:i:1}"
+            if [[ $arg == "=" ]]; then new_args+=("${1:i+1}"); break; fi
+            new_args+=("-$arg")
+        done
+    else
+        if [[ ${1:-} == --*=* ]]; then new_args+=("${1%%=*}"); new_args+=("${1##*=}")
+        else new_args+=("${1:-}"); fi
+    fi
+    shift
+done
+
+# Process the arguments
+set -- "${new_args[@]}"
+while [[ "${1:-}" != "" ]]; do
+    case "${1:-}" in
+        -d|--disk) # arg: Show disk information.
+            disk=true
+            ;;
+        -h|--help) # arg: Show this help text.
+            usage
+            ;;
+        -n|--network) # arg: Show network information.
+            network=true
+            ;;
+        -p|--processes) # arg: Show process information.
+            processes=true
+            ;;
+        -*|--*)
+            echo "Unknown option: ${1:-}"
+            usage
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift
+done
+
+. /etc/os-release
+cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs)
+
+h1 "Summary"
+cecho lcya "Hostname :${cdef} $(hostname)"
+cecho lcya "OS       :${cdef} $PRETTY_NAME"
+cecho lcya "Kernel   :${cdef} $(uname -r)"
+cecho lcya "Arch     :${cdef} $(uname -m)"
+cecho lcya "Uptime   :${cdef} $(uptime -p)"
+cecho lcya "User     :${cdef} $USER (UID $(id -u))"
+cecho lcya "Shell    :${cdef} $SHELL"
+cecho lcya "CPU      :${cdef} ${cpu:-unknown}"
+cecho lcya "Cores    :${cdef} $(nproc)"
+cecho lcya "RAM      :${cdef} $(free -h | awk '/^Mem/ {print $2}')"
+
+read l1 l5 l15 _ < /proc/loadavg
+cores=$(nproc)
+mood=$(awk -v l="$l1" -v c="$cores" 'BEGIN { print (l > c) ? "OVERLOADED" : "relaxed" }')
+cecho lcya "Load     :${cdef} $l1  $l5  $l15  on $cores cores  ($mood)"
+cecho lcya "RAM      :${cdef} $(free -m | awk '/^Mem/ { printf "%d MB used, %d MB available of %d MB\n", $3, $7, $2 }')"
+
+if $disk; then
+    h1 "Disk Usage"
+    df -h --output=target,pcent -x tmpfs -x devtmpfs -x squashfs | tail -n +2 | sort |
+    while read -r mount pct; do
+        if [[ "$mount" =~ ^/snap/ ]]; then continue; fi
+        n=${pct%\%}
+        printf "%-56s %5s  " "$mount" "$pct" 
+        if   [ "$n" -ge 90 ]; then cecho red "DANGER"
+        elif [ "$n" -ge 75 ]; then cecho yel "Watch"
+        else                       cecho gre "OK"
+        fi
+    done
+fi
+
+if $processes; then
+    h1 "Processes"
+    cecho lgre "Top 5 by CPU"
+    ps -eo pid,user,%cpu,%mem,comm --sort=-%cpu | head -n 6
+    echo
+
+    cecho lgre "Top 5 by memory"
+    ps -eo pid,user,%cpu,%mem,comm --sort=-%mem | head -n 6
+    echo
+
+    cecho lcya "Processes running : ${cdef}$(ps -e --no-headers | wc -l)"
+    cecho lcya "Zombie processes  : ${cdef}$(ps -eo stat --no-headers | grep -c '^Z')"
+fi
+
+if $network; then
+    h1 "Network Information"
+    cecho lcya "Local IP  : ${cdef}$(hostname -I | awk '{print $1}')"
+    cecho lcya "Gateway   : ${cdef}$(ip route | awk '/^default/ {print $3; exit}')"
+    cecho lcya "DNS       : ${cdef}$(awk '/^nameserver/ {print $2}' /etc/resolv.conf | xargs)"
+    cecho lcya "Public IP : ${cdef}$(curl -s --max-time 5 ifconfig.me || echo unavailable)"
+    echo
+
+    cecho lgre "Interfaces:"
+    ip -br addr show | sed "
+        s/^/${clcya}/;
+        s/ / ${cdef}/;
+        s/ UNKNOWN / ${cyel}UNKNOWN${cdef} /;
+        s/ UP / ${cgre}UP${cdef} /;
+        s/ DOWN / ${cred}DOWN${cdef} /;
+    "
+    echo
+
+    cecho lgre "Ports listening for connections:"
+    ss -tuln | awk 'NR > 1 {print $1, $5}' | sort -u | column -t | sed "
+        s/^/${clcya}/;
+        s/ / ${cdef}/;
+    "
+fi
+
+if ! $processes || ! $network || ! $disk; then
+    echo
+    cecho gra "Available options:"
+    if ! $processes; then
+        cecho gra "-p : Show processes information"
+    fi
+    if ! $network; then
+        cecho gra "-n : Show network information"
+    fi
+    if ! $disk; then
+        cecho gra "-d : Show disk usage information"
+    fi
+fi

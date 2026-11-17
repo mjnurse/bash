@@ -11,7 +11,7 @@ web_desc_line="Generates a bash script from a template"
 BASH_HOME="$HOME/mjnurse/bash"
 
 basic_yn=n
-case $1 in
+case ${1:-} in
     -h|--help)
         echo "$help_text"
         exit
@@ -22,27 +22,27 @@ case $1 in
         ;;
 esac
 
-new_file="$1"
+new_file="${1:-}"
 
-if [[ "$1" == "" ]]; then
+if [[ "${1:-}" == "" ]]; then
     echo "Error: no filename provided"
     echo "$help_text"
     exit 1
 fi
 
 if [[ -f "$new_file" ]]; then
-    echo "Error: file: $1 already exists"
+    echo "Error: file: ${1:-} already exists"
     exit 1
 fi
 
 if [[ $basic_yn == y ]]; then
-    cat "$BASH_HOME/bash-basic-script-ex" | sed "s/<<FILENAME>>/$1/" > "$new_file"
+    cat "$BASH_HOME/bash-basic-script-ex" | sed "s/<<FILENAME>>/${1:-}/" > "$new_file"
 else
     cat "$BASH_HOME/bash-script-example" > "$new_file"
 fi
 chmod +x "$new_file"
 
-read -p "Edit $1? c - code, g - gvim, n - No [cgN]: " cgn
+read -p "Edit ${1:-}? c - code, g - gvim, n - No [cgN]: " cgn
 
 case ${cgn^} in
     C)
