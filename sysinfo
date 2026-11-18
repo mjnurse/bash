@@ -2,9 +2,11 @@
 help_text="
 usage: sysinfo
 -h : This help text.
+-a : Show all information.
 -d : Show disk usage information.
 -n : Show network information.
 -p : Show processes information.
+-s : Show security information.
 "
 
 help_line="Display Linux system information"
@@ -38,9 +40,10 @@ usage() {
     exit 1
 }
 
+disk=false
 network=false
 processes=false
-disk=false
+security=false
 
 # Split combined short arguments (eg -abc) into individual arguments (-a -b -c). Remove = symbols.
 new_args=()
@@ -62,6 +65,12 @@ done
 set -- "${new_args[@]}"
 while [[ "${1:-}" != "" ]]; do
     case "${1:-}" in
+        -a|--all) # arg: Show all information.
+            disk=true
+            network=true
+            processes=true
+            security=true
+            ;;
         -d|--disk) # arg: Show disk information.
             disk=true
             ;;
@@ -73,6 +82,9 @@ while [[ "${1:-}" != "" ]]; do
             ;;
         -p|--processes) # arg: Show process information.
             processes=true
+            ;;
+        -s|--security) # arg: Show security information.
+            security=true
             ;;
         -*|--*)
             echo "Unknown option: ${1:-}"
@@ -159,6 +171,38 @@ if $network; then
     "
 fi
 
+if $security; then
+    h1 "Security Information"
+
+    cecho lcya "Accounts with root power (UID 0):"
+    awk -F: '$3 == 0 {print "  " $1}' /etc/passwd
+    echo
+
+    cecho lcya "Users who can actually log in:"
+    grep -Ev 'nologin|false$' /etc/passwd | cut -d: -f1 | xargs | sed 's/^/  /'
+    echo
+
+    cecho lcya "Sudo group members:"
+    getent group sudo wheel | cut -d: -f4 | tr ',' ' ' | xargs | sed 's/^/  /'
+    echo
+
+    cecho lcya "Logged in right now:"
+    who
+    echo
+
+    cecho lcya "Last 5 logins:"
+    last -n 5 | head -n 5
+    echo
+
+    if [ -r /var/log/auth.log ]; then
+    fails=$(grep -c "Failed password" /var/log/auth.log)
+    else
+    fails=$(journalctl -q -u ssh -u sshd 2>/dev/null | grep -c "Failed password")
+    fi
+    cecho lcya "Failed SSH password attempts : ${cdef}$fails"
+    cecho lcya "Files in /etc changed today  : ${cdef}$(find /etc -type f -mtime -1 2>/dev/null | wc -l)"
+fi
+
 if ! $processes || ! $network || ! $disk; then
     echo
     cecho gra "Available options:"
@@ -170,5 +214,8 @@ if ! $processes || ! $network || ! $disk; then
     fi
     if ! $disk; then
         cecho gra "-d : Show disk usage information"
+    fi
+    if ! $security; then
+        cecho gra "-s : Show security information"
     fi
 fi
