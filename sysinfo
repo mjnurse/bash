@@ -9,16 +9,20 @@ usage: sysinfo
 -s : Show security information.
 "
 
-help_line="Display Linux system information"
-web_desc_line="Display Linux system information"
+help_line="Display Linux/macOS system information"
+web_desc_line="Display Linux/macOS system information"
 
 set -uo pipefail # Treat unset variables as an error and fail on pipe errors
 
+os_type="$(uname -s)"
+is_macos=false
+[[ "$os_type" == "Darwin" ]] && is_macos=true
+
 # Terminal Colours
-cdef="\x1b[39m" # default colour
-cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
-cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
-clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
+cdef=$'\x1b[39m' # default colour
+cbla=$'\x1b[30m'; cgra=$'\x1b[90m'; clgra=$'\x1b[37m'; cwhi=$'\x1b[97m'
+cred=$'\x1b[31m'; cgre=$'\x1b[32m'; cyel=$'\x1b[33m'; cblu=$'\x1b[34m'; cmag=$'\x1b[35m'; ccya=$'\x1b[36m';
+clred=$'\x1b[91m'; clgre=$'\x1b[92m'; clyel=$'\x1b[93m'; clblu=$'\x1b[94m'; clmag=$'\x1b[95m'; clcya=$'\x1b[96m'
 
 function cecho {
     if [[ "$1" == "-u" ]]; then ul=true; shift; else ul=false; fi
@@ -36,7 +40,7 @@ function h1 {
 usage() {
     echo "Usage: $0 [options]"
     echo "Options:"
-    grep "# arg:" $0 | grep -v "grep" | sed 's/^ *//; s/).*# *arg://'
+    grep "# arg:" "$0" | grep -v "grep" | sed 's/^ *//; s/).*# *arg://'
     exit 1
 }
 
@@ -62,7 +66,7 @@ while [[ "${1:-}" != "" ]]; do
 done
 
 # Process the arguments
-set -- "${new_args[@]}"
+set -- ${new_args[@]+"${new_args[@]}"}
 while [[ "${1:-}" != "" ]]; do
     case "${1:-}" in
         -a|--all) # arg: Show all information.
@@ -97,34 +101,99 @@ while [[ "${1:-}" != "" ]]; do
     shift
 done
 
-. /etc/os-release
-cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs)
+if $is_macos; then
+    os_name="$(sw_vers -productName) $(sw_vers -productVersion)"
+    cpu=$(sysctl -n machdep.cpu.brand_string 2>/dev/null || true)
+    cores=$(sysctl -n hw.ncpu)
+
+    boot_sec=$(sysctl -n kern.boottime | awk -F'[=,]' '{gsub(/ /, "", $2); print $2}')
+    now_sec=$(date +%s)
+    up_sec=$((now_sec - boot_sec))
+    up_days=$((up_sec / 86400))
+    up_hours=$(((up_sec % 86400) / 3600))
+    up_mins=$(((up_sec % 3600) / 60))
+    up_parts=()
+    (( up_days > 0 )) && up_parts+=("$up_days day$( (( up_days != 1 )) && echo s )")
+    (( up_hours > 0 )) && up_parts+=("$up_hours hour$( (( up_hours != 1 )) && echo s )")
+    (( up_mins > 0 || ${#up_parts[@]} == 0 )) && up_parts+=("$up_mins minute$( (( up_mins != 1 )) && echo s )")
+    uptime_str="up $(IFS=,; echo "${up_parts[*]}")"
+    uptime_str="${uptime_str//,/, }"
+
+    read -r _ l1 l5 l15 _ <<< "$(sysctl -n vm.loadavg)"
+
+    total_bytes=$(sysctl -n hw.memsize)
+    page_size=$(sysctl -n hw.pagesize)
+    ram_total=$(awk -v b="$total_bytes" 'BEGIN { g = b / 1073741824; if (g == int(g)) printf "%dGi", g; else printf "%.1fGi", g }')
+    ram_detail=$(vm_stat | awk -v total_bytes="$total_bytes" -v ps="$page_size" '
+        /Pages wired down:/             { gsub(/\./, "", $NF); wired = $NF }
+        /Pages occupied by compressor:/ { gsub(/\./, "", $NF); compressed = $NF }
+        /Anonymous pages:/              { gsub(/\./, "", $NF); anon = $NF }
+        /Pages purgeable:/              { gsub(/\./, "", $NF); purgeable = $NF }
+        /Pages active:/                 { gsub(/\./, "", $NF); active = $NF }
+        END {
+            total_mb = total_bytes / 1048576
+            used_pages = (anon > 0 ? anon - purgeable : active) + wired + compressed
+            used_mb = (used_pages * ps) / 1048576
+            avail_mb = total_mb - used_mb
+            if (avail_mb < 0) avail_mb = 0
+            printf "%d MB used, %d MB available of %d MB\n", used_mb, avail_mb, total_mb
+        }
+    ')
+else
+    if [[ -r /etc/os-release ]]; then
+        . /etc/os-release
+        os_name="${PRETTY_NAME:-$(uname -s)}"
+    else
+        os_name="$(uname -s)"
+    fi
+    cpu=$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs || true)
+    cores=$(nproc)
+    uptime_str=$(uptime -p)
+    read -r l1 l5 l15 _ < /proc/loadavg
+    ram_total=$(free -h | awk '/^Mem/ {print $2}')
+    ram_detail=$(free -m | awk '/^Mem/ { printf "%d MB used, %d MB available of %d MB\n", $3, $7, $2 }')
+fi
 
 h1 "Summary"
 cecho lcya "Hostname :${cdef} $(hostname)"
-cecho lcya "OS       :${cdef} $PRETTY_NAME"
+cecho lcya "OS       :${cdef} $os_name"
 cecho lcya "Kernel   :${cdef} $(uname -r)"
 cecho lcya "Arch     :${cdef} $(uname -m)"
-cecho lcya "Uptime   :${cdef} $(uptime -p)"
+cecho lcya "Uptime   :${cdef} $uptime_str"
 cecho lcya "User     :${cdef} $USER (UID $(id -u))"
 cecho lcya "Shell    :${cdef} $SHELL"
 cecho lcya "CPU      :${cdef} ${cpu:-unknown}"
-cecho lcya "Cores    :${cdef} $(nproc)"
-cecho lcya "RAM      :${cdef} $(free -h | awk '/^Mem/ {print $2}')"
+cecho lcya "Cores    :${cdef} $cores"
+cecho lcya "RAM      :${cdef} $ram_total"
 
-read l1 l5 l15 _ < /proc/loadavg
-cores=$(nproc)
 mood=$(awk -v l="$l1" -v c="$cores" 'BEGIN { print (l > c) ? "OVERLOADED" : "relaxed" }')
 cecho lcya "Load     :${cdef} $l1  $l5  $l15  on $cores cores  ($mood)"
-cecho lcya "RAM      :${cdef} $(free -m | awk '/^Mem/ { printf "%d MB used, %d MB available of %d MB\n", $3, $7, $2 }')"
+cecho lcya "RAM      :${cdef} $ram_detail"
 
 if $disk; then
     h1 "Disk Usage"
-    df -h --output=target,pcent -x tmpfs -x devtmpfs -x squashfs | tail -n +2 | sort |
-    while read -r mount pct; do
+    if $is_macos; then
+        df -P -T nodevfs,autofs,tmpfs | awk '
+            NR > 1 {
+                mount = ""; pct = ""
+                for (i = 1; i <= NF; i++) {
+                    if (pct == "" && $i ~ /^[0-9]+%$/) {
+                        pct = $i
+                    } else if (pct != "") {
+                        mount = (mount == "" ? $i : mount " " $i)
+                    }
+                }
+                if (pct != "" && mount != "") print mount "\t" pct
+            }
+        ' | sort
+    else
+        df -h --output=target,pcent -x tmpfs -x devtmpfs -x squashfs | tail -n +2 |
+        awk '{ pct = $NF; $NF = ""; sub(/[[:space:]]+$/, ""); print $0 "\t" pct }' | sort
+    fi |
+    while IFS=$'\t' read -r mount pct; do
         if [[ "$mount" =~ ^/snap/ ]]; then continue; fi
         n=${pct%\%}
-        printf "%-56s %5s  " "$mount" "$pct" 
+        printf "%-56s %5s  " "$mount" "$pct"
         if   [ "$n" -ge 90 ]; then cecho red "DANGER"
         elif [ "$n" -ge 75 ]; then cecho yel "Watch"
         else                       cecho gre "OK"
@@ -134,76 +203,216 @@ fi
 
 if $processes; then
     h1 "Processes"
-    cecho lgre "Top 5 by CPU"
-    ps -eo pid,user,%cpu,%mem,comm --sort=-%cpu | head -n 6
-    echo
+    if $is_macos; then
+        cecho lgre "Top 5 by CPU"
+        ps -Arco pid,user,%cpu,%mem,comm | head -n 6
+        echo
 
-    cecho lgre "Top 5 by memory"
-    ps -eo pid,user,%cpu,%mem,comm --sort=-%mem | head -n 6
-    echo
+        cecho lgre "Top 5 by memory"
+        ps -Amco pid,user,%cpu,%mem,comm | head -n 6
+        echo
 
-    cecho lcya "Processes running : ${cdef}$(ps -e --no-headers | wc -l)"
-    cecho lcya "Zombie processes  : ${cdef}$(ps -eo stat --no-headers | grep -c '^Z')"
+        cecho lcya "Processes running : ${cdef}$(ps -A -o pid= | wc -l | xargs)"
+        cecho lcya "Zombie processes  : ${cdef}$(ps -Ao stat= | awk '/^Z/ {c++} END {print c+0}')"
+    else
+        cecho lgre "Top 5 by CPU"
+        ps -eo pid,user,%cpu,%mem,comm --sort=-%cpu | head -n 6
+        echo
+
+        cecho lgre "Top 5 by memory"
+        ps -eo pid,user,%cpu,%mem,comm --sort=-%mem | head -n 6
+        echo
+
+        cecho lcya "Processes running : ${cdef}$(ps -e --no-headers | wc -l)"
+        cecho lcya "Zombie processes  : ${cdef}$(ps -eo stat --no-headers | awk '/^Z/ {c++} END {print c+0}')"
+    fi
 fi
 
 if $network; then
     h1 "Network Information"
-    cecho lcya "Local IP  : ${cdef}$(hostname -I | awk '{print $1}')"
-    cecho lcya "Gateway   : ${cdef}$(ip route | awk '/^default/ {print $3; exit}')"
-    cecho lcya "DNS       : ${cdef}$(awk '/^nameserver/ {print $2}' /etc/resolv.conf | xargs)"
-    cecho lcya "Public IP : ${cdef}$(curl -s --max-time 5 ifconfig.me || echo unavailable)"
-    echo
+    public_ip=$(curl -s --max-time 5 ifconfig.me || true)
+    public_ip="${public_ip:-unavailable}"
 
-    cecho lgre "Interfaces:"
-    ip -br addr show | sed "
-        s/^/${clcya}/;
-        s/ / ${cdef}/;
-        s/ UNKNOWN / ${cyel}UNKNOWN${cdef} /;
-        s/ UP / ${cgre}UP${cdef} /;
-        s/ DOWN / ${cred}DOWN${cdef} /;
-    "
-    echo
+    if $is_macos; then
+        route_info=$(route -n get default 2>/dev/null || true)
+        gateway=$(awk '/gateway:/ {print $2; exit}' <<< "$route_info")
+        default_if=$(awk '/interface:/ {print $2; exit}' <<< "$route_info")
+        local_ip=""
+        if [[ -n "$default_if" ]]; then
+            local_ip=$(ipconfig getifaddr "$default_if" 2>/dev/null || true)
+        fi
+        if [[ -z "$local_ip" ]]; then
+            local_ip=$(ifconfig | awk '/inet / && $2 != "127.0.0.1" {print $2; exit}')
+        fi
+        dns=$(scutil --dns 2>/dev/null | awk '/nameserver\[[0-9]+\]/ {print $3}' | awk '!seen[$0]++' | xargs || true)
+        if [[ -z "$dns" && -r /etc/resolv.conf ]]; then
+            dns=$(awk '/^nameserver/ {print $2}' /etc/resolv.conf | xargs || true)
+        fi
 
-    cecho lgre "Ports listening for connections:"
-    ss -tuln | awk 'NR > 1 {print $1, $5}' | sort -u | column -t | sed "
-        s/^/${clcya}/;
-        s/ / ${cdef}/;
-    "
+        cecho lcya "Local IP  : ${cdef}${local_ip:-unavailable}"
+        cecho lcya "Gateway   : ${cdef}${gateway:-unavailable}"
+        cecho lcya "DNS       : ${cdef}${dns:-unavailable}"
+        cecho lcya "Public IP : ${cdef}$public_ip"
+        echo
+
+        cecho lgre "Interfaces:"
+        ifconfig | awk '
+            function flush_if() {
+                if (iface == "") return
+                if (addrs == "" && status != "UP") return
+                if (status == "") status = (is_up ? "UNKNOWN" : "DOWN")
+                printf "%-16s %-14s %s\n", iface, status, addrs
+            }
+            /^[a-zA-Z0-9._-]+:/ {
+                flush_if()
+                iface = $1; sub(/:$/, "", iface)
+                status = ""; addrs = ""
+                is_up = ($0 ~ /<UP[,>]|,UP[,>]/)
+                next
+            }
+            /^[[:space:]]+status:/ {
+                if ($2 == "active") status = "UP"
+                else status = "DOWN"
+            }
+            /^[[:space:]]+inet / {
+                addrs = (addrs == "" ? $2 : addrs " " $2)
+            }
+            /^[[:space:]]+inet6 / {
+                addr = $2; sub(/%.*/, "", addr)
+                addrs = (addrs == "" ? addr : addrs " " addr)
+            }
+            END { flush_if() }
+        ' | sed "
+            s/^/${clcya}/;
+            s/ / ${cdef}/;
+            s/ UNKNOWN / ${cyel}UNKNOWN${cdef} /;
+            s/ UP / ${cgre}UP${cdef} /;
+            s/ DOWN / ${cred}DOWN${cdef} /;
+        "
+        echo
+
+        cecho lgre "Ports listening for connections:"
+        ports_out=$(
+            netstat -an 2>/dev/null | awk '
+                function fmt_addr(a,   i) {
+                    for (i = length(a); i >= 1; i--) {
+                        if (substr(a, i, 1) == ".") return substr(a, 1, i - 1) ":" substr(a, i + 1)
+                    }
+                    return a
+                }
+                $1 ~ /^tcp/ && $6 == "LISTEN" { print $1, fmt_addr($4) }
+                $1 ~ /^udp/ && $4 != "*.*" && $5 == "*.*" { print $1, fmt_addr($4) }
+            ' | sort -u
+        )
+        if [[ -z "$ports_out" ]] && command -v lsof >/dev/null 2>&1; then
+            ports_out=$(
+                {
+                    lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | awk 'NR > 1 {print tolower($8), $9}'
+                    lsof -nP -iUDP 2>/dev/null | awk 'NR > 1 && $9 != "*:*" && $9 !~ /->/ {print tolower($8), $9}'
+                } | sort -u
+            )
+        fi
+        if [[ -n "$ports_out" ]]; then
+            printf '%s\n' "$ports_out" | column -t | sed "
+                s/^/${clcya}/;
+                s/ / ${cdef}/;
+            "
+        fi
+    else
+        cecho lcya "Local IP  : ${cdef}$(hostname -I | awk '{print $1}')"
+        cecho lcya "Gateway   : ${cdef}$(ip route | awk '/^default/ {print $3; exit}')"
+        cecho lcya "DNS       : ${cdef}$(awk '/^nameserver/ {print $2}' /etc/resolv.conf | xargs)"
+        cecho lcya "Public IP : ${cdef}$public_ip"
+        echo
+
+        cecho lgre "Interfaces:"
+        ip -br addr show | sed "
+            s/^/${clcya}/;
+            s/ / ${cdef}/;
+            s/ UNKNOWN / ${cyel}UNKNOWN${cdef} /;
+            s/ UP / ${cgre}UP${cdef} /;
+            s/ DOWN / ${cred}DOWN${cdef} /;
+        "
+        echo
+
+        cecho lgre "Ports listening for connections:"
+        ss -tuln | awk 'NR > 1 {print $1, $5}' | sort -u | column -t | sed "
+            s/^/${clcya}/;
+            s/ / ${cdef}/;
+        "
+    fi
 fi
 
 if $security; then
     h1 "Security Information"
 
-    cecho lcya "Accounts with root power (UID 0):"
-    awk -F: '$3 == 0 {print "  " $1}' /etc/passwd
-    echo
+    if $is_macos; then
+        cecho lcya "Accounts with root power (UID 0):"
+        uid0=$(dscl . -list /Users UniqueID 2>/dev/null | awk '$2 == 0 {print "  " $1}' || true)
+        if [[ -n "$uid0" ]]; then
+            printf '%s\n' "$uid0"
+        else
+            awk -F: '$3 == 0 {print "  " $1}' /etc/passwd
+        fi
+        echo
 
-    cecho lcya "Users who can actually log in:"
-    grep -Ev 'nologin|false$' /etc/passwd | cut -d: -f1 | xargs | sed 's/^/  /'
-    echo
+        cecho lcya "Users who can actually log in:"
+        login_users=$(dscl . -list /Users UserShell 2>/dev/null | awk '$2 !~ /(nologin|false)$/ {print $1}' | xargs || true)
+        if [[ -n "$login_users" ]]; then
+            printf '  %s\n' "$login_users"
+        else
+            grep -Ev '^#|nologin|false$' /etc/passwd | cut -d: -f1 | xargs | sed 's/^/  /'
+        fi
+        echo
 
-    cecho lcya "Sudo group members:"
-    getent group sudo wheel | cut -d: -f4 | tr ',' ' ' | xargs | sed 's/^/  /'
-    echo
+        cecho lcya "Sudo group members (admin):"
+        admin_members=$(dscl . -read /Groups/admin GroupMembership 2>/dev/null | sed 's/^GroupMembership: *//' || true)
+        printf '  %s\n' "${admin_members:-unavailable}"
+        echo
 
-    cecho lcya "Logged in right now:"
-    who
-    echo
+        cecho lcya "Logged in right now:"
+        who
+        echo
 
-    cecho lcya "Last 5 logins:"
-    last -n 5 | head -n 5
-    echo
+        cecho lcya "Last 5 logins:"
+        last -5 | head -n 5
+        echo
 
-    if [ -r /var/log/auth.log ]; then
-    fails=$(grep -c "Failed password" /var/log/auth.log)
+        fails=$(log show --style syslog --last 24h --predicate 'process == "sshd" AND eventMessage CONTAINS "Failed password"' 2>/dev/null | grep -c "Failed password" || true)
+        cecho lcya "Failed SSH password attempts (24h) : ${cdef}$fails"
+        cecho lcya "Files in /etc changed today        : ${cdef}$(find /etc/ -type f -mtime -1 2>/dev/null | wc -l | xargs)"
     else
-    fails=$(journalctl -q -u ssh -u sshd 2>/dev/null | grep -c "Failed password")
+        cecho lcya "Accounts with root power (UID 0):"
+        awk -F: '$3 == 0 {print "  " $1}' /etc/passwd
+        echo
+
+        cecho lcya "Users who can actually log in:"
+        grep -Ev 'nologin|false$' /etc/passwd | cut -d: -f1 | xargs | sed 's/^/  /'
+        echo
+
+        cecho lcya "Sudo group members:"
+        getent group sudo wheel | cut -d: -f4 | tr ',' ' ' | xargs | sed 's/^/  /'
+        echo
+
+        cecho lcya "Logged in right now:"
+        who
+        echo
+
+        cecho lcya "Last 5 logins:"
+        last -n 5 | head -n 5
+        echo
+
+        if [ -r /var/log/auth.log ]; then
+            fails=$(grep -c "Failed password" /var/log/auth.log || true)
+        else
+            fails=$(journalctl -q -u ssh -u sshd 2>/dev/null | grep -c "Failed password" || true)
+        fi
+        cecho lcya "Failed SSH password attempts : ${cdef}$fails"
+        cecho lcya "Files in /etc changed today  : ${cdef}$(find /etc/ -type f -mtime -1 2>/dev/null | wc -l | xargs)"
     fi
-    cecho lcya "Failed SSH password attempts : ${cdef}$fails"
-    cecho lcya "Files in /etc changed today  : ${cdef}$(find /etc -type f -mtime -1 2>/dev/null | wc -l)"
 fi
 
-if ! $processes || ! $network || ! $disk; then
+if ! $processes || ! $network || ! $disk || ! $security; then
     echo
     cecho gra "Available options:"
     if ! $processes; then
