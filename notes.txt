@@ -1,4 +1,4 @@
-7zip: 7z a -p -mhe=on archive.7z <files_or_folders> # -mhe=on - encrypt file contents and filenames/headers.
+7zip: 7z a -p -mhe=on archive.7z <files_or_folders> # -mhe=on - encrypt file contents and filenames/headers
 
 ES: @esql 'SELECT id.value FROM "mdm-example-entity-store-business-all-data"' # Elasticsearch SQL
 
@@ -21,7 +21,7 @@ awk: awk 'BEGIN {OFS="->"}{ORS="|"}{print $1, $2}' file # Output Field Separator
 awk: awk 'BEGIN {OFS="->"}{ORS="|"}{print $1, $2}' file # Output Field Separator, Output Record Separator (replacing newline)
 awk: awk 'BEGIN {RS=""} {print $0}' file # Treat blank-line-separated paragraphs as records
 awk: awk 'BEGIN {print "head"} {print $0} END {print "---\n" NR}' file # BEGIN/END
-awk: awk 'NR == 1 {mn=mx=$1} $1<mn {mn=$1} $1>=mx {mx=$1} END {print mn, mx}' numfile # Can't use BEGIN as $1 not set for BEGIN.
+awk: awk 'NR == 1 {mn=mx=$1} $1<mn {mn=$1} $1>=mx {mx=$1} END {print mn, mx}' numfile # Can't use BEGIN as $1 not set for BEGIN
 awk: awk 'function sz(v) {if (v < 5) return "S" else if (v >= 9) return "L" else return "M"} {print $1, sz($1)}' file # functions
 awk: awk '{count[$1]++} END {for (x in count) print x, count[x]}' file # count is array indexed by $1 value containing count
 awk: awk '{for (i=1; i<=NF; i++) {print i, $i}}' file # for loop through all fields, every line
@@ -68,16 +68,19 @@ code: CTRL-k v - View markdown and markdown preview side by side
 column: column -J -s"," -N col1,col2 # format csv as JSON with attribute names col1, col2
 column: column -t -s"," -N col1,col2 # format csv as a table with headings col1, col2
 
-date: date -d "1 month ago" +%y-%m-%d # Outputs date 1 month ago in YY-MM-DD format.
+curl: curl -s https://api.ipify.org # find public ip address
+
+date: date -d "1 month ago" +%y-%m-%d # Outputs date 1 month ago in YY-MM-DD format
 
 find: find . -name "*.jar" -exec du -h {} \; # Find the size of jar files
 find: find . -type d -name ".git" # Find directories
 find: find . -type d -name .git -prune -o -type f -name *.py -print # exclude .git directories
 find: find . -type f -mtime +90 # Find files last modified at least 90 days ago
+find: find . -type f -mtime -1 # find files modified in the last day
 
 gcp: gcloud auth login --no-launch-browser
 
-git: git checkout tags/<tag name> # checkout a git tag.
+git: git checkout tags/<tag name> # checkout a git tag
 git: git push --set-upstream origin main # set main as default origin branch
 
 grep: grep -v ... # to invert the match
@@ -99,9 +102,9 @@ jq: jq -r '.field' # Raw output
 
 ln: ln -s <target_file_or_dir> [<link_name>] # -s symbolic link (ie a pointer), hard link is same item two names
 
-postgres: ALTER ROLE <username> SET search_path TO <schema name>; # Permanently alter search_path.
-postgres: SET search_path TO <schema name>; # Alter the schema searched.
-postgres: SHOW search_path; # show the currently search schema.
+postgres: ALTER ROLE <username> SET search_path TO <schema name>; # Permanently alter search_path
+postgres: SET search_path TO <schema name>; # Alter the schema searched
+postgres: SHOW search_path; # show the currently search schema
 postgres: export PGPASSWORD=postgres # Set password
 postgres: export PGPASSWORD=postgres; cat my.sql \| psql -h localhost -U postgres -d postgres # Run my.sql
 
@@ -117,15 +120,15 @@ psql: \l # list databases
 
 sed: s/de/la&da/ # & in replacement is the matched text
 sed: sed -E # Extended - can use 's/a+/b/' rather than 's/a\+/b/'
-sed: sed -E 's/a+/b/' # one or more a's.
+sed: sed -E 's/a+/b/' # one or more a's
 sed: sed -E 's/a{2,5}/b/' # between 2 and 5 a's
 
 sort: sort -h # Sort human readable numbers eg 1.2GB, 9KB
 
 sqlite: REPLACE(PRINTF('%100c', ' '), ' ', 'X') # Generate a string of 100 X's
 
-tar: tar -cvzf filename sourcedir # Create tarball.
-tar: tar -xvzf <filename> # Extract zipped tarball.
+tar: tar -cvzf filename sourcedir # Create tarball
+tar: tar -xvzf <filename> # Extract zipped tarball
 
 tr: tr A-Z a-z # lowercase
 tr: tr a-z A-Z # uppercase

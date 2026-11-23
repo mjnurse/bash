@@ -85,17 +85,16 @@ fi
 
 if [[ $running_elsewhere_yn == y ]]; then
     find . -maxdepth 1 -type f -executable -printf "%f\n" \
-        | xargs grep --exclude="*.pack" --exclude="*.tmp" --exclude="*.bkp" --exclude="*.json" \
+        | xargs grep -I --exclude="*.pack" --exclude="*.tmp" --exclude="*.bkp" --exclude="*.json" \
             --exclude="*.bac" --exclude="mjn*rc" --exclude-dir="*" \
             -s -e "^help_line=" -e "^HELP_LINE=" -e "^-- help_line:" \
         | sed '/README.*.md/d; /^h:/d; /tmp0/d' \
         | sort -f > /tmp/h.l.tmp
 fi
-
 cd "${location:0:-2}"
 
 find . -maxdepth 1 -type f -executable -printf "%f\n" \
-    | xargs grep --exclude="*.pack" --exclude="*.tmp" --exclude="*.bkp" --exclude="*.json" \
+    | xargs grep -I --exclude="*.pack" --exclude="*.tmp" --exclude="*.bkp" --exclude="*.json" \
         --exclude="*.bac" --exclude="mjn*rc" --exclude-dir="*" \
         -s -L -e "^help_line=" -e "^HELP_LINE=" -e "^-- help_line:" \
     | sed '/README.*.md/d; /^h:/d; /tmp0/d' \

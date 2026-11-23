@@ -77,12 +77,12 @@ esac
 echo "OS: $OS"
 
 export PATH="$PATH:."
-export PATH="$PATH:~/mjnurse/bash"
-export PATH="$PATH:~/mjnurse/cli-builder"
-export PATH="$PATH:~/mjnurse/shortcut-keys"
-export PATH="$PATH:~/mjnurse/website-builder"
-export PATH="$PATH:~/mjnurse/todo-done"
-export PATH="$PATH:~/spark"
+export PATH="$PATH:$HOME/mjnurse/bash"
+export PATH="$PATH:$HOME/mjnurse/cli-builder"
+export PATH="$PATH:$HOME/mjnurse/shortcut-keys"
+export PATH="$PATH:$HOME/mjnurse/website-builder"
+export PATH="$PATH:$HOME/mjnurse/todo-done"
+export PATH="$PATH:$HOME/spark"
 
 export QES_HOST=localhost
 export QES_PORT=9200
@@ -106,7 +106,7 @@ export clblu="\x1b[94m"
 export clmag="\x1b[95m"
 export clcya="\x1b[96m"
 
-for f in ~/mjnurse/cli-builder/*.alias; do
+for f in $HOME/mjnurse/cli-builder/*.alias; do
     source "$f"
 done
 
@@ -132,15 +132,15 @@ lmr() {
 }
 
 trash() {
-    # func: trash: Moves files to ~/.trash instead of deleting them
-    mkdir -p ~/.trash
+    # func: trash: Moves files to $HOME/.trash instead of deleting them
+    mkdir -p $HOME/.trash
 
     if [[ "$1" == "" ]]; then
         echo -e "\x1b[92m20 largest:\x1b[39m"
-        ls -alhS ~/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
+        ls -alhS $HOME/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
         echo -e "\x1b[92m20 most recent:\x1b[39m"
-        ls -alht ~/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
-        echo -e "\x1b[92mSize:\x1b[39m $(du -d0 -h ~/.trash 2>/dev/null)"
+        ls -alht $HOME/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
+        echo -e "\x1b[92mSize:\x1b[39m $(du -d0 -h $HOME/.trash 2>/dev/null)"
         echo -e "\x1b[92mOptions:\x1b[39m"
         echo "-f|--force (force delete without confirmation)"
         echo "-i|--interactive (prompt before deleting each file)"
@@ -156,11 +156,11 @@ trash() {
     # Parse -p option
     if [[ "$1" == "-p" || "$1" == "--purge" ]]; then
         shift
-        ls -alh "~/.trash/$1"* 2>/dev/null
+        ls -alh "$HOME/.trash/$1"* 2>/dev/null
         [[ $? -ne 0 ]] && { echo "No matching files found in trash for $1*"; return; }
         read -p "Purge these files? [yN] " answer
         [[ "${answer^^}" == "Y" ]] || { echo "Purge cancelled"; return; }
-        \rm "~/.trash/$1"*
+        \rm "$HOME/.trash/$1"*
         return 1
     fi
 
@@ -189,7 +189,7 @@ trash() {
 
         timestamp=$(date +%Y%m%d_%H%M%S)
         base=$(basename "$f")
-        dest=~/.trash/"$base.$timestamp"
+        dest=$HOME/.trash/"$base.$timestamp"
         mv "$f" "$dest"
         if [[ -d $dest ]]; then
             tar -czf "$dest.tar.gz" "$dest" > /tmp/trash.log 2>&1
@@ -287,12 +287,12 @@ beep() {
 [[ $OS == "Mac" ]] && defaults write -g com.apple.sound.beep.volume -float 0
 
 # Backup important files
-backup -f -d toto-db ~/.todo.db
-backup -f -d notes ~/.notes.txt
+backup -f -d toto-db $HOME/.todo.db
+backup -f -d notes $HOME/.notes.txt
 echo
 
 # Refresh misc notes web page
-n -m > ~/mjnurse/mjnurse-website/notes/miscellaneous_notes.md
+n -m > $HOME/mjnurse/mjnurse-website/notes/miscellaneous_notes.md
 
 # Check if website been built today, if not build it
 build-website -d
@@ -311,8 +311,8 @@ alias cat='batcat'
 alias cf='code "$(fzf)"'
 alias clip='xclip -selection clipboard'
 alias drm='command rm -i'
-alias ebc='code ~/mjnurse/bash/mjn-bashrc' # help_line: Edit the mjn-bashrc file
-alias ebe='code ~/mjnurse/bash/bash-script-example' # help_line: Edit bash-script-example
+alias ebc='code $HOME/mjnurse/bash/mjn-bashrc' # help_line: Edit the mjn-bashrc file
+alias ebe='code $HOME/mjnurse/bash/bash-script-example' # help_line: Edit bash-script-example
 alias fwd='file-watch-do'
 alias gbp='gen-bookmark-page'
 alias gp='g(){ egrep -i "$1" *; }; g' # help_line: Search/egrep for a pattern in the current directory
@@ -328,12 +328,17 @@ alias mdu='sudo du -sh --exclude=c --exclude=mnt/c * | sort -h' # help_line: Dis
 alias mo='ms-office' # help_line: Open file in Microsoft Office
 alias psg='ps -edf | grep'
 alias rm='trash'
-alias sbc='[[ $(uname -s) == Darwin ]] && source ~/.bash_profile || source ~/.bashrc' # help_line: Reload the bash configuration ~/.bashrc
+alias sbc='[[ $(uname -s) == Darwin ]] && source $HOME/.bash_profile || source $HOME/.bashrc' # help_line: Reload the bash configuration $HOME/.bashrc
 alias svg='chafa --scale=20 --size=80x80' # help_line: Display SVG images in the terminal
 alias tf='table-filter'
 alias vf='vi "$(fzf)"'
 alias web='/mnt/c/Windows/System32/cmd.exe /c start' # help_line: Open page in the default browser
 alias word='w(){ grep -iE "$1" /usr/share/dict/words; }; w' # help_line: Search for a word in the system dictionary
+
+# To get a keys code: \cat -v # then remove first 2 char and replace with \e. bind -X to list all bindings
+bind -x '"\eOP": h -n' # help_line: F1 - h
+bind -x '"\eOQ": cls' # F2
+bind -x '"\e[15~": echo; echo PWD: $PWD; ll' # F5
 
 # Append history instead of overwrite
 shopt -s histappend
@@ -346,8 +351,8 @@ HISTSIZE=10000
 HISTFILESIZE=20000
 HISTTIMEFORMAT="%F %T  "
 
-# Display trash size and item count if ~/.trash exists
-[ -d ~/.trash ] && echo -e "\nTrash Size: $(du ~/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls ~/.trash | wc -l) Items"
+# Display trash size and item count if $HOME/.trash exists
+[ -d $HOME/.trash ] && echo -e "\nTrash Size: $(du $HOME/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls $HOME/.trash | wc -l) Items"
 
 export EDITOR=vi
 
