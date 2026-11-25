@@ -100,6 +100,27 @@ function is_merge_in_progress {
     [[ -f "$git_dir/MERGE_HEAD" ]]
 }
 
+function has_unmerged_conflicts {
+    [[ -n "$(git diff --name-only --diff-filter=U 2>/dev/null)" ]]
+}
+
+function find_conflict_marker_files {
+    local status_line xy file
+    while IFS= read -r status_line; do
+        [[ -z "$status_line" ]] && continue
+        xy="${status_line:0:2}"
+        file="${status_line:3}"
+        if [[ "$xy" == R* || "$xy" == C* ]]; then
+            file="${file#* -> }"
+        fi
+        if [[ -f "$file" && ! -L "$file" ]]; then
+            if grep -qE '^<<<<<<< ' "$file" 2>/dev/null && grep -qE '^>>>>>>> ' "$file" 2>/dev/null; then
+                printf '%s\n' "$file"
+            fi
+        fi
+    done < <(git -c core.quotepath=false status --porcelain)
+}
+
 function get_branch {
     git symbolic-ref --short -q HEAD 2>/dev/null
 }
@@ -266,8 +287,15 @@ if [[ "$push_yn" == "n" ]]; then
             if is_rebase_in_progress || is_merge_in_progress; then
                 cecho lred "Rebase/merge in progress in repo: ${clcya}$d"
                 changes_yn=y
+            elif has_unmerged_conflicts; then
+                cecho lred "Unresolved conflicts (e.g. from stash pop) in repo: ${clcya}$d"
+                changes_yn=y
             elif ! git symbolic-ref -q HEAD >/dev/null 2>&1; then
                 cecho lred "Detached HEAD in repo: ${clcya}$d"
+                changes_yn=y
+            fi
+            if [[ -n "$(find_conflict_marker_files)" ]]; then
+                cecho lred "Conflict markers found in modified files in repo: ${clcya}$d"
                 changes_yn=y
             fi
             if [[ -n "$(git status --porcelain)" ]]; then
@@ -385,6 +413,38 @@ for d in "${repos[@]}"; do
             esac
         fi
 
+        # Handle unmerged conflicts outside a merge/rebase (e.g. from 'git stash pop')
+        if has_unmerged_conflicts; then
+            echo
+            cecho lred "------------------------------------------------------------"
+            cecho lred "Repository: $d (UNRESOLVED CONFLICTS)"
+            cecho lred "------------------------------------------------------------"
+            cecho lyel "Unmerged files detected (e.g. from 'git stash pop' or cherry-pick):"
+            git diff --name-only --diff-filter=U
+            echo
+            if [[ "$force_yn" == "y" ]]; then
+                cecho lred "Skipping $d (cannot auto-commit while unresolved conflicts exist)."
+                continue
+            fi
+            printf "%b" "${clyel}Resolve using [U]pstream/HEAD (ours), [T]heirs (stashed/incoming), or [S]kip to resolve manually [utS]? ${cdef}"
+            read -r cf_choice
+            cf_choice="$(to_upper "${cf_choice:-S}")"
+            case "$cf_choice" in
+                U)
+                    resolve_merge_conflicts ours
+                    cecho lgre "Conflicts resolved using HEAD/upstream version. Review and re-run 'clr -p' to commit."
+                    ;;
+                T)
+                    resolve_merge_conflicts theirs
+                    cecho lgre "Conflicts resolved using incoming/stashed version. Review and re-run 'clr -p' to commit."
+                    ;;
+                *)
+                    cecho lyel "Skipping $d. Resolve conflicts manually, then re-run 'clr -p'."
+                    ;;
+            esac
+            continue
+        fi
+
         # Guard against detached HEAD
         if ! git symbolic-ref -q HEAD >/dev/null 2>&1; then
             cecho lred "Repository $d is in detached HEAD state. Checkout a branch (e.g. 'git checkout main') first. Skipping."
@@ -396,6 +456,27 @@ for d in "${repos[@]}"; do
         get_ahead_behind
 
         if [[ "$has_uncommitted" == "y" ]]; then
+            conflict_files="$(find_conflict_marker_files)"
+            if [[ -n "$conflict_files" ]]; then
+                echo
+                cecho lred "------------------------------------------------------------"
+                cecho lred "Repository: $d (CONFLICT MARKERS DETECTED)"
+                cecho lred "------------------------------------------------------------"
+                cecho lred "Git conflict markers (<<<<<<< / >>>>>>>) found in modified file(s):"
+                printf '%s\n' "$conflict_files"
+                if [[ "$force_yn" == "y" ]]; then
+                    cecho lred "Refusing to auto-commit $d while conflict markers are present. Skipping."
+                    continue
+                fi
+                echo
+                printf "%b" "${clyel}Conflict markers detected. Still proceed to commit prompt [yN]? ${cdef}"
+                read -r cm_override
+                if [[ "$(to_upper "${cm_override:-N}")" != "Y" ]]; then
+                    cecho lyel "Skipping $d. Resolve conflict markers first, then re-run 'clr -p'."
+                    continue
+                fi
+            fi
+
             echo
             cecho lmag "------------------------------------------------------------"
             cecho lmag "Repository: $d"
