@@ -22,6 +22,9 @@ DESCRIPTION
 AUTHORS
     mjnurse.github.io - 2020
 "
+
+# set -x
+
 help_line="Tidies filenames and fixes issues such as permission issues with files in the specified directory"
 web_desc_line="Tidies filenames and fixes issues such as permission issues with files in the specified directory"
 
@@ -387,7 +390,8 @@ for f in $(find . -maxdepth 1 -executable); do
    if [[ -f $f && ! -L $f ]]; then
       l1="$(cat "$f" | sed -n '1p')"
       l2="$(cat "$f" | sed -n '2p')"
-      if [[ "$l1" == "#!/usr/bin/env bash" && "${l2:0:10}" != "help_text=" ]]; then
+      l3="$(cat "$f" | sed -n '3p')"
+      if [[ "$l1" == "#!/usr/bin/env bash" && "${l2:0:10}" != "help_text="  && "${l3:0:10}" != "help_text=" ]]; then
          cecho lcya --------------------------------------------------------------------------------
          cecho lcya No header:
          ls -al "$f"
@@ -439,7 +443,7 @@ case $1 in
         ;;
 esac
 ' > $tidytmp
-               tail +2 "$f" >> $tidytmp
+               tail -n +2 "$f" >> $tidytmp
                cp -f $tidytmp "$f"
                ;;
             B)
@@ -453,7 +457,7 @@ usage: <<FILENAME>> [options] <filename>
 help_line="tbc"
 web_desc_line="tbc"
 ' > $tidytmp
-               tail +2 "$f" >> $tidytmp
+               tail -n +2 "$f" >> $tidytmp
                cp -f $tidytmp "$f"
                ;;            
             V)

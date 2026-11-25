@@ -4,6 +4,7 @@ usage: lo [options] <filename-regex>
 -h|--help : This help text.
 -a|--all : Search full pathname instead of just filenames.
 -m|--max <num> : Maximum number of matches to display (default: 20).
+-u|--update : Update the locate database.
 "
 
 help_line="Locate files using bash locate"
@@ -11,35 +12,158 @@ web_desc_line="Locate files using bash locate"
 
 set -uo pipefail # Treat unset variables as an error and fail on pipe errors
 
+is_macos=false
+[[ "$(uname -s)" == "Darwin" ]] && is_macos=true
+
 # Terminal Colours
-cdef="\x1b[39m" # default colour
-cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
-cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
-clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
+cdef=$'\x1b[39m' # default colour
+cbla=$'\x1b[30m'; cgra=$'\x1b[90m'; clgra=$'\x1b[37m'; cwhi=$'\x1b[97m'
+cred=$'\x1b[31m'; cgre=$'\x1b[32m'; cyel=$'\x1b[33m'; cblu=$'\x1b[34m'; cmag=$'\x1b[35m'; ccya=$'\x1b[36m'
+clred=$'\x1b[91m'; clgre=$'\x1b[92m'; clyel=$'\x1b[93m'; clblu=$'\x1b[94m'; clmag=$'\x1b[95m'; clcya=$'\x1b[96m'
+
+locate_cmd=""
+updatedb_cmd=""
+default_db=""
+
+find_locate_tools() {
+    if "$is_macos"; then
+        if [[ -x /opt/homebrew/opt/findutils/libexec/gnubin/locate ]]; then
+            locate_cmd="/opt/homebrew/opt/findutils/libexec/gnubin/locate"
+            updatedb_cmd="/opt/homebrew/opt/findutils/libexec/gnubin/updatedb"
+            default_db="/opt/homebrew/var/locate/locatedb"
+        elif [[ -x /usr/local/opt/findutils/libexec/gnubin/locate ]]; then
+            locate_cmd="/usr/local/opt/findutils/libexec/gnubin/locate"
+            updatedb_cmd="/usr/local/opt/findutils/libexec/gnubin/updatedb"
+            default_db="/usr/local/var/locate/locatedb"
+        elif command -v glocate &>/dev/null; then
+            locate_cmd="$(command -v glocate)"
+            updatedb_cmd="$(command -v gupdatedb 2>/dev/null || true)"
+            [[ "$locate_cmd" == /opt/homebrew/* ]] && default_db="/opt/homebrew/var/locate/locatedb"
+            [[ "$locate_cmd" == /usr/local/* ]] && default_db="/usr/local/var/locate/locatedb"
+        elif locate --version 2>/dev/null | grep -q GNU; then
+            locate_cmd="$(command -v locate)"
+            updatedb_cmd="$(command -v updatedb 2>/dev/null || true)"
+        fi
+    else
+        locate_cmd="$(command -v locate 2>/dev/null || true)"
+        updatedb_cmd="$(command -v updatedb 2>/dev/null || true)"
+    fi
+}
+
+update_db() {
+    if [[ -z "$updatedb_cmd" ]]; then
+        if "$is_macos"; then
+            echo "GNU updatedb not found. Install it with: brew install findutils" >&2
+        else
+            echo "updatedb not found. Install plocate or mlocate." >&2
+        fi
+        exit 1
+    fi
+
+    if "$is_macos"; then
+        local db_path="${LOCATE_PATH:-}"
+        db_path="${db_path%%:*}"
+        db_path="${db_path:-$default_db}"
+        local prune_paths="/System/Volumes/Data /Volumes /dev /tmp /private/tmp /private/var/tmp /private/var/vm /System /Library/Caches /Library/Developer $HOME/Library/Caches $HOME/.Trash"
+        mkdir -p "$(dirname "$db_path")"
+        printf '%s\n' "${clcya}Updating locate database: ${db_path}${cdef}"
+        local err_file
+        err_file="$(mktemp)"
+        if "$updatedb_cmd" --localpaths="/" --prunepaths="$prune_paths" --output="$db_path" 2>"$err_file"; then
+            rm -f "$err_file"
+            printf '%s\n' "${clgre}Locate database updated.${cdef}"
+        else
+            cat "$err_file" >&2
+            rm -f "$err_file"
+            printf '%s\n' "${clred}Failed to update locate database.${cdef}" >&2
+            exit 1
+        fi
+    else
+        printf '%s\n' "${clcya}Updating locate database...${cdef}"
+        sudo "$updatedb_cmd"
+    fi
+}
+
+copy_to_clipboard() {
+    if command -v pbcopy &>/dev/null; then
+        printf '%s' "$1" | pbcopy
+    elif command -v xclip &>/dev/null; then
+        printf '%s' "$1" | xclip -selection clipboard
+    elif command -v wl-copy &>/dev/null; then
+        printf '%s' "$1" | wl-copy
+    elif command -v xsel &>/dev/null; then
+        printf '%s' "$1" | xsel --clipboard --input
+    else
+        echo "No clipboard tool found (pbcopy, xclip, wl-copy, xsel)" >&2
+        return 1
+    fi
+}
 
 max_matches=20
 search_all=false
-case ${1:-} in
-    -h|--help)
-        echo "$help_text"
-        exit
-        ;;
-    -a|--all)
-        search_all=true
-        shift
-        ;;
-    -m|--max)
-        if [[ -z "$2" || ! "$2" =~ ^[0-9]+$ ]]; then
-            echo "Invalid max value: $2" >&2
+do_update=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            echo "$help_text"
+            exit 0
+            ;;
+        -a|--all)
+            search_all=true
+            shift
+            ;;
+        -m|--max)
+            if [[ -z "${2:-}" || ! "${2:-}" =~ ^[0-9]+$ ]]; then
+                echo "Invalid max value: ${2:-}" >&2
+                exit 1
+            fi
+            max_matches="$2"
+            shift 2
+            ;;
+        -u|--update)
+            do_update=true
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            echo "Unknown option: $1" >&2
+            echo "$help_text" >&2
             exit 1
-        fi
-        max_matches="$2"
-        shift 2
-        ;;
-esac
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+find_locate_tools
+
+if "$do_update"; then
+    update_db
+    [[ "${1:-}" == "" ]] && exit 0
+fi
 
 if [[ "${1:-}" == "" ]]; then
     echo "$help_text"
+    exit 1
+fi
+
+if [[ -z "$locate_cmd" ]]; then
+    if "$is_macos"; then
+        echo "GNU locate not found. Install it with: brew install findutils" >&2
+    else
+        echo "locate not found. Install plocate or mlocate." >&2
+    fi
+    exit 1
+fi
+
+if "$is_macos" && [[ -z "${LOCATE_PATH:-}" && -n "$default_db" && ! -s "$default_db" ]]; then
+    printf '%s\n' "${clred}Locate database not found: ${default_db}${cdef}" >&2
+    printf '%s\n' "${cyel}Run 'lo -u' to build it.${cdef}" >&2
     exit 1
 fi
 
@@ -55,19 +179,20 @@ else
 fi
 
 if [[ "${search_all}" == true ]]; then
-    res="$(locate -r "$s")"
-    grep_cmd=(grep --color=always "$h")
+    res="$("$locate_cmd" -r "$s" || true)"
     msg="Searched for paths/files matching regex: $s"
 else
-    res="$(locate -br "$s")"
-    grep_cmd=(grep -P --color=always "$h(?!.*$h)")
+    res="$("$locate_cmd" -br "$s" || true)"
     msg="Searched for files matching regex: $s"
 fi
 
-mapfile -t matches < <(printf '%s\n' "$res" | sed '/^$/d')
+matches=()
+while IFS= read -r m; do
+    [[ -n "$m" ]] && matches+=("$m")
+done <<< "$res"
 
 if [[ ${#matches[@]} -eq 0 ]]; then
-    echo -e "\n${cyel}${msg}${cdef}"
+    printf '\n%s\n' "${cyel}${msg}${cdef}"
     exit 0
 fi
 
@@ -77,28 +202,49 @@ echo
 [[ ${#matches[@]} -gt 1 ]] && multi=true
 for i in "${!matches[@]}"; do
     if (( i >= max_matches )); then
-        echo -e  "\n${clcya}$max_matches of ${#matches[@]} matches shown.${cdef}" >&2
+        printf '\n%s\n' "${clcya}$max_matches of ${#matches[@]} matches shown.${cdef}" >&2
         break
     fi
-    line="$(printf '%s\n' "${matches[$i]}" | "${grep_cmd[@]}")"
-    if [[ -d "${matches[$i]}" ]]; then
+    match="${matches[$i]}"
+    if [[ "${search_all}" == true ]]; then
+        if [[ -n "$h" ]]; then
+            line="$(printf '%s\n' "$match" | grep --color=always -- "$h" || printf '%s' "$match")"
+        else
+            line="$match"
+        fi
+    else
+        if [[ "$match" == */* ]]; then
+            dir="${match%/*}/"
+            base="${match##*/}"
+        else
+            dir=""
+            base="$match"
+        fi
+        if [[ -n "$h" ]]; then
+            hl_base="$(printf '%s\n' "$base" | grep --color=always -- "$h" || printf '%s' "$base")"
+        else
+            hl_base="$base"
+        fi
+        line="${dir}${hl_base}"
+    fi
+    if [[ -d "$match" ]]; then
         line="${line}/ ${clblu}[dir]${cdef}"
     fi
     if [[ "$multi" == true ]]; then
-        printf '%3d) %b\n' "$((i + 1))" "$line"
+        printf '%3d) %s\n' "$((i + 1))" "$line"
     else
-        printf '%b\n' "$line"
+        printf '%s\n' "$line"
     fi
 done
-echo -e "\n${cyel}${msg}${cdef}"
+printf '\n%s\n' "${cyel}${msg}${cdef}"
 
 if [[ "$multi" == true ]]; then
-    printf "${clmag}Select: # copy name, v# view (cat/ls), e# edit in code, i# edit in vim (Enter to quit): ${cdef}"
+    printf '%s' "${clmag}Select: # copy name, v# view (cat/ls), e# edit in code, i# edit in vim (Enter to quit): ${cdef}"
 else
-    printf "${clmag}Enter copy name, v view (cat/ls), e edit in code, i edit in vim (q to quit): ${cdef}"
+    printf '%s' "${clmag}Enter copy name, v view (cat/ls), e edit in code, i edit in vim (q to quit): ${cdef}"
 fi
 read -r choice </dev/tty
-echo -ne "${cdef}"
+printf '%s' "${cdef}"
 
 [[ -z "$choice" && "$multi" == true ]] && exit 0
 [[ "$choice" == "q" ]] && exit 0
@@ -119,7 +265,7 @@ if [[ "$choice" =~ ^([vei]?)([0-9]*)$ ]]; then
     fi
     file="${matches[$((n - 1))]}"
     case "$action" in
-        "") printf '%s' "$file" | xclip -selection clipboard ;;
+        "") copy_to_clipboard "$file" ;;
         v)  if [[ -d "$file" ]]; then ls -la --color=auto "$file"; else cat "$file"; fi ;;
         e)  code "$file" ;;
         i)  vim "$file" ;;

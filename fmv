@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+help_text="
+usage: <<FILENAME>> [options] <filename>
+-h : This help text.
+"
+
+help_line="tbc"
+web_desc_line="tbc"
+
 
 if [ "$#" -lt 2 ]; then
     echo "Usage: $0 <file_selector> <search_for> <replace_with>"

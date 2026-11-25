@@ -9,11 +9,11 @@ USAGE
 
 OPTIONS
     -p|--push
-        Interactively commit, rebase, and push changes for each repository
-        with uncommitted or unpushed changes.
+        Interactively commit, merge remote changes, and push for each repository
+        with uncommitted, unpushed, or unpulled changes.
 
     -f|--force
-        With -p, commit (with default message 'Various') and push without
+        With -p, commit (with default message 'Various'), merge, and push without
         prompting for confirmation unless a conflict occurs.
 
     -h|--help
@@ -21,10 +21,10 @@ OPTIONS
 
 DESCRIPTION
     Checks a predefined list of local git repositories for uncommitted
-    changes, unpushed commits, or unfinished rebases/merges. When run
+    changes, unpushed/unpulled commits, or unfinished rebases/merges. When run
     without options, displays a summary of repositories needing attention.
     With the -p option, iterates through each repository and prompts to
-    commit, pull --rebase, and push.
+    commit, pull (merge), and push. Works on both macOS and Ubuntu WSL.
 
 AUTHOR
     mjnurse.github.io - 2026
@@ -34,17 +34,21 @@ web_desc_line="Check Local Repositories for uncommitted changes"
 
 # set -x
 
-# Terminal Colours
-cdef="\e[39m" # default colour
-cbla="\e[30m"; cgra="\e[90m"; clgra="\e[37m"; cwhi="\e[97m"
-cred="\e[31m"; cgre="\e[32m"; cyel="\e[33m" 
-cblu="\e[34m"; cmag="\e[35m"; ccya="\e[36m";
-clred="\e[91m"; clgre="\e[92m"; clyel="\e[93m"
-clblu="\e[94m"; clmag="\e[95m"; clcya="\e[96m"
+# Terminal Colours (POSIX-compatible \033 escapes for macOS and Linux/WSL)
+cdef="\033[39m" # default colour
+cbla="\033[30m"; cgra="\033[90m"; clgra="\033[37m"; cwhi="\033[97m"
+cred="\033[31m"; cgre="\033[32m"; cyel="\033[33m"
+cblu="\033[34m"; cmag="\033[35m"; ccya="\033[36m"
+clred="\033[91m"; clgre="\033[92m"; clyel="\033[93m"
+clblu="\033[94m"; clmag="\033[95m"; clcya="\033[96m"
 
 function cecho {
-    color=c$1; shift
-    echo -e $"${!color}$*${cdef}"
+    local color="c$1"; shift
+    printf '%b\n' "${!color}$*${cdef}"
+}
+
+function to_upper {
+    printf '%s' "$1" | tr '[:lower:]' '[:upper:]'
 }
 
 try="Try ${0##*/} -h for more information"
@@ -76,12 +80,12 @@ while [[ "$1" != "" ]]; do
 done
 
 repos=(
-    ~/mjnurse/bash
-    ~/mjnurse/python
-    ~/mjnurse/cli-builder
-    ~/mjnurse/website-builder
-    ~/mjnurse/mjnurse-website
-    ~/mjnurse/mjnurse.github.io
+    "$HOME/mjnurse/bash"
+    "$HOME/mjnurse/python"
+    "$HOME/mjnurse/cli-builder"
+    "$HOME/mjnurse/website-builder"
+    "$HOME/mjnurse/mjnurse-website"
+    "$HOME/mjnurse/mjnurse.github.io"
 )
 
 function is_rebase_in_progress {
@@ -96,66 +100,64 @@ function is_merge_in_progress {
     [[ -f "$git_dir/MERGE_HEAD" ]]
 }
 
+function get_branch {
+    git symbolic-ref --short -q HEAD 2>/dev/null
+}
+
 function get_ahead_behind {
-    # Sets global ahead_count and behind_count relative to upstream (if configured)
+    # Sets global ahead_count, behind_count, and upstream_ref
     ahead_count=0
     behind_count=0
+    upstream_ref=""
+
     if git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
+        upstream_ref="@{u}"
+    else
+        local branch
+        branch="$(get_branch)"
+        if [[ -n "$branch" ]] && git rev-parse --verify "origin/$branch" >/dev/null 2>&1; then
+            upstream_ref="origin/$branch"
+        fi
+    fi
+
+    if [[ -n "$upstream_ref" ]]; then
         local counts
-        counts="$(git rev-list --left-right --count @{u}...HEAD 2>/dev/null)"
+        counts="$(git rev-list --left-right --count "${upstream_ref}...HEAD" 2>/dev/null)"
         if [[ -n "$counts" ]]; then
             read -r behind_count ahead_count <<< "$counts"
         fi
     fi
 }
 
-function pull_rebase_and_push {
-    local repo_dir="$1"
-
-    get_ahead_behind
-    if (( behind_count > 0 )); then
-        cecho lcya "Pulling $behind_count remote commit(s) with rebase..."
-        if ! git pull --rebase; then
-            cecho lred "Rebase conflict encountered in $repo_dir!"
-            git status --short
-            local res=""
-            while [[ ! "${res^}" =~ ^[OTA]$ ]]; do
-                echo
-                printf "${clyel}Resolve conflict using [O]urs (local), [T]heirs (remote), or [A]bort rebase [otA]? ${cdef}"
-                read -r res
-                res="${res:-A}"
-            done
-            case "${res^}" in
-                O)
-                    git diff --name-only --diff-filter=U | while IFS= read -r file; do
-                        [[ -n "$file" ]] && git checkout --ours -- "$file" && git add -- "$file"
-                    done
-                    if ! GIT_EDITOR=true git rebase --continue; then
-                        cecho lred "Failed to continue rebase automatically. Aborting rebase."
-                        git rebase --abort
-                        return 1
+function resolve_merge_conflicts {
+    local side="$1" # "ours" (local) or "theirs" (remote)
+    local status_line xy file
+    while IFS= read -r status_line; do
+        [[ -z "$status_line" ]] && continue
+        xy="${status_line:0:2}"
+        file="${status_line:3}"
+        case "$xy" in
+            UU|AA|DD|AU|UA|DU|UD)
+                if [[ "$side" == "ours" ]]; then
+                    if [[ "$xy" == "DU" || "$xy" == "DD" ]]; then
+                        git rm -f -- "$file"
+                    else
+                        git checkout --ours -- "$file" && git add -- "$file"
                     fi
-                    ;;
-                T)
-                    git diff --name-only --diff-filter=U | while IFS= read -r file; do
-                        [[ -n "$file" ]] && git checkout --theirs -- "$file" && git add -- "$file"
-                    done
-                    if ! GIT_EDITOR=true git rebase --continue; then
-                        cecho lred "Failed to continue rebase automatically. Aborting rebase."
-                        git rebase --abort
-                        return 1
+                else
+                    if [[ "$xy" == "UD" || "$xy" == "DD" ]]; then
+                        git rm -f -- "$file"
+                    else
+                        git checkout --theirs -- "$file" && git add -- "$file"
                     fi
-                    ;;
-                A)
-                    git rebase --abort
-                    cecho lyel "Rebase aborted for $repo_dir (local commit preserved on branch)."
-                    return 1
-                    ;;
-            esac
-        fi
-    fi
+                fi
+                ;;
+        esac
+    done < <(git -c core.quotepath=false status --porcelain)
+}
 
-    # Warn if remote origin uses HTTPS instead of SSH on github.com
+function ensure_ssh_remote {
+    # Switch GitHub HTTPS origin to SSH so pushing works consistently across Mac and WSL
     local remote_url
     remote_url="$(git remote get-url origin 2>/dev/null)"
     if [[ "$remote_url" =~ ^https://github\.com/(.+)$ ]]; then
@@ -164,20 +166,99 @@ function pull_rebase_and_push {
         cecho lyel "Note: origin uses HTTPS ($remote_url). Switching to SSH ($ssh_url)..."
         git remote set-url origin "$ssh_url"
     fi
+}
 
-    cecho lcya "Pushing to remote..."
-    if git push; then
-        cecho lgre "Successfully pushed $repo_dir."
+function merge_and_push {
+    local repo_dir="$1"
+    local branch
+    branch="$(get_branch)"
+
+    ensure_ssh_remote
+    get_ahead_behind
+
+    if (( behind_count > 0 )); then
+        cecho lcya "Merging $behind_count remote commit(s)..."
+        local pull_ok=n
+        if [[ "$upstream_ref" == "@{u}" ]]; then
+            git pull --no-rebase --no-edit && pull_ok=y
+        elif [[ -n "$branch" ]]; then
+            git pull --no-rebase --no-edit origin "$branch" && pull_ok=y
+        fi
+
+        if [[ "$pull_ok" == "n" ]]; then
+            if is_merge_in_progress; then
+                cecho lred "Merge conflict encountered in $repo_dir!"
+                git status --short
+                local res=""
+                local res_up=""
+                while [[ "$res_up" != "L" && "$res_up" != "R" && "$res_up" != "M" && "$res_up" != "A" ]]; do
+                    echo
+                    printf "%b" "${clyel}Resolve conflict using [L]ocal (this machine), [R]emote (GitHub), [M]anual, or [A]bort merge [lrmA]? ${cdef}"
+                    read -r res
+                    res="${res:-A}"
+                    res_up="$(to_upper "$res")"
+                done
+                case "$res_up" in
+                    L)
+                        resolve_merge_conflicts ours
+                        if ! git commit --no-edit; then
+                            cecho lred "Failed to commit merge resolution. Aborting merge."
+                            git merge --abort
+                            return 1
+                        fi
+                        cecho lgre "Merge conflict resolved using local version."
+                        ;;
+                    R)
+                        resolve_merge_conflicts theirs
+                        if ! git commit --no-edit; then
+                            cecho lred "Failed to commit merge resolution. Aborting merge."
+                            git merge --abort
+                            return 1
+                        fi
+                        cecho lgre "Merge conflict resolved using remote version."
+                        ;;
+                    M)
+                        cecho lyel "Leaving merge conflict in $repo_dir for manual resolution. Re-run 'clr -p' once resolved."
+                        return 1
+                        ;;
+                    A)
+                        git merge --abort
+                        cecho lyel "Merge aborted for $repo_dir (local commits preserved on branch)."
+                        return 1
+                        ;;
+                esac
+            else
+                cecho lred "Failed to pull changes in $repo_dir."
+                return 1
+            fi
+        fi
+    fi
+
+    get_ahead_behind
+    if (( ahead_count > 0 )) || [[ -z "$upstream_ref" ]]; then
+        cecho lcya "Pushing to remote..."
+        local push_ok=n
+        if [[ "$upstream_ref" == "@{u}" ]]; then
+            git push && push_ok=y
+        elif [[ -n "$branch" ]]; then
+            git push -u origin "$branch" && push_ok=y
+        fi
+
+        if [[ "$push_ok" == "y" ]]; then
+            cecho lgre "Successfully pushed $repo_dir."
+        else
+            cecho lred "Failed to push $repo_dir!"
+            return 1
+        fi
     else
-        cecho lred "Failed to push $repo_dir!"
-        return 1
+        cecho lgre "$repo_dir is up to date with remote."
     fi
 }
 
 echo
 cecho lgre "Checking local git repositories for uncommitted changes..."
 
-if [[ "$push_yn" == "n" ]]; then 
+if [[ "$push_yn" == "n" ]]; then
     changes_yn=n
     for d in "${repos[@]}"; do
         if [[ -d "$d" ]]; then
@@ -194,15 +275,21 @@ if [[ "$push_yn" == "n" ]]; then
                 changes_yn=y
             fi
             get_ahead_behind
-            if (( ahead_count > 0 )); then
+            if (( ahead_count > 0 && behind_count > 0 )); then
+                cecho lyel "Diverged ($ahead_count ahead, $behind_count behind) in repo: ${clcya}$d"
+                changes_yn=y
+            elif (( ahead_count > 0 )); then
                 cecho lyel "Unpushed commits ($ahead_count ahead) in repo: ${clcya}$d"
+                changes_yn=y
+            elif (( behind_count > 0 )); then
+                cecho lyel "Unpulled remote commits ($behind_count behind) in repo: ${clcya}$d"
                 changes_yn=y
             fi
         fi
     done
     if [[ "$changes_yn" == "y" ]]; then
         echo
-        cecho lmag "Run clr -p to selectively commit/push changes."
+        cecho lmag "Run clr -p to selectively commit/merge/push changes."
         exit 1
     fi
     exit 0
@@ -212,9 +299,12 @@ for d in "${repos[@]}"; do
     if [[ -d "$d" ]]; then
         cd "$d" || continue
         echo "Checking repository: $d"
-        git fetch --quiet
+        if ! git fetch --quiet; then
+            cecho lred "Failed to fetch remote for $d (check network/auth). Skipping."
+            continue
+        fi
 
-        # Handle unfinished rebase or merge first
+        # Handle unfinished rebase first
         if is_rebase_in_progress; then
             echo
             cecho lred "------------------------------------------------------------"
@@ -222,17 +312,17 @@ for d in "${repos[@]}"; do
             cecho lred "------------------------------------------------------------"
             git status
             echo
-            printf "${clyel}Continue rebase (C), abort rebase (A), or skip (S) [caS]? ${cdef}"
+            printf "%b" "${clyel}Continue rebase (C), abort rebase (A), or skip (S) [caS]? ${cdef}"
             read -r rb_choice
-            rb_choice="${rb_choice:-S}"
-            if [[ "${rb_choice^}" == "A" ]]; then
+            rb_choice="$(to_upper "${rb_choice:-S}")"
+            if [[ "$rb_choice" == "A" ]]; then
                 git rebase --abort
                 cecho lyel "Rebase aborted."
-            elif [[ "${rb_choice^}" == "C" ]]; then
-                git add .
+            elif [[ "$rb_choice" == "C" ]]; then
+                git add -A
                 if GIT_EDITOR=true git rebase --continue; then
                     cecho lgre "Rebase completed."
-                    pull_rebase_and_push "$d"
+                    merge_and_push "$d"
                 else
                     cecho lred "Could not complete rebase automatically."
                 fi
@@ -240,6 +330,65 @@ for d in "${repos[@]}"; do
             else
                 continue
             fi
+        fi
+
+        # Handle unfinished merge
+        if is_merge_in_progress; then
+            echo
+            cecho lred "------------------------------------------------------------"
+            cecho lred "Repository: $d (MERGE IN PROGRESS)"
+            cecho lred "------------------------------------------------------------"
+            git status
+            echo
+            printf "%b" "${clyel}Continue merge (C), use [L]ocal, use [R]emote, [A]bort merge, or [S]kip [clraS]? ${cdef}"
+            read -r mg_choice
+            mg_choice="$(to_upper "${mg_choice:-S}")"
+            case "$mg_choice" in
+                A)
+                    git merge --abort
+                    cecho lyel "Merge aborted."
+                    ;;
+                L)
+                    resolve_merge_conflicts ours
+                    if git commit --no-edit; then
+                        cecho lgre "Merge completed using local version."
+                        merge_and_push "$d"
+                    else
+                        cecho lred "Could not complete merge automatically."
+                    fi
+                    continue
+                    ;;
+                R)
+                    resolve_merge_conflicts theirs
+                    if git commit --no-edit; then
+                        cecho lgre "Merge completed using remote version."
+                        merge_and_push "$d"
+                    else
+                        cecho lred "Could not complete merge automatically."
+                    fi
+                    continue
+                    ;;
+                C)
+                    if [[ -n "$(git diff --name-only --diff-filter=U)" ]]; then
+                        cecho lred "Unresolved conflicts still exist in $d. Resolve them first or choose L/R/A."
+                    elif git commit --no-edit; then
+                        cecho lgre "Merge completed."
+                        merge_and_push "$d"
+                    else
+                        cecho lred "Could not complete merge."
+                    fi
+                    continue
+                    ;;
+                *)
+                    continue
+                    ;;
+            esac
+        fi
+
+        # Guard against detached HEAD
+        if ! git symbolic-ref -q HEAD >/dev/null 2>&1; then
+            cecho lred "Repository $d is in detached HEAD state. Checkout a branch (e.g. 'git checkout main') first. Skipping."
+            continue
         fi
 
         has_uncommitted=n
@@ -260,25 +409,27 @@ for d in "${repos[@]}"; do
                 yn=""
             fi
 
-            while [[ "${yn^}" != "Y" && "${yn^}" != "N" ]]; do
+            yn_up="$(to_upper "$yn")"
+            while [[ "$yn_up" != "Y" && "$yn_up" != "N" ]]; do
                 echo
-                printf "${clcya}Commit and Push changes with comment Various (YN), custom comment (C) or view diff (D) [cdyN]? ${cdef}"
+                printf "%b" "${clcya}Commit and Sync changes with comment Various (YN), custom comment (C) or view diff (D) [cdyN]? ${cdef}"
                 read -r yn
                 yn="${yn:-N}"
+                yn_up="$(to_upper "$yn")"
 
-                case "${yn^}" in
+                case "$yn_up" in
                     D)
                         git diff
                         ;;
                     C)
-                        printf "${clcya}Commit Message (blank defaults to 'Various'): ${cdef}" 
+                        printf "%b" "${clcya}Commit Message (blank defaults to 'Various'): ${cdef}"
                         read -r cm
                         cm="${cm:-Various}"
-                        yn="Y"
+                        yn_up="Y"
                         ;;
                     Y)
                         cm="Various"
-                        echo -e $"${clcya}Using default commit message:${cdef} Various"
+                        printf "%b\n" "${clcya}Using default commit message:${cdef} Various"
                         ;;
                     N)
                         ;;
@@ -288,10 +439,10 @@ for d in "${repos[@]}"; do
                 esac
             done
 
-            if [[ "${yn^}" == "Y" ]]; then
-                git add .
+            if [[ "$yn_up" == "Y" ]]; then
+                git add -A
                 if git commit -m "$cm"; then
-                    pull_rebase_and_push "$d"
+                    merge_and_push "$d"
                 else
                     cecho lred "Commit failed in $d."
                 fi
@@ -306,12 +457,12 @@ for d in "${repos[@]}"; do
                 sync_yn="Y"
             else
                 echo
-                printf "${clcya}Sync (pull --rebase / push) this repository with origin [yN]? ${cdef}"
+                printf "%b" "${clcya}Sync (merge/push) this repository with origin [yN]? ${cdef}"
                 read -r sync_yn
-                sync_yn="${sync_yn:-N}"
+                sync_yn="$(to_upper "${sync_yn:-N}")"
             fi
-            if [[ "${sync_yn^}" == "Y" ]]; then
-                pull_rebase_and_push "$d"
+            if [[ "$sync_yn" == "Y" ]]; then
+                merge_and_push "$d"
             fi
         fi
     fi

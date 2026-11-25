@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+help_text="
+usage: <<FILENAME>> [options] <filename>
+-h : This help text.
+"
+
+help_line="tbc"
+web_desc_line="tbc"
+
 
 # for f in c_*/*_notes.md; do awk -v dt="$(date -d '1 month ago' +%y-%m-%d)" 'NR==1 || ($1 ~ /[0-9]{2}-[0-9]{2}-[0-9]{2}/ && $1 > dt) {print FNR, $0 "\n"}' $f; done
 

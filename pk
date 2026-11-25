@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+help_text="
+usage: <<FILENAME>> [options] <filename>
+-h : This help text.
+"
+
+help_line="tbc"
+web_desc_line="tbc"
+
 
 help_line="Search for processes matching provided name with option to kill"
 

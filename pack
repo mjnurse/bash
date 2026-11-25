@@ -76,10 +76,10 @@ else
 fi
 
 if [[ -f $pack_name && $force_yn == n ]]; then
-    read -p "File '${pack_name}' already exists.  Overwrite [yN]? " yn
-    if [[ "${yn,,}" != y ]]; then
+    read -r -p "File '${pack_name}' already exists.  Overwrite [yN]? " yn
+    if [[ "$(printf '%s' "$yn" | tr '[:upper:]' '[:lower:]')" != y ]]; then
         exit
-      fi
+    fi
 fi
 
 rm -f $pack_name
@@ -100,20 +100,23 @@ for f in $*; do
             echo "# FILE: $f " >> $pack_name
             echo "${line}" >> $pack_name
         fi
-        echo "$(cat $f | gzip -f -9 | base64 -w 999999999 )" | sed "s/^/echo '/" \
-            | fold -w 100 >> $pack_name
-        echo "' | base64 -d | gunzip > $f; chmod u+x $f" >> $pack_name
+        printf '%s\n' "$(gzip -n -f -9 < "$f" | base64 | tr -d '\n')" | sed "s/^/echo '/" \
+            | fold -w 100 >> "$pack_name"
+        echo "' | base64 -d | gunzip > $f; chmod u+x $f" >> "$pack_name"
     fi
 done
 
 if [[ $silent_yn == n ]]; then
-    cat $pack_name
+    cat "$pack_name"
     echo
-    if command -v clip.exe &> /dev/null; then 
-        cat $pack_name | clip.exe
+    if command -v clip.exe &> /dev/null; then
+        clip.exe < "$pack_name"
+        echo "Copied to clipboard"
+    elif command -v pbcopy &> /dev/null; then
+        pbcopy < "$pack_name"
         echo "Copied to clipboard"
     else
-        echo "clip.exe not found, not copied to clipboard"
+        echo "Clipboard tool (clip.exe / pbcopy) not found, not copied to clipboard"
     fi
 fi
 

@@ -1,17 +1,45 @@
 #!/usr/bin/env bash
+help_text="
+NAME
+    mdc - One line description.
 
-help_line="Formats markdown text with terminal colours"
+USAGE
+    mdc [options] <parameters>
 
- # Terminal Colours
-cdef="\x1b[39m" # default colour
-cbla="\x1b[30m"; cgra="\x1b[90m"; clgra="\x1b[37m"; cwhi="\x1b[97m"
-cred="\x1b[31m"; cgre="\x1b[32m"; cyel="\x1b[33m"; cblu="\x1b[34m"; cmag="\x1b[35m"; ccya="\x1b[36m";
-clred="\x1b[91m"; clgre="\x1b[92m"; clyel="\x1b[93m"; clblu="\x1b[94m"; clmag="\x1b[95m"; clcya="\x1b[96m"
-cbold="\x1b[1m"; cnorm="\x1b[0m"
+OPTIONS
+    -x
+        Description...
 
-text="$(cat)"
+    -h|--help
+        Show help text.
 
-echo -e "$text" | sed "
+DESCRIPTION
+    Description description description description.
+
+AUTHOR
+    mjnurse.github.io - 2026
+"
+help_line="tbc"
+web_desc_line="tbc"
+
+try="Try ${0##*/} -h for more information"
+tmp="${help_text##*USAGE}"
+usage=$(echo "Usage: ${tmp%%OPTIONS*}" | tr -d "\n" | sed "s/  */ /g")
+
+if [[ "$1" == "" ]]; then
+    echo "${usage}"
+    echo "${try}"
+    exit 1
+fi
+
+case $1 in
+    -h|--help)
+        echo "$help_text"
+        exit
+        ;;
+esac
+
+==> ./mdc <==
     s/^-/\n-/
     s/^\(#.*\)\((.*)\)/\1$cgra\2$cdef/
     s/^# .*/$clmag&$cdef/
