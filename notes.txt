@@ -1,28 +1,13 @@
 7zip: 7z a -p -mhe=on archive.7z <files_or_folders> # -mhe=on - encrypt file contents and filenames/headers
 
-ES: @esql 'SELECT id.value FROM "mdm-example-entity-store-business-all-data"' # Elasticsearch SQL
-
-Excel: =CELL("protect",A1)=0 # Use in conditional formatting to highlight unlocked cells
-Excel: ALT-DOWN_ARROW # Open Drop-down in Cell
-
-Windows: WIN-H - turn on dictation
-
 apt: sudo apt autoclean # tidy the package cache
 apt: sudo apt autoremove # remove not required dependencies
 apt: sudo apt install ./download/apt.deb # install deb files
 
+awk: awk -F, '{print $1, $7}' file # use , as field separator (awk 'BEGIN {FS=","} {print ...) also works
+awk: awk -F, '{print $1, $7}' file # use , as field separator (awk 'BEGIN {FS=","} {print ...) also works
+awk: awk -v x="$envvar" '$1 == x {print $0}' file # Using environment variables
 awk: awk '($1 ~ /re/ || $1 ~/2/) && $2 == "one" && $3 >= 7 {print $5}' # Various matches (!~ /x/ is not match)
-awk: awk '/^#/ {next} {print}' file # skip lines starting # ('NF == 0 {next} - skip blank lines)
-awk: awk '/^aa/,/^bb/ {print $0}' file # output from first line starting 'aa' to the last line starting 'bb'
-awk: awk '/error/' file # A regex match anywhere in file
-awk: awk 'BEGIN { "date" | getline nw; close("date"); print "time now: " tolower(nw)}' # run unix date and capture output
-awk: awk 'BEGIN { i=1; while (("ls" | getline f) > 0) { print "file " i++ ": " f } close("ls") }' # loop though command output
-awk: awk 'BEGIN {OFS="->"}{ORS="|"}{print $1, $2}' file # Output Field Separator, O' Record S' (replacing newline)
-awk: awk 'BEGIN {OFS="->"}{ORS="|"}{print $1, $2}' file # Output Field Separator, Output Record Separator (replacing newline)
-awk: awk 'BEGIN {RS=""} {print $0}' file # Treat blank-line-separated paragraphs as records
-awk: awk 'BEGIN {print "head"} {print $0} END {print "---\n" NR}' file # BEGIN/END
-awk: awk 'NR == 1 {mn=mx=$1} $1<mn {mn=$1} $1>=mx {mx=$1} END {print mn, mx}' numfile # Can't use BEGIN as $1 not set for BEGIN
-awk: awk 'function sz(v) {if (v < 5) return "S" else if (v >= 9) return "L" else return "M"} {print $1, sz($1)}' file # functions
 awk: awk '{count[$1]++} END {for (x in count) print x, count[x]}' file # count is array indexed by $1 value containing count
 awk: awk '{for (i=1; i<=NF; i++) {print i, $i}}' file # for loop through all fields, every line
 awk: awk '{i=1}{while (i<=5) {print i; i++ }}' file # while loop, every line
@@ -33,9 +18,17 @@ awk: awk '{print $1, $3, $NF, NF}' file # print 1st, 3rd, last field and number 
 awk: awk '{print FILENAME, NR, FNR, $0}' file1 file2 # NR - record number continues, FNR - resets each file
 awk: awk '{printf "%-12s %5d %.2f\n", $1, $2, $3}' file # Formatted output: %12s - left pad, %-12s - right pad
 awk: awk '{t += ($1 + $2)} END {print "tot:" t, "avg:" t/NR}' file # Arithmetic
-awk: awk -F, '{print $1, $7}' file # use , as field separator (awk 'BEGIN {FS=","} {print ...) also works
-awk: awk -F, '{print $1, $7}' file # use , as field separator (awk 'BEGIN {FS=","} {print ...) also works
-awk: awk -v x="$envvar" '$1 == x {print $0}' file # Using environment variables
+awk: awk '/^#/ {next} {print}' file # skip lines starting # ('NF == 0 {next} - skip blank lines)
+awk: awk '/^aa/,/^bb/ {print $0}' file # output from first line starting 'aa' to the last line starting 'bb'
+awk: awk '/error/' file # A regex match anywhere in file
+awk: awk 'BEGIN { "date" | getline nw; close("date"); print "time now: " tolower(nw)}' # run unix date and capture output
+awk: awk 'BEGIN { i=1; while (("ls" | getline f) > 0) { print "file " i++ ": " f } close("ls") }' # loop though command output
+awk: awk 'BEGIN {OFS="->"}{ORS="|"}{print $1, $2}' file # Output Field Separator, O' Record S' (replacing newline)
+awk: awk 'BEGIN {OFS="->"}{ORS="|"}{print $1, $2}' file # Output Field Separator, Output Record Separator (replacing newline)
+awk: awk 'BEGIN {print "head"} {print $0} END {print "---\n" NR}' file # BEGIN/END
+awk: awk 'BEGIN {RS=""} {print $0}' file # Treat blank-line-separated paragraphs as records
+awk: awk 'function sz(v) {if (v < 5) return "S" else if (v >= 9) return "L" else return "M"} {print $1, sz($1)}' file # functions
+awk: awk 'NR == 1 {mn=mx=$1} $1<mn {mn=$1} $1>=mx {mx=$1} END {print mn, mx}' numfile # Can't use BEGIN as $1 not set for BEGIN
 awk: length($1), tolower($1), toupper($1), index($1, "err:") # index is find
 awk: substr($1, 1, 3), sub(/foo.*bar/, "fb"), gsub(/foo/, "bar") # gsub - replace all occurrences
 
@@ -44,12 +37,12 @@ bash: !^ !$ !:2 !:2-4 # First, Last, 2nd, 2nd to 4th arguments from prev command
 bash: #!/usr/bin/env bash # First line bash script
 bash: ${var^^} ${var,,} # var to UPPERCASE, lowercase
 bash: ALT-# # Convert current command to a comment
+bash: cd - # Return to previous directory
 bash: COLUMNS=1; PS3="Choose: "; select v in *; do [[ -n $v ]] && break; done # Generate a numbered list of options
+bash: cp file.txt{,.bak} # cp file.txt file.txt.bak
 bash: CTRL-A, CTRL-E # Move beginning / end of line
 bash: CTRL-W, CTRL-U, CTRL-K # Delete word, to start of line, to end of line
 bash: CTRL-X CTRL-E # Edit current command line
-bash: cd - # Return to previous directory
-bash: cp file.txt{,.bak} # cp file.txt file.txt.bak
 bash: echo {0..10..2} # 0 -> 10 in steps of 2: 0 2 4 6 8 10
 bash: echo {1,2}{a..e} # 1a 1b 1c 1d 1e 2a 2b 2c 2d 2e
 bash: o="$(!!)" # Rerun last command and capture output eg. `which f.txt`, `o="$(!!)"`, `vi "$o"`
@@ -59,11 +52,11 @@ bash: v="a:b:c"; echo ${v%:*} ${v%%:*} # Text before last : , text before first 
 claude: Quick/simple → Haiku; Everything else → Sonnet; Hard problems → Opus
 
 code: ALT+z - Enable word wrap
-code: CTRL+, - Open Settings
-code: CTRL+. - Fix problem
-code: CTRL+; - Find next problem (I added this shortcut)
-code: CTRL+k CTRL+s - Open Keyboard Shortcuts
 code: CTRL-k v - View markdown and markdown preview side by side
+code: CTRL+, - Open Settings
+code: CTRL+; - Find next problem (I added this shortcut)
+code: CTRL+. - Fix problem
+code: CTRL+k CTRL+s - Open Keyboard Shortcuts
 
 column: column -J -s"," -N col1,col2 # format csv as JSON with attribute names col1, col2
 column: column -t -s"," -N col1,col2 # format csv as a table with headings col1, col2
@@ -72,11 +65,16 @@ curl: curl -s https://api.ipify.org # find public ip address
 
 date: date -d "1 month ago" +%y-%m-%d # Outputs date 1 month ago in YY-MM-DD format
 
+ES: @esql 'SELECT id.value FROM "mdm-example-entity-store-business-all-data"' # Elasticsearch SQL
+
+Excel: =CELL("protect",A1)=0 # Use in conditional formatting to highlight unlocked cells
+Excel: ALT-DOWN_ARROW # Open Drop-down in Cell
+
 find: find . -name "*.jar" -exec du -h {} \; # Find the size of jar files
-find: find . -type d -name ".git" # Find directories
 find: find . -type d -name .git -prune -o -type f -name *.py -print # exclude .git directories
-find: find . -type f -mtime +90 # Find files last modified at least 90 days ago
+find: find . -type d -name ".git" # Find directories
 find: find . -type f -mtime -1 # find files modified in the last day
+find: find . -type f -mtime +90 # Find files last modified at least 90 days ago
 
 gcp: gcloud auth login --no-launch-browser
 
@@ -91,37 +89,37 @@ if: if [[ -f "<file>" ]] # Check file exists
 if: if [[ -n "$var" ]] # Non-zero length / not empty check
 if: if [[ -z "$var" ]] # Zero length / empty check
 
+jq: jq -r '.field' # Raw output
 jq: jq '. \| length' # Count
-jq: jq '.[0]' # Array item
-jq: jq '.[] \| select(x == "y")' # Filter
 jq: jq '.[] \| {a, b}' # Pick fields
+jq: jq '.[] \| select(x == "y")' # Filter
 jq: jq '.[]' # Loop array
+jq: jq '.[0]' # Array item
 jq: jq '.a.b.c' # Nested field
 jq: jq '.field' # Get a field
-jq: jq -r '.field' # Raw output
 
 ln: ln -s <target_file_or_dir> [<link_name>] # -s symbolic link (ie a pointer), hard link is same item two names
 
 postgres: ALTER ROLE <username> SET search_path TO <schema name>; # Permanently alter search_path
-postgres: SET search_path TO <schema name>; # Alter the schema searched
-postgres: SHOW search_path; # show the currently search schema
 postgres: export PGPASSWORD=postgres # Set password
 postgres: export PGPASSWORD=postgres; cat my.sql \| psql -h localhost -U postgres -d postgres # Run my.sql
+postgres: SET search_path TO <schema name>; # Alter the schema searched
+postgres: SHOW search_path; # show the currently search schema
 
 ps: ps auxww # list linux processes, ww - show full command, do not truncate
 
-psql: SET search_path=<schema>[,<schema>]; # set current schema(s)
-psql: SHOW search_path; # show current schema(s)
 psql: \c <db> # connect to database
 psql: \d <table> # describe table
 psql: \dn # list schemas
 psql: \dt # list tables
 psql: \l # list databases
+psql: SET search_path=<schema>[,<schema>]; # set current schema(s)
+psql: SHOW search_path; # show current schema(s)
 
 sed: s/de/la&da/ # & in replacement is the matched text
-sed: sed -E # Extended - can use 's/a+/b/' rather than 's/a\+/b/'
-sed: sed -E 's/a+/b/' # one or more a's
 sed: sed -E 's/a{2,5}/b/' # between 2 and 5 a's
+sed: sed -E 's/a+/b/' # one or more a's
+sed: sed -E # Extended - can use 's/a+/b/' rather than 's/a\+/b/'
 
 sort: sort -h # Sort human readable numbers eg 1.2GB, 9KB
 
@@ -133,12 +131,14 @@ tar: tar -xvzf <filename> # Extract zipped tarball
 tr: tr A-Z a-z # lowercase
 tr: tr a-z A-Z # uppercase
 
-vim: /lala\C # Make search case sensitive (..\c - insensitive) [sed, regex]
 vim: :%!sort -R # Random order - calling external app to order [sed, regex]
+vim: /lala\C # Make search case sensitive (..\c - insensitive) [sed, regex]
 vim: \a (\A) # alphabetic character [A-Za-z]. Uppercase: non ... [sed, regex]
 vim: \d \x (\D \X) # digit [0-9], hex digit [0-9A-Fa-f]. Uppercase: non... [sed, regex]
 vim: \l \u # lowercase letter [a-z], uppercase letter [sed, regex]
 vim: \w \s (\W \S) # word character [0-9A-Za-z_], whitespace char (space, tab). Uppercase: non... [sed, regex]
 vim: s/de/la&da/ # & in replacement is the matched text
+
+Windows: WIN-H - turn on dictation
 
 wsl: /c/Users/[name]/.wslconfig # WSL Config
