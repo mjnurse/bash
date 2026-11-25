@@ -131,6 +131,54 @@ lmr() {
     find . -type f -printf '%T@ %TY/%Tm/%Td %TH:%TM:%.2TS %p\n' | sort -rn | head -"$n" | cut -d' ' -f2-
 }
 
+llm() {
+    # func: llm: List files with metadata and type information
+    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+        echo "Usage: llm [files/globs...] - List files with metadata and type information"
+        echo "                              (no args = everything in cwd, incl. dotfiles)"
+        return 1
+    fi
+    local -a lsargs
+    local skip
+    if (( $# )); then
+        lsargs=(-d -- "$@"); skip=1     # -d: no "total" line
+    else
+        lsargs=(-a);         skip=2     # skip the "total" line
+    fi
+
+    paste -d' ' <(ls -lh --color=always "${lsargs[@]}" | tail -n +"$skip") \
+                <(ls -1 "${lsargs[@]}" | while IFS= read -r f; do
+                      t=$(file -b -- "$f")
+                      if [[ -f $f && ! -L $f && $t == *text* ]]; then
+                          t+=" lines=$(wc -l < "$f")"
+                      fi
+                      printf '%s\n' "$t"
+                  done | sed "
+        s/2007+//
+        s/Bourne-Again shell script/Bash/
+        s/CR.*LF.*line.*terminators.*with.*escape.*sequences//
+        s/Microsoft/MS/
+        s/New Line/NL/
+        s/SQLite.*/SQLite/
+        s/Vim swap file.*/Vim swap file/
+        s/Zip.*/Zip/
+        s/^dir.*y$/dir/
+        s/certificate/cert/
+        s/data//
+        s/executable//g
+        s/script//
+        s/text//g
+        s/with CRLF line terminators/CRLF/
+        s/with very long lines (\([^)]*\))/width=\1/
+        s/with//
+        s/,//g
+        s/  */ /g
+        s/^ *//
+        s/ *$//
+        s/.*/$cgra(&)$cdef/
+    ")
+}
+
 trash() {
     # func: trash: Moves files to $HOME/.trash instead of deleting them
     mkdir -p $HOME/.trash
@@ -288,7 +336,7 @@ beep() {
 
 # Backup important files
 backup -f -d toto-db $HOME/.todo.db
-backup -f -d notes $HOME/.notes.txt
+backup -f -d bin $HOME/bin/*
 echo
 
 # Refresh misc notes web page
@@ -319,7 +367,7 @@ alias gp='g(){ egrep -i "$1" *; }; g' # help_line: Search/egrep for a pattern in
 alias img='catimg' # help_line: Display images in the terminal
 alias kd='keep-delete'
 alias kp='f(){ ps aux | fzf -i -e -q "$1" | awk "{print \$2}" | xargs -r kill -9; }; f' # help_line: Kill a process selected via search list
-alias ll="ls -al"
+alias ll="llm"
 alias lle='ls -al | \egrep "^[^d]..x|^[^d].....x|^[^d]........x"' # help_line: List executable files
 alias lm='list-move'
 alias lls='ls -lhSrA --color=always | grep --color=never '^-'' # help_line: List files sorted by size in reverse order

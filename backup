@@ -29,6 +29,7 @@ DESCRIPTION
 AUTHOR
     Martin N 2025  
 "
+
 help_line="Create a dated zip archive of files and directories"
 web_desc_line="Creates dated zip backups and copies them to BACKUP_DIR"
 
@@ -70,8 +71,6 @@ while [[ "$1" != "" ]]; do
     shift
 done
 
-set -e
-
 # Ensure BACKUP_DIR is set
 if [ -z "$BACKUP_DIR" ]; then
     echo "Error: BACKUP_DIR environment variable is not set."
@@ -97,7 +96,21 @@ DATE=$(date +%y%m%d)
 ZIPFILE="${NAME}_${DATE}.zip"
 
 # Ensure BACKUP_DIR exists
-mkdir -p "$BACKUP_DIR"
+if [[ ! -d "$BACKUP_DIR" ]]; then
+    mkdir -p "$BACKUP_DIR"
+
+fi
+
+if [[ $DOTFILES_YN == y ]]; then
+    files="$(ls $* 2>/dev/null)"
+else
+    files="$(ls --ignore=__pycache__ --ignore=venv --ignore=.git $* 2>/dev/null)"
+fi
+
+if [[ -z "$files" ]]; then
+    cecho red "Error: No files found to backup."
+    exit 1
+fi
 
 # Confirm request
 if [[ $FORCE_YN == n ]]; then
@@ -108,10 +121,13 @@ if [[ $FORCE_YN == n ]]; then
             exit 0
         fi
     fi
-    echo "Creating backup: $ZIPFILE"
-    echo "Including files/directories: $*"
-    ls $*
-    read -p "Proceed? [yN]: " CONFIRM
+    echo
+    cecho lgre "Creating backup: ${clcya}$ZIPFILE"
+    echo
+    cecho lgre "Including files/directories:"
+    echo "$files"
+    printf "${clgre}Proceed? [yN]: ${cdef}"
+    read -r CONFIRM
     if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
         echo "Backup cancelled."
         exit 0
