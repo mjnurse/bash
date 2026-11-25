@@ -79,7 +79,10 @@ fi
 
 if [ $# = 0 ]; then
     cecho lcya "BACKUP_DIR Contents:"
-    ls -ltrh "$BACKUP_DIR"
+    cd "$BACKUP_DIR"
+    ls -ltrh
+    cecho lcya "Size of BACKUP_DIR:"
+    du -h -d0 .
     exit 
 fi
 
