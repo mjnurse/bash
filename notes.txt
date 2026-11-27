@@ -135,6 +135,7 @@ tr: tr a-z A-Z # uppercase
 
 vim: /lala\C # Make search case sensitive (..\c - insensitive) [sed, regex]
 vim: :%!sort -R # Random order - calling external app to order [sed, regex]
+vim: :%s/\%>100v.*/[+]/ # \%>100v skips up to col 100. .*/[+]/ replaces any text after with [+]
 vim: \a (\A) # alphabetic character [A-Za-z]. Uppercase: non ... [sed, regex]
 vim: \d \x (\D \X) # digit [0-9], hex digit [0-9A-Fa-f]. Uppercase: non... [sed, regex]
 vim: \l \u # lowercase letter [a-z], uppercase letter [sed, regex]

@@ -163,6 +163,9 @@ llm() {
                   done | sed "
         s/2007+//
         s/Bourne-Again shell script/Bash/
+        s/magic.*fragment.*/magic fragment\.\.\./
+        s/escape sequences//
+        s/(.*BOM)//
         s/CR.*LF.*line.*terminators.*with.*escape.*sequences//
         s/Microsoft/MS/
         s/New Line/NL/
@@ -203,33 +206,52 @@ trash() {
     fi
     force_yn=n
 
-    # ignore -r
-    if [[ "$1" == "-r" ]]; then
+    # Split combined short arguments (eg -abc) into individual arguments (-a -b -c). Remove = symbols.
+    new_args=()
+    while [[ "$1" != "" ]]; do
+        if [[ $1 == -* && $1 != --* && ${#1} -gt 2 ]]; then
+            for ((i=1; i<${#1}; i++)); do
+                arg="${1:i:1}"
+                if [[ $arg == "=" ]]; then new_args+=("${1:i+1}"); break; fi
+            done
+        else
+            if [[ $1 == --*=* ]]; then new_args+=("${1%%=*}"); new_args+=("${1##*=}")
+            else new_args+=("$1"); fi
+        fi
         shift
-    fi
-    
-    # Parse -p option
-    if [[ "$1" == "-p" || "$1" == "--purge" ]]; then
-        shift
-        ls -alh "$TRASH_DIR/$1"* 2>/dev/null
-        [[ $? -ne 0 ]] && { echo "No matching files found in trash for $1*"; return; }
-        read -p "Purge these files? [yN] " answer
-        [[ "${answer^^}" == "Y" ]] || { echo "Purge cancelled"; return; }
-        \rm "$TRASH_DIR/$1"*
-        return 1
-    fi
+    done
 
-    # Parse -f option
-    if [[ "$1" == "-f" || "$1" == "--force" || "$1" == "-rf" ]]; then
-        force_yn=y
-        shift
-    fi
+    # Process the arguments
+    set -- "${new_args[@]}"
 
-    # Parse -i option
-    if [[ "$1" == "-i" || "$1" == "--interactive" ]]; then
-        force_yn=n
-        shift
-    fi
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -r)
+                # ignore -r
+                shift
+                ;;
+            -f|--force)
+                force_yn=y
+                shift
+                ;;
+            -i|--interactive)
+                force_yn=n
+                shift
+                ;;
+            -p|--purge)
+                shift
+                ls -alh "$TRASH_DIR/$1"* 2>/dev/null
+                [[ $? -ne 0 ]] && { echo "No matching files found in trash for $1*"; return; }
+                read -p "Purge these files? [yN] " answer
+                [[ "${answer^^}" == "Y" ]] || { echo "Purge cancelled"; return; }
+                \rm "$TRASH_DIR/$1"*
+                return 1
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
 
     for f in "$@"; do
         if [ ! -e "$f" ]; then
