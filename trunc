@@ -2,22 +2,33 @@
 help_text="
 usage: trunc [options] <filename>
 -h|--help:  This help text.
+-r|--replacement: Specify replacement string for truncated lines (default is empty).
 -w|--width: Specify width (default is terminal width less 1).
 "
 
 help_line="Truncate lines to fit terminal width or a specified width"
 web_desc_line="Truncate lines to fit terminal width or a specified width"
 
-case $1 in
-    -h|--help)
-        echo "$help_text"
-        exit
-        ;;
-    -w|--width)
-        w="$2"
-        shift 2
-        ;;
-esac
+while [[ "$1" != "" ]]; do
+    case $1 in
+        -h|--help)
+            echo "$help_text"
+            exit
+            ;;
+        -r|--replacement)
+            replacement="$2"
+            shift
+            ;;
+        -w|--width)
+            w="$2"
+            shift
+            ;;
+        *) 
+            break
+            ;;
+    esac
+shift
+done
 
 if [ -z "$1" ] && [ -t 0 ]; then
     echo "Usage: $(basename "$0") <filename>  (or pipe data in)" >&2
@@ -29,6 +40,5 @@ if [ -z "$w" ]; then
     w=$(( $(tput cols) - 1 ))
 fi
 
-cat "$@" | perl -s -pe '
-    s/^((?:\e\[[0-9;]*[[:alpha:]]|[^\e]){$w}).*/$1/
-' -- -w="$w"
+let w=w-${#replacement}
+awk -v w="$w" -v r="$replacement" 'length($0) > w { $0 = substr($0, 1, w) r } 1' "$@"
