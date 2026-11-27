@@ -46,6 +46,7 @@ git_prompt_info() {
 case "$(uname -s)" in
     Linux)
         export OS=WSL # For me anyway
+        export TRASH_DIR="$HOME/.trash"
 
         if ! grep '/mnt/c /c' /etc/fstab > /dev/null 2>&1; then
             echo "Adding /mnt/c /c bind to /etc/fstab and mounting all filesystems..."
@@ -57,11 +58,12 @@ case "$(uname -s)" in
         ;;
     Darwin)
         export OS=Mac
+        export TRASH_DIR="$HOME/.mytrash"
 
         export PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:/opt/homebrew/opt/gnu-sed/libexec/gnubin:/opt/homebrew/opt/findutils/libexec/gnubin:$PATH"
         alias find="gfind"
         alias sed="gsed"
-        alias code="ttt"
+        alias code="vi"
         alias python="python3"
 
         # Prompt: user@host:directory [repo:branch ↑ahead ↓behind *] $
@@ -185,15 +187,15 @@ llm() {
 }
 
 trash() {
-    # func: trash: Moves files to $HOME/.trash instead of deleting them
-    mkdir -p $HOME/.trash
+    # func: trash: Moves files to $TRASH_DIR instead of deleting them
+    mkdir -p $TRASH_DIR
 
     if [[ "$1" == "" ]]; then
         echo -e "\x1b[92m20 largest:\x1b[39m"
-        ls -alhS $HOME/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
+        ls -alhS $TRASH_DIR | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
         echo -e "\x1b[92m20 most recent:\x1b[39m"
-        ls -alht $HOME/.trash | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
-        echo -e "\x1b[92mSize:\x1b[39m $(du -d0 -h $HOME/.trash 2>/dev/null)"
+        ls -alht $TRASH_DIR | grep -v '^\(total\|.*[[:space:]]\.\.\?$\)' | head -20
+        echo -e "\x1b[92mSize:\x1b[39m $(du -d0 -h $TRASH_DIR 2>/dev/null)"
         echo -e "\x1b[92mOptions:\x1b[39m"
         echo "-f|--force (force delete without confirmation)"
         echo "-i|--interactive (prompt before deleting each file)"
@@ -209,11 +211,11 @@ trash() {
     # Parse -p option
     if [[ "$1" == "-p" || "$1" == "--purge" ]]; then
         shift
-        ls -alh "$HOME/.trash/$1"* 2>/dev/null
+        ls -alh "$TRASH_DIR/$1"* 2>/dev/null
         [[ $? -ne 0 ]] && { echo "No matching files found in trash for $1*"; return; }
         read -p "Purge these files? [yN] " answer
         [[ "${answer^^}" == "Y" ]] || { echo "Purge cancelled"; return; }
-        \rm "$HOME/.trash/$1"*
+        \rm "$TRASH_DIR/$1"*
         return 1
     fi
 
@@ -242,7 +244,7 @@ trash() {
 
         timestamp=$(date +%Y%m%d_%H%M%S)
         base=$(basename "$f")
-        dest=$HOME/.trash/"$base.$timestamp"
+        dest=$TRASH_DIR/"$base.$timestamp"
         mv "$f" "$dest"
         if [[ -d $dest ]]; then
             tar -czf "$dest.tar.gz" "$dest" > /tmp/trash.log 2>&1
@@ -385,6 +387,7 @@ alias rm='trash'
 alias sbc='[[ $(uname -s) == Darwin ]] && source $HOME/.bash_profile || source $HOME/.bashrc' # help_line: Reload the bash configuration $HOME/.bashrc
 alias svg='chafa --scale=20 --size=80x80' # help_line: Display SVG images in the terminal
 alias tf='table-filter'
+alias tidy="$HOME/mjnurse/bash/tidy"
 alias vf='vi "$(fzf)"'
 alias web='/mnt/c/Windows/System32/cmd.exe /c start' # help_line: Open page in the default browser
 alias word='w(){ grep -iE "$1" /usr/share/dict/words; }; w' # help_line: Search for a word in the system dictionary
@@ -405,10 +408,9 @@ HISTSIZE=10000
 HISTFILESIZE=20000
 HISTTIMEFORMAT="%F %T  "
 
-# Display trash size and item count if $HOME/.trash exists
-[ -d $HOME/.trash ] && echo -e "\nTrash Size: $(du $HOME/.trash -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls $HOME/.trash | wc -l) Items"
+# Display trash size and item count if $TRASH_DIR exists
+[ -d $TRASH_DIR ] && echo -e "\nTrash Size: $(du $TRASH_DIR -d0 -h 2>/dev/null | sed 's/\t.*//'), $(ls $TRASH_DIR | wc -l) Items"
 
 export EDITOR=vi
 
 echo 'REMEMBER: eval "$(starship init bash)"'
-
